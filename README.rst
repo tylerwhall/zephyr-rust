@@ -82,6 +82,7 @@ Sample Output
 
 .. code-block:: console
 
+    Hello from Rust
     Hello World! native_posix 42
 
 Supported Architectures
@@ -89,6 +90,7 @@ Supported Architectures
 
 * native_posix
 * x86
+* armv7m
 
 License
 *******

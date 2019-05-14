@@ -8,3 +8,6 @@ edition = "2018"
 crate-type = ["staticlib"]
 
 [dependencies]
+
+[build-dependencies]
+bindgen = "0.49.0"

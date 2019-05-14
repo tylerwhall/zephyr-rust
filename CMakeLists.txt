@@ -19,6 +19,13 @@ set(rust_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/rust-app)
 set(rust_build_dir ${CMAKE_CURRENT_BINARY_DIR}/rust-app)
 set(rust_staticlib ${rust_build_dir}/${rust_target}/release/librust_app.a)
 
+zephyr_get_include_directories_for_lang_as_string(       C includes)
+zephyr_get_compile_definitions_for_lang_as_string(       C definitions)
+
+set(external_project_cflags
+    "${includes} ${definitions} -imacros ${AUTOCONF_H}"
+)
+
 include(ExternalProject)
 
 ExternalProject_Add(
@@ -29,6 +36,9 @@ ExternalProject_Add(
   BUILD_ALWAYS 1
   CONFIGURE_COMMAND ""
   BUILD_COMMAND
+  env
+  "RUSTFLAGS=-C relocation-model=static"
+  "TARGET_CFLAGS=${external_project_cflags}"
   cargo +nightly build --target=${rust_target} --target-dir=${rust_build_dir} --release
   INSTALL_COMMAND ""
   BUILD_BYPRODUCTS ${rust_staticlib}
