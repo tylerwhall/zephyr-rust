@@ -92,6 +92,15 @@ Supported Architectures
 * x86
 * armv7m
 
+TODO
+****
+
+* generate syscall bindings
+* println
+* alloc
+* split into zephyr-sys and zephyr crates
+* safe wrappers (threads, semaphores, etc.)
+
 License
 *******
 
