@@ -9,6 +9,8 @@ target_sources(app PRIVATE src/main.c)
 
 if(${ARCH} STREQUAL "posix" OR ${ARCH} STREQUAL "x86")
     set(rust_target i686-unknown-linux-gnu)
+elseif(${ARCH} STREQUAL "arm")
+    set(rust_target thumbv7m-none-eabi)
 else()
     message(FATAL_ERROR "Arch ${ARCH} not supported")
 endif()

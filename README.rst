@@ -45,6 +45,7 @@ Rust toolchain
 
     rustup toolchain install nightly
     rustup target add i686-unknown-linux-gnu
+    rustup target add thumbv7m-none-eabi
 
 This project outputs 'Hello World' to the console.  It can be built and executed
 on QEMU as follows:
@@ -62,6 +63,13 @@ qemu_x86:
 
     mkdir -p build-x86 && cd build-x86
     cmake -GNinja -DBOARD=qemu_x86 ..
+
+ARM Cortex-M:
+
+.. code-block:: console
+
+    mkdir -p build-arm && cd build-arm
+    cmake -GNinja -DBOARD=qemu_cortex_m3 ..
 
 Build and run:
 
