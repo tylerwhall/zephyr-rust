@@ -1,0 +1,10 @@
+[package]
+name = "rust-app"
+version = "0.1.0"
+authors = ["Tyler Hall <tyler.hall@lexmark.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
