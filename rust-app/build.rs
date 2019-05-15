@@ -19,7 +19,7 @@ fn main() {
         // XXX: doesn't handle args with spaces in quotes
         .clang_args(flags.split(" "))
         .blacklist_item(".*x86_mmu.*")
-        .blacklist_item("z_x86_kernel_pdpt")
+        .blacklist_item(".*x86_.*pdpt")
         // Finish the builder and generate the bindings.
         .generate()
         // Unwrap the Result and panic on failure.
