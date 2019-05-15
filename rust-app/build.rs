@@ -47,7 +47,7 @@ fn main() {
         // bindings for.
         .header("wrapper.h")
         .use_core()
-        .ctypes_prefix("crate::ctypes")
+        .ctypes_prefix("super::ctypes")
         .parse_callbacks(Box::new(callbacks.clone()))
         // XXX: doesn't handle args with spaces in quotes
         .clang_args(flags.split(" "))
@@ -72,7 +72,7 @@ fn main() {
         if syscalls.user.iter().any(|c| c == syscall) {
             writeln!(
                 &mut out,
-                "    pub use crate::raw::z_impl_{} as {};",
+                "    pub use super::super::raw::z_impl_{} as {};",
                 syscall, syscall
             )
             .unwrap();
@@ -85,7 +85,7 @@ fn main() {
         for syscall in syscalls.user.iter() {
             writeln!(
                 &mut out,
-                "    pub use crate::raw::z_userctx_{} as {};",
+                "    pub use super::super::raw::z_userctx_{} as {};",
                 syscall, syscall
             )
             .unwrap();
@@ -100,7 +100,7 @@ fn main() {
         for syscall in syscalls.user.iter() {
             writeln!(
                 &mut out,
-                "    pub use crate::raw::z_anyctx_{} as {};",
+                "    pub use super::raw::z_anyctx_{} as {};",
                 syscall, syscall
             )
             .unwrap();
