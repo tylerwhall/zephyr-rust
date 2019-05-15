@@ -44,6 +44,8 @@ Rust toolchain
 .. code-block:: console
 
     rustup toolchain install nightly
+    rustup default nightly
+    rustup component add rustfmt
     rustup target add i686-unknown-linux-gnu
     rustup target add thumbv7m-none-eabi
 
