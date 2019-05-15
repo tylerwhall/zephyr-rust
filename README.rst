@@ -84,8 +84,27 @@ Sample Output
 
 .. code-block:: console
 
-    Hello from Rust
-    Hello World! native_posix 42
+    SeaBIOS (version rel-1.12.0-0-ga698c8995f-prebuilt.qemu.org)
+    Booting from ROM..***** Booting Zephyr OS zephyr-v1.14.0-752-gfd97e44011f6 *****
+    Hello from Rust kernel with direct kernel call
+    Hello from Rust kernel with runtime-detect syscall
+    Entering user mode
+    Hello from Rust userspace with forced user-mode syscall
+    Hello from Rust userspace with runtime-detect syscall
+    Next call will crash if userspace is working.
+    ***** CPU Page Fault (error code 0x00000004)
+    User thread read address 0x00408000
+    PDE: 0x027 Present, Writable, User, Execute Enabled
+    PTE: 0x800000002 Non-present, Writable, Supervisor, Execute Disable
+    Current thread ID = 0x00400060
+    eax: 0x00000048, ebx: 0x000086aa, ecx: 0x0000002b, edx: 0x00000064
+    esi: 0x000086da, edi: 0x004043e8, ebp: 0x004043ac, esp: 0x004043a0
+    eflags: 0x00000207 cs: 0x002b
+    call trace:
+    eip: 0x0000140b
+         0x0000035d (0x86a9)
+         Fatal fault in thread 0x00400060! Aborting.
+
 
 Supported Architectures
 ***********************

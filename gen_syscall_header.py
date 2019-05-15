@@ -113,27 +113,48 @@ def newline():
     sys.stdout.write(" \\\n")
 
 
-def gen_defines_inner(ret, argc, kernel_only=False, user_only=False):
+def gen_defines_inner(ret, argc, kernel_only=False, user_only=False, define=False):
     sys.stdout.write("#define ")
     gen_macro(ret, argc)
     newline()
 
-    if not user_only:
-        gen_fn(ret, argc, "z_impl_##name", extern=True)
-        sys.stdout.write(";")
-        newline()
+    # Declare kernel mode - implemented in the kernel
+    gen_fn(ret, argc, "z_impl_##name", extern=True)
+    sys.stdout.write(";")
+    newline()
 
+    # Bogus static inline function to keep the compiler happy
+    # Need a definition to match the __syscall in zephyr code
     gen_fn(ret, argc, "name")
     newline()
     sys.stdout.write("\t{")
     newline()
+    sys.stdout.write("__builtin_unreachable();")
+    newline()
+    sys.stdout.write("\t}")
+    newline()
 
-    if kernel_only:
-        sys.stdout.write("\t\t")
-        gen_call_impl(ret, argc)
-    elif user_only:
+    gen_fn(ret, argc, "z_userctx_##name", extern=True)
+
+    if define:
+        # define user-only
+        newline()
+        sys.stdout.write("\t{")
+        newline()
         gen_make_syscall(ret, argc, 2)
+        sys.stdout.write("\t}")
+        newline()
     else:
+        sys.stdout.write(";")
+        newline()
+
+    gen_fn(ret, argc, "z_anyctx_##name", extern=True)
+    # generic
+    if define:
+        # Generate with the real name in the implementation
+        newline()
+        sys.stdout.write("\t{")
+        newline()
         sys.stdout.write("\t\tif (_is_user_context()) {")
         newline()
 
@@ -151,14 +172,16 @@ def gen_defines_inner(ret, argc, kernel_only=False, user_only=False):
         gen_call_impl(ret, argc)
         sys.stdout.write("\t\t}")
         newline()
+        sys.stdout.write("\t}")
+    else:
+        sys.stdout.write(";")
+    sys.stdout.write("\n\n");
 
-    sys.stdout.write("\t}\n\n")
 
-
-def gen_defines(argc, kernel_only=False, user_only=False):
-    gen_defines_inner(Retval.VOID, argc, kernel_only, user_only)
-    gen_defines_inner(Retval.U32, argc, kernel_only, user_only)
-    gen_defines_inner(Retval.U64, argc, kernel_only, user_only)
+def gen_defines(argc, kernel_only=False, user_only=False, define=False):
+    gen_defines_inner(Retval.VOID, argc, kernel_only, user_only, define)
+    gen_defines_inner(Retval.U32, argc, kernel_only, user_only, define)
+    gen_defines_inner(Retval.U64, argc, kernel_only, user_only, define)
 
 
 sys.stdout.write(
@@ -167,13 +190,10 @@ sys.stdout.write("#ifndef GEN_SYSCALL_H\n#define GEN_SYSCALL_H\n\n")
 sys.stdout.write("#include <syscall.h>\n")
 
 for i in range(11):
-    sys.stdout.write(
-        "#if !defined(CONFIG_USERSPACE) || defined(__ZEPHYR_SUPERVISOR__)\n")
+    sys.stdout.write("#if defined(__ZEPHYR_DEFINE_SYSCALLS__) && defined(CONFIG_USERSPACE)\n")
+    gen_defines(i, define=True)
+    sys.stdout.write("#else\n")
     gen_defines(i, kernel_only=True)
-    sys.stdout.write("#elif defined(__ZEPHYR_USER__)\n")
-    gen_defines(i, user_only=True)
-    sys.stdout.write("#else /* mixed kernel/user macros */\n")
-    gen_defines(i)
-    sys.stdout.write("#endif /* mixed kernel/user macros */\n\n")
+    sys.stdout.write("#endif\n\n")
 
 sys.stdout.write("#endif /* GEN_SYSCALL_H */\n")

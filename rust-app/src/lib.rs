@@ -5,7 +5,13 @@
 #![allow(non_snake_case)]
 #![allow(improper_ctypes)] // Zero size struct for k_spinlock
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+pub mod raw {
+    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+}
+
+pub mod syscalls {
+    include!(concat!(env!("OUT_DIR"), "/syscalls.rs"));
+}
 
 pub mod ctypes {
     use core::fmt;
@@ -59,10 +65,31 @@ fn panic(_panic: &PanicInfo<'_>) -> ! {
 extern "C" fn eh_personality() {}
 
 #[no_mangle]
-pub extern "C" fn hello_rust() -> u8 {
-    const MSG: &str = "Hello from Rust\n";
+pub extern "C" fn hello_rust() {
+    {
+        const MSG: &str = "Hello from Rust kernel with direct kernel call\n";
+        unsafe { syscalls::kernel::k_str_out(MSG.as_ptr() as *mut _, MSG.len()) };
+    }
+    {
+        const MSG: &str = "Hello from Rust kernel with runtime-detect syscall\n";
+        unsafe { syscalls::k_str_out(MSG.as_ptr() as *mut _, MSG.len()) };
+    }
+}
 
-    // XXX: bypasses syscall wrapper
-    unsafe { z_impl_k_str_out(MSG.as_ptr() as *mut _, MSG.len()) };
-    42
+#[no_mangle]
+pub extern "C" fn hello_rust_user() {
+    {
+        const MSG: &str = "Hello from Rust userspace with forced user-mode syscall\n";
+        unsafe { syscalls::user::k_str_out(MSG.as_ptr() as *mut _, MSG.len()) };
+    }
+    {
+        const MSG: &str = "Hello from Rust userspace with runtime-detect syscall\nNext call will crash if userspace is working.\n";
+        unsafe { syscalls::k_str_out(MSG.as_ptr() as *mut _, MSG.len()) };
+    }
+
+    // This will compile, but crash if CONFIG_USERSPACE is working
+    {
+        const MSG: &str = "Hello from Rust userspace with direct kernel call\n";
+        unsafe { syscalls::kernel::k_str_out(MSG.as_ptr() as *mut _, MSG.len()) };
+    }
 }

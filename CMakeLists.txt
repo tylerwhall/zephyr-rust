@@ -15,6 +15,19 @@ else()
     message(FATAL_ERROR "Arch ${ARCH} not supported")
 endif()
 
+set(rust_syscall_macros_h ${ZEPHYR_BINARY_DIR}/include/generated/rust_syscall_macros.h)
+add_custom_target(rust_syscall_macros_h_target DEPENDS ${rust_syscall_macros_h})
+add_custom_command(OUTPUT ${rust_syscall_macros_h}
+  COMMAND
+  ${PYTHON_EXECUTABLE}
+  ${CMAKE_CURRENT_SOURCE_DIR}/gen_syscall_header.py
+  > ${rust_syscall_macros_h}
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/gen_syscall_header.py
+  )
+
+add_library(syscall_thunk OBJECT syscall_thunk.c)
+target_link_libraries(syscall_thunk zephyr_interface)
+
 set(rust_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/rust-app)
 set(rust_build_dir ${CMAKE_CURRENT_BINARY_DIR}/rust-app)
 set(rust_staticlib ${rust_build_dir}/${rust_target}/release/librust_app.a)
@@ -34,10 +47,12 @@ ExternalProject_Add(
   SOURCE_DIR ${rust_src_dir}
   BUILD_IN_SOURCE 1
   BUILD_ALWAYS 1
+  DEPENDS rust_syscall_macros_h_target
   CONFIGURE_COMMAND ""
   BUILD_COMMAND
   env
   "RUSTFLAGS=-C relocation-model=static"
+  "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
   "TARGET_CFLAGS=${external_project_cflags}"
   cargo +nightly build --target=${rust_target} --target-dir=${rust_build_dir} --release
   INSTALL_COMMAND ""
@@ -50,6 +65,7 @@ add_dependencies(
     rust_project
 )
 set_target_properties(rust_lib PROPERTIES IMPORTED_LOCATION ${rust_staticlib})
-set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${rust_build_dir})
+# This should be a dependency of rust_lib, but adding it as an INTERFACE lib doesn't do anything
+target_link_libraries(app PRIVATE syscall_thunk)
 
 target_link_libraries(app PUBLIC rust_lib)
