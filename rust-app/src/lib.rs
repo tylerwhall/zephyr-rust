@@ -5,6 +5,8 @@
 #![allow(non_snake_case)]
 #![allow(improper_ctypes)] // Zero size struct for k_spinlock
 
+use core::fmt::Write;
+
 pub mod zephyr_sys {
     pub mod raw {
         include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
@@ -64,10 +66,21 @@ pub mod zephyr_sys {
     extern "C" fn eh_personality() {}
 }
 
+pub struct Stdout;
+
+impl Write for Stdout {
+    #[inline(always)]
+    fn write_str(&mut self, s: &str) -> core::result::Result<(), core::fmt::Error> {
+        unsafe { zephyr_sys::syscalls::k_str_out(s.as_ptr() as *mut _, s.len()) };
+        Ok(())
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn hello_rust() {
     use zephyr_sys::syscalls;
 
+    writeln!(&mut Stdout, "Hello Rust writeln").unwrap();
     {
         const MSG: &str = "Hello from Rust kernel with direct kernel call\n";
         unsafe { syscalls::kernel::k_str_out(MSG.as_ptr() as *mut _, MSG.len()) };

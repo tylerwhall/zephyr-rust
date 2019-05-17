@@ -48,6 +48,7 @@ Rust toolchain
     rustup component add rustfmt
     rustup target add i686-unknown-linux-gnu
     rustup target add thumbv7m-none-eabi
+    cargo install xargo
 
 This project outputs 'Hello World' to the console.  It can be built and executed
 on QEMU as follows:

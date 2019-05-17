@@ -7,10 +7,14 @@ project(hello_world)
 
 target_sources(app PRIVATE src/main.c)
 
+# Use a clang_target known to clang so headers will be processed correctly with
+# bindgen. rust_target may point to a custom json target.
 if(${ARCH} STREQUAL "posix" OR ${ARCH} STREQUAL "x86")
-    set(rust_target i686-unknown-linux-gnu)
+    set(rust_target i686-unknown-zephyr)
+    set(clang_target i686-unknown-linux-gnu)
 elseif(${ARCH} STREQUAL "arm")
     set(rust_target thumbv7m-none-eabi)
+    set(clang_target thumbv7m-none-eabi)
 else()
     message(FATAL_ERROR "Arch ${ARCH} not supported")
 endif()
@@ -51,15 +55,14 @@ ExternalProject_Add(
   CONFIGURE_COMMAND ""
   BUILD_COMMAND
   env
-  "RUSTFLAGS=-C relocation-model=static"
   "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
-  "TARGET_CFLAGS=${external_project_cflags}"
-  cargo +nightly build --target=${rust_target} --target-dir=${rust_build_dir} --release
-  INSTALL_COMMAND ""
+  "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
+  xargo +nightly build --target=${rust_target} --target-dir=${rust_build_dir} --release
+  INSTALL_COMMAND sh -c "ar d ${rust_staticlib} $(ar t ${rust_staticlib} | grep compiler_builtins)"
   BUILD_BYPRODUCTS ${rust_staticlib}
 )
 
-add_library(rust_lib STATIC IMPORTED GLOBAL)
+add_library(rust_lib STATIC IMPORTED)
 add_dependencies(
     rust_lib
     rust_project
@@ -67,5 +70,4 @@ add_dependencies(
 set_target_properties(rust_lib PROPERTIES IMPORTED_LOCATION ${rust_staticlib})
 # This should be a dependency of rust_lib, but adding it as an INTERFACE lib doesn't do anything
 target_link_libraries(app PRIVATE syscall_thunk)
-
 target_link_libraries(app PUBLIC rust_lib)
