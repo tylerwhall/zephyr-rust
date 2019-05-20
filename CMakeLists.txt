@@ -58,7 +58,7 @@ ExternalProject_Add(
   "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
   "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
   xargo +nightly build --target=${rust_target} --target-dir=${rust_build_dir} --release
-  INSTALL_COMMAND sh -c "ar d ${rust_staticlib} $(ar t ${rust_staticlib} | grep compiler_builtins)"
+  INSTALL_COMMAND ""
   BUILD_BYPRODUCTS ${rust_staticlib}
 )
 

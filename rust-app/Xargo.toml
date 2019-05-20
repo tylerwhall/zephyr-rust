@@ -1,0 +1,5 @@
+[dependencies]
+core = {}
+
+[dependencies.compiler_builtins]
+path = "./compiler_builtins"
