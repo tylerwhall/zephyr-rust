@@ -1,5 +1,5 @@
 [package]
-name = "zephyr-std"
+name = "std"
 version = "0.1.0"
 authors = ["Tyler Hall <tylerwhall@gmail.com>"]
 edition = "2018"

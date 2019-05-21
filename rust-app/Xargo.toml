@@ -2,5 +2,9 @@
 core = {}
 alloc = {}
 
+[dependencies.std]
+path = "./zephyr-std"
+stage = 1
+
 [patch.crates-io.compiler_builtins]
 path = "./compiler_builtins"
