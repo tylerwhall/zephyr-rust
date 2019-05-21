@@ -118,11 +118,16 @@ Supported Architectures
 TODO
 ****
 
-* generate syscall bindings
+* syscall bindings for inline functions in kernel mode
 * println
 * alloc
-* split into zephyr-sys and zephyr crates
 * safe wrappers (threads, semaphores, etc.)
+
+Complete
+========
+
+* generate syscall bindings
+* split into zephyr-sys and zephyr crates
 
 License
 *******
