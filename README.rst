@@ -46,6 +46,7 @@ Rust toolchain
     rustup toolchain install nightly
     rustup default nightly
     rustup component add rustfmt
+    rustup component add rust-src
     rustup target add i686-unknown-linux-gnu
     rustup target add thumbv7m-none-eabi
     cargo install xargo
