@@ -8,9 +8,7 @@ edition = "2018"
 crate-type = ["staticlib"]
 
 [dependencies]
-
-[build-dependencies]
-bindgen = "0.49.0"
+zephyr-sys = { path = "./zephyr-sys" }
 
 [profile.release]
 panic = "abort"
