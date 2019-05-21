@@ -9,6 +9,7 @@ crate-type = ["staticlib"]
 
 [dependencies]
 zephyr-sys = { path = "./zephyr-sys" }
+zephyr-std = { path = "./zephyr-std" }
 
 [profile.release]
 panic = "abort"
