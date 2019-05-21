@@ -57,6 +57,7 @@ ExternalProject_Add(
   env
   "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
   "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
+  "XARGO_HOME=${rust_build_dir}/xargo"
   xargo +nightly build --target=${rust_target} --target-dir=${rust_build_dir} --release
   INSTALL_COMMAND ""
   BUILD_BYPRODUCTS ${rust_staticlib}
