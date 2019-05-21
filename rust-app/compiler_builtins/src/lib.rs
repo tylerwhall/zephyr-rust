@@ -3,7 +3,6 @@
 //! libsyntax adds "extern crate" for core and compiler_builtins when using #[no_std]
 //! The real builtins conflict with those provided by libgcc which is already used by Zephyr.
 
-#![no_std]
 // Remove implicit dependency on compiler builtins
 #![feature(compiler_builtins)]
 #![compiler_builtins]

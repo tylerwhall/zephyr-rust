@@ -1,5 +1,6 @@
 [dependencies]
 core = {}
+alloc = {}
 
-[dependencies.compiler_builtins]
+[patch.crates-io.compiler_builtins]
 path = "./compiler_builtins"
