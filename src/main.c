@@ -13,6 +13,4 @@ extern void hello_rust_user(void);
 void main(void)
 {
         hello_rust();
-        printk("Entering user mode\n");
-        k_thread_user_mode_enter((k_thread_entry_t)hello_rust_user, NULL, NULL, NULL);
 }
