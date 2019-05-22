@@ -10,7 +10,7 @@ pub extern "C" fn hello_rust() {
     }
     {
         const MSG: &str = "Hello from Rust kernel with runtime-detect syscall\n";
-        unsafe { syscalls::k_str_out(MSG.as_ptr() as *mut _, MSG.len()) };
+        unsafe { syscalls::any::k_str_out(MSG.as_ptr() as *mut _, MSG.len()) };
     }
 }
 
@@ -22,7 +22,7 @@ pub extern "C" fn hello_rust_user() {
     }
     {
         const MSG: &str = "Hello from Rust userspace with runtime-detect syscall\nNext call will crash if userspace is working.\n";
-        unsafe { syscalls::k_str_out(MSG.as_ptr() as *mut _, MSG.len()) };
+        unsafe { syscalls::any::k_str_out(MSG.as_ptr() as *mut _, MSG.len()) };
     }
 
     // This will compile, but crash if CONFIG_USERSPACE is working

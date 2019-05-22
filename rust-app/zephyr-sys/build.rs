@@ -95,18 +95,20 @@ fn main() {
         writeln!(&mut out, "pub use super::kernel::*;").unwrap();
     }
     writeln!(&mut out, "}}").unwrap();
+    writeln!(&mut out, "pub mod any {{").unwrap();
     if userspace {
         // If userspace, put the any-context functions in the root of the module
         for syscall in syscalls.user.iter() {
             writeln!(
                 &mut out,
-                "    pub use super::raw::z_anyctx_{} as {};",
+                "    pub use super::super::raw::z_anyctx_{} as {};",
                 syscall, syscall
             )
             .unwrap();
         }
     } else {
         // Else, import all kernel functions since they can be called directly
-        writeln!(&mut out, "pub use kernel::*;").unwrap();
+        writeln!(&mut out, "pub use super::kernel::*;").unwrap();
     }
+    writeln!(&mut out, "}}").unwrap();
 }
