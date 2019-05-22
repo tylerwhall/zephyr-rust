@@ -1,0 +1,12 @@
+[package]
+name = "zephyr"
+description = "Safe bindings to Zephyr kernel API"
+version = "0.1.0"
+authors = ["Tyler Hall <tylerwhall@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+zephyr-sys = { path = "../zephyr-sys" }
+
+[features]
+usermode = []
