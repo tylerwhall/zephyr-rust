@@ -61,7 +61,7 @@ ExternalProject_Add(
   "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
   "XARGO_HOME=${rust_build_dir}/xargo"
   "RUST_TARGET_PATH=${rust_src_dir}"
-  xargo +nightly build --target=${rust_target} --target-dir=${rust_build_dir} --release
+  xargo +nightly -v build --target=${rust_target} --target-dir=${rust_build_dir} --release
   INSTALL_COMMAND ""
   BUILD_BYPRODUCTS ${rust_staticlib}
 )
