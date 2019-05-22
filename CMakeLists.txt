@@ -31,6 +31,8 @@ add_custom_command(OUTPUT ${rust_syscall_macros_h}
 
 add_library(syscall_thunk OBJECT syscall_thunk.c)
 target_link_libraries(syscall_thunk zephyr_interface)
+# High level target that means all headers have been generated
+add_dependencies(syscall_thunk offsets_h)
 
 set(rust_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/rust-app)
 set(rust_build_dir ${CMAKE_CURRENT_BINARY_DIR}/rust-app)
