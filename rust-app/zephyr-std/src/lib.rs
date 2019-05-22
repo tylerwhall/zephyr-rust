@@ -49,6 +49,12 @@ pub mod io {
             Ok(())
         }
     }
+
+    #[stable(feature = "rust1", since = "1.0.0")]
+    pub type Result<T> = core::result::Result<T, Error>;
+
+    #[stable(feature = "rust1", since = "1.0.0")]
+    pub struct Error;
 }
 
 pub mod prelude;
