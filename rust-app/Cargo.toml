@@ -13,3 +13,4 @@ zephyr = { path = "./zephyr" }
 
 [profile.release]
 panic = "abort"
+lto = true
