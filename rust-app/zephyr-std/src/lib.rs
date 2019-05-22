@@ -5,6 +5,15 @@
 #[stable(feature = "rust1", since = "1.0.0")]
 pub use core::*;
 
+#[cfg(all(feature = "kernelmode", not(feature = "usermode")))]
+use ::zephyr::kernel as zephyr;
+#[cfg(all(not(feature = "kernelmode"), feature = "usermode"))]
+use ::zephyr::user as zephyr;
+#[cfg(all(feature = "kernelmode", feature = "usermode"))]
+use ::zephyr::any as zephyr;
+#[cfg(not(any(feature = "kernelmode", feature = "usermode")))]
+use ::zephyr::any as zephyr;
+
 pub mod io {
     #![stable(feature = "rust1", since = "1.0.0")]
 
@@ -17,7 +26,7 @@ pub mod io {
     impl Write for Stdout {
         #[inline(always)]
         fn write_str(&mut self, s: &str) -> core::result::Result<(), core::fmt::Error> {
-            unsafe { zephyr_sys::syscalls::any::k_str_out(s.as_ptr() as *mut _, s.len()) };
+            crate::zephyr::k_str_out(s);
             Ok(())
         }
     }
