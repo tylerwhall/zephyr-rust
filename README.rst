@@ -47,12 +47,19 @@ Rust toolchain
     rustup default nightly
     rustup component add rustfmt
     rustup component add rust-src
-    rustup target add i686-unknown-linux-gnu
-    rustup target add thumbv7m-none-eabi
     cargo install xargo
 
-This project outputs 'Hello World' to the console.  It can be built and executed
-on QEMU as follows:
+Also install clang. This is required by bindgen to generate syscall bindings.
+Else you will get this error
+
+.. code-block:: console
+
+    thread 'main' panicked at 'Unable to find libclang: "couldn\'t find any valid shared libraries matching: [\'libclang.so\', \'libclang-*.so\', \'libclang.so.*\']
+
+Build
+=====
+
+Build and run on QEMU (or posix native) as follows:
 
 Native:
 
