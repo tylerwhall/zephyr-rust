@@ -11,8 +11,6 @@ use ::zephyr::kernel as zephyr;
 use ::zephyr::user as zephyr;
 #[cfg(all(feature = "kernelmode", feature = "usermode"))]
 use ::zephyr::any as zephyr;
-#[cfg(not(any(feature = "kernelmode", feature = "usermode")))]
-use ::zephyr::any as zephyr;
 
 pub mod io {
     #![stable(feature = "rust1", since = "1.0.0")]

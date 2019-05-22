@@ -8,10 +8,3 @@ edition = "2018"
 
 [dependencies]
 zephyr = { path = "../zephyr"}
-
-[features]
-# These two feature determine whether to use user or kernel mode syscall
-# bindings. If neither or both are set, the runtime-detect syscalls will be
-# used.
-kernelmode = []
-usermode = []
