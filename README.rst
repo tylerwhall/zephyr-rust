@@ -10,6 +10,15 @@ Zephyr_ project template for building a cargo project and linking it into a Zeph
 Building and Running
 ********************
 
+Clone the repo
+==============
+
+Make sure to clone the submodules recursively. This points to modified Rust libstd.
+
+.. code-block:: console
+
+    git clone --recurse-submodules https://github.com/tylerwhall/zephyr-rust.git
+
 Zephyr setup
 ============
 

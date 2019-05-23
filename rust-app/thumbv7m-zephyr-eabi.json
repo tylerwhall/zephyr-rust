@@ -21,6 +21,7 @@
   "relocation-model": "static",
   "target-c-int-width": "32",
   "target-endian": "little",
+  "target-family": "zephyr",
   "target-pointer-width": "32",
   "vendor": ""
 }

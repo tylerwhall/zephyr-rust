@@ -1,10 +1,8 @@
 [dependencies]
-core = {}
-alloc = {}
+std = {}
 
-[dependencies.std]
-path = "./zephyr-std"
-stage = 1
+[patch.crates-io.libc]
+path = "./libc"
 
 [patch.crates-io.compiler_builtins]
 path = "./compiler_builtins"

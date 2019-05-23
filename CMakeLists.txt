@@ -64,6 +64,7 @@ add_custom_command(OUTPUT ${rust_staticlib}
           "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
           "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
           "XARGO_HOME=${rust_build_dir}/xargo"
+          "XARGO_RUST_SRC=${rust_src_dir}/rust/src"
           "RUST_TARGET_PATH=${rust_src_dir}"
           xargo +nightly-2019-05-22 -v build --target=${rust_target} --target-dir=${rust_build_dir} --release
 )
