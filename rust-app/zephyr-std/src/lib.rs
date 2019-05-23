@@ -57,6 +57,16 @@ pub mod io {
     pub struct Error;
 }
 
+pub mod iter {
+    #![stable(feature = "rust1", since = "1.0.0")]
+
+    #[stable(feature = "rust1", since = "1.0.0")]
+    pub use core::iter::IntoIterator;
+
+    #[stable(feature = "rust1", since = "1.0.0")]
+    pub use core::iter::Iterator;
+}
+
 pub mod option {
     #![stable(feature = "rust1", since = "1.0.0")]
 
