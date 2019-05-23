@@ -41,10 +41,15 @@ Acquire Zephyr source, export ZEPHYR_BASE, and source the Zephyr env script.
 Rust toolchain
 ==============
 
+A nightly compiler is required to use unstable features that are unavoidable
+when implementing libstd. The nightly date is arbitrary, but needs to be locked
+so long as we are using rust-src from rustup. The interface between std and
+core is not stable so we need to look the version for build reproducibility.
+
 .. code-block:: console
 
-    rustup toolchain install nightly
-    rustup default nightly
+    rustup toolchain install nightly-2019-05-22
+    rustup default nightly-2019-05-22
     rustup component add rustfmt
     rustup component add rust-src
     cargo install xargo
