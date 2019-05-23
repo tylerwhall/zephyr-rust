@@ -1,26 +1,14 @@
-use core::fmt::Write;
+use std::io::Write;
 
 #[no_mangle]
 pub extern "C" fn hello_rust() {
-    writeln!(&mut std::io::Stdout, "Hello Rust writeln").unwrap();
+    writeln!(std::io::stdout(), "Hello Rust writeln").unwrap();
     zephyr::kernel::k_str_out("Hello from Rust kernel with direct kernel call\n");
     zephyr::any::k_str_out("Hello from Rust kernel with runtime-detect syscall\n");
 
     {
         let boxed = Box::new(1u8);
-        writeln!(&mut std::io::Stdout, "Boxed value {}", boxed).unwrap();
-    }
-
-    {
-        let io_results: [std::io::Result<()>; 2] = [Ok(()), Err(std::io::Error)];
-
-        for io in &io_results {
-            if io.is_ok() {
-                writeln!(&mut std::io::Stdout, "io::Result is Ok").unwrap();
-            } else {
-                writeln!(&mut std::io::Stdout, "io::Result is Error").unwrap();
-            }
-        }
+        writeln!(std::io::stdout(), "Boxed value {}", boxed).unwrap();
     }
 
     zephyr::kernel::k_thread_user_mode_enter(|| {
