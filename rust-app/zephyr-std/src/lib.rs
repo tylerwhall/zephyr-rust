@@ -67,6 +67,9 @@ pub mod iter {
     pub use core::iter::Iterator;
 }
 
+#[stable(feature = "rust1", since = "1.0.0")]
+pub use core::ops;
+
 pub mod option {
     #![stable(feature = "rust1", since = "1.0.0")]
 
