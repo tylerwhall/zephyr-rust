@@ -20,7 +20,6 @@ else()
 endif()
 
 set(rust_syscall_macros_h ${ZEPHYR_BINARY_DIR}/include/generated/rust_syscall_macros.h)
-add_custom_target(rust_syscall_macros_h_target DEPENDS ${rust_syscall_macros_h})
 add_custom_command(OUTPUT ${rust_syscall_macros_h}
   COMMAND
   ${PYTHON_EXECUTABLE}
@@ -45,32 +44,21 @@ set(external_project_cflags
     "${includes} ${definitions} -imacros ${AUTOCONF_H}"
 )
 
-include(ExternalProject)
-
-ExternalProject_Add(
-  rust_project
-  PREFIX     ${rust_build_dir}
-  SOURCE_DIR ${rust_src_dir}
-  BUILD_IN_SOURCE 1
-  BUILD_ALWAYS 1
-  DEPENDS rust_syscall_macros_h_target
-  CONFIGURE_COMMAND ""
-  BUILD_COMMAND
-  env
-  "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
-  "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
-  "XARGO_HOME=${rust_build_dir}/xargo"
-  "RUST_TARGET_PATH=${rust_src_dir}"
-  xargo +nightly-2019-05-22 -v build --target=${rust_target} --target-dir=${rust_build_dir} --release
-  INSTALL_COMMAND ""
-  BUILD_BYPRODUCTS ${rust_staticlib}
+add_custom_command(OUTPUT ${rust_staticlib}
+    WORKING_DIRECTORY ${rust_src_dir}
+    DEPENDS ${rust_syscall_macros_h}
+    COMMAND
+          env
+          "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
+          "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
+          "XARGO_HOME=${rust_build_dir}/xargo"
+          "RUST_TARGET_PATH=${rust_src_dir}"
+          xargo +nightly-2019-05-22 -v build --target=${rust_target} --target-dir=${rust_build_dir} --release
 )
+add_custom_target(rust_project DEPENDS ${rust_staticlib})
 
 add_library(rust_lib STATIC IMPORTED)
-add_dependencies(
-    rust_lib
-    rust_project
-)
+add_dependencies(rust_lib rust_project)
 set_target_properties(rust_lib PROPERTIES IMPORTED_LOCATION ${rust_staticlib})
 # This should be a dependency of rust_lib, but adding it as an INTERFACE lib doesn't do anything
 target_link_libraries(app PRIVATE syscall_thunk)
