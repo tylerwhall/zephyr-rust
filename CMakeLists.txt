@@ -33,6 +33,17 @@ target_link_libraries(syscall_thunk zephyr_interface)
 # High level target that means all headers have been generated
 add_dependencies(syscall_thunk offsets_h)
 
+set(rust_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/zephyr-bindgen)
+set(rust_build_dir ${CMAKE_CURRENT_BINARY_DIR}/zephyr-bindgen)
+set(zephyr_bindgen ${rust_build_dir}/release/zephyr-bindgen)
+
+add_custom_command(OUTPUT ${zephyr_bindgen}
+    WORKING_DIRECTORY ${rust_src_dir}
+    DEPENDS ${rust_syscall_macros_h}
+    COMMAND
+          cargo -v build --release --target-dir=${rust_build_dir}
+)
+
 set(rust_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/rust-app)
 set(rust_build_dir ${CMAKE_CURRENT_BINARY_DIR}/rust-app)
 set(rust_staticlib ${rust_build_dir}/${rust_target}/release/librust_app.a)
@@ -46,9 +57,10 @@ set(external_project_cflags
 
 add_custom_command(OUTPUT ${rust_staticlib}
     WORKING_DIRECTORY ${rust_src_dir}
-    DEPENDS ${rust_syscall_macros_h}
+    DEPENDS ${rust_syscall_macros_h} ${zephyr_bindgen}
     COMMAND
           env
+          "ZEPHYR_BINDGEN=${zephyr_bindgen}"
           "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
           "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
           "XARGO_HOME=${rust_build_dir}/xargo"

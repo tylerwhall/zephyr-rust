@@ -5,6 +5,3 @@ authors = ["Tyler Hall <tylerwhall@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-
-[build-dependencies]
-bindgen = "0.49.0"
