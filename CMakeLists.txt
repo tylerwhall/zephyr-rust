@@ -20,6 +20,7 @@ else()
 endif()
 
 set(rust_syscall_macros_h ${ZEPHYR_BINARY_DIR}/include/generated/rust_syscall_macros.h)
+add_custom_target(rust_syscall_macros_h_target DEPENDS ${rust_syscall_macros_h})
 add_custom_command(OUTPUT ${rust_syscall_macros_h}
   COMMAND
   ${PYTHON_EXECUTABLE}
@@ -36,6 +37,7 @@ add_dependencies(syscall_thunk offsets_h)
 set(rust_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/zephyr-bindgen)
 set(rust_build_dir ${CMAKE_CURRENT_BINARY_DIR}/zephyr-bindgen)
 set(zephyr_bindgen ${rust_build_dir}/release/zephyr-bindgen)
+add_custom_target(zephyr_bindgen_target DEPENDS ${zephyr_bindgen})
 
 add_custom_command(OUTPUT ${zephyr_bindgen}
     WORKING_DIRECTORY ${rust_src_dir}
@@ -55,21 +57,29 @@ set(external_project_cflags
     "${includes} ${definitions} -imacros ${AUTOCONF_H}"
 )
 
-add_custom_command(OUTPUT ${rust_staticlib}
-    WORKING_DIRECTORY ${rust_src_dir}
-    DEPENDS ${rust_syscall_macros_h} ${zephyr_bindgen}
-    COMMAND
-          env
-          "ZEPHYR_BINDGEN=${zephyr_bindgen}"
-          "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
-          "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
-          "SYSROOT=${rust_build_dir}/sysroot"
-          "RUST_TARGET_PATH=${rust_src_dir}"
-          "CARGO_TARGET_DIR=${rust_build_dir}"
-          "RUST_TARGET=${rust_target}"
-          ./build.sh
+include(ExternalProject)
+
+ExternalProject_Add(
+    rust_project
+    PREFIX     ${rust_build_dir}
+    SOURCE_DIR ${rust_src_dir}
+    BUILD_IN_SOURCE 1
+    BUILD_ALWAYS 1
+    DEPENDS rust_syscall_macros_h_target zephyr_bindgen_target
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND
+        env
+        "ZEPHYR_BINDGEN=${zephyr_bindgen}"
+        "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
+        "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
+        "SYSROOT=${rust_build_dir}/sysroot"
+        "RUST_TARGET_PATH=${rust_src_dir}"
+        "CARGO_TARGET_DIR=${rust_build_dir}"
+        "RUST_TARGET=${rust_target}"
+        ./build.sh
+    INSTALL_COMMAND ""
+    BUILD_BYPRODUCTS ${rust_staticlib}
 )
-add_custom_target(rust_project DEPENDS ${rust_staticlib})
 
 add_library(rust_lib STATIC IMPORTED)
 add_dependencies(rust_lib rust_project)
