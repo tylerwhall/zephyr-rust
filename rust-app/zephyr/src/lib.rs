@@ -4,9 +4,15 @@
 macro_rules! zephyr_bindings {
     ($context:ident) => {
         #[inline(always)]
-        pub fn k_str_out(s: &str) {
+        pub fn k_str_out_raw(s: &[u8]) {
             unsafe { zephyr_sys::syscalls::$context::k_str_out(s.as_ptr() as *mut _, s.len()) };
         }
+
+        #[inline(always)]
+        pub fn k_str_out(s: &str) {
+            k_str_out_raw(s.as_bytes())
+        }
+
     };
 }
 
