@@ -47,7 +47,7 @@ fn main() {
         // bindings for.
         .header("wrapper.h")
         .use_core()
-        .ctypes_prefix("super::ctypes")
+        .ctypes_prefix("libc")
         .parse_callbacks(Box::new(callbacks.clone()))
         // XXX: doesn't handle args with spaces in quotes
         .clang_args(flags.split(" "))

@@ -12,7 +12,7 @@ macro_rules! zephyr_bindings {
 
 pub mod kernel {
     use core::ptr;
-    use zephyr_sys::ctypes::c_void;
+    use libc::c_void;
 
     zephyr_bindings!(kernel);
 
