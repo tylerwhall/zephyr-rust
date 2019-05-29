@@ -12,11 +12,12 @@ macro_rules! zephyr_bindings {
         pub fn k_str_out(s: &str) {
             k_str_out_raw(s.as_bytes())
         }
-
     };
 }
 
+/// Functions only accessible from kernel mode
 pub mod kernel {
+    use core::alloc::{GlobalAlloc, Layout};
     use core::ptr;
     use libc::c_void;
 
@@ -28,7 +29,7 @@ pub mod kernel {
     {
         extern "C" fn run_closure<F>(p1: *mut c_void, _p2: *mut c_void, _p3: *mut c_void)
         where
-            F: FnOnce()
+            F: FnOnce(),
         {
             let f = unsafe { ptr::read(p1 as *mut F) };
             f();
@@ -42,6 +43,25 @@ pub mod kernel {
             )
         }
         unreachable!()
+    }
+
+    pub struct KMalloc;
+
+    unsafe impl GlobalAlloc for KMalloc {
+        #[inline]
+        unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+            zephyr_sys::raw::k_malloc(layout.size()) as *mut _
+        }
+
+        #[inline]
+        unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+            zephyr_sys::raw::k_calloc(1, layout.size()) as *mut _
+        }
+
+        #[inline]
+        unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
+            zephyr_sys::raw::k_free(ptr as *mut _)
+        }
     }
 }
 
