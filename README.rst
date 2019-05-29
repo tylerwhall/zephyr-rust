@@ -61,7 +61,6 @@ core is not stable so we need to look the version for build reproducibility.
     rustup default nightly-2019-05-22
     rustup component add rustfmt
     rustup component add rust-src
-    cargo install xargo
 
 Also install clang. This is required by bindgen to generate syscall bindings.
 Else you will get this error

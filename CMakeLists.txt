@@ -63,10 +63,11 @@ add_custom_command(OUTPUT ${rust_staticlib}
           "ZEPHYR_BINDGEN=${zephyr_bindgen}"
           "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
           "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
-          "XARGO_HOME=${rust_build_dir}/xargo"
-          "XARGO_RUST_SRC=${rust_src_dir}/rust/src"
+          "SYSROOT=${rust_build_dir}/sysroot"
           "RUST_TARGET_PATH=${rust_src_dir}"
-          xargo +nightly-2019-05-22 -v build --target=${rust_target} --target-dir=${rust_build_dir} --release
+          "CARGO_TARGET_DIR=${rust_build_dir}"
+          "RUST_TARGET=${rust_target}"
+          ./build.sh
 )
 add_custom_target(rust_project DEPENDS ${rust_staticlib})
 
