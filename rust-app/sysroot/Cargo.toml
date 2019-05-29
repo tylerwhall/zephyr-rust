@@ -21,3 +21,4 @@ path = "../rust/src/tools/rustc-std-workspace-core"
 [profile.release]
 lto = true
 panic = "abort"
+debug = true
