@@ -1,14 +1,12 @@
-use std::io::Write;
-
 #[no_mangle]
 pub extern "C" fn hello_rust() {
-    writeln!(std::io::stdout(), "Hello Rust writeln").unwrap();
+    println!("Hello Rust println");
     zephyr::kernel::k_str_out("Hello from Rust kernel with direct kernel call\n");
     zephyr::any::k_str_out("Hello from Rust kernel with runtime-detect syscall\n");
 
     {
         let boxed = Box::new(1u8);
-        writeln!(std::io::stdout(), "Boxed value {}", boxed).unwrap();
+        println!("Boxed value {}", boxed);
     }
 
     // test std::ops::{Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive}
