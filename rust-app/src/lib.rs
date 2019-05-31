@@ -1,3 +1,9 @@
+#[macro_use]
+extern crate log;
+
+extern crate zephyr_logger;
+
+use log::LevelFilter;
 use zephyr_macros::k_mutex_define;
 
 k_mutex_define!(TEST_MUTEX);
@@ -34,6 +40,14 @@ pub extern "C" fn hello_rust() {
     }
 
     zephyr::kernel::k_thread_user_mode_enter(|| {
+        zephyr_logger::init(LevelFilter::Info);
+
+        trace!("TEST: trace!()");
+        debug!("TEST: debug!()");
+        info!("TEST: info!()");
+        warn!("TEST: warn!()");
+        error!("TEST: error!()");
+
         zephyr::user::k_str_out("Hello from Rust userspace with forced user-mode syscall\n");
         zephyr::any::k_str_out("Hello from Rust userspace with runtime-detect syscall\nNext call will crash if userspace is working.\n");
 
