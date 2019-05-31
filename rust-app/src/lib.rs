@@ -1,8 +1,17 @@
+use zephyr_macros::k_mutex_define;
+
+k_mutex_define!(TEST_MUTEX);
+
 #[no_mangle]
 pub extern "C" fn hello_rust() {
     println!("Hello Rust println");
     zephyr::kernel::k_str_out("Hello from Rust kernel with direct kernel call\n");
     zephyr::any::k_str_out("Hello from Rust kernel with runtime-detect syscall\n");
+
+    unsafe {
+        TEST_MUTEX.lock();
+        TEST_MUTEX.unlock();
+    }
 
     {
         let boxed = Box::new(1u8);

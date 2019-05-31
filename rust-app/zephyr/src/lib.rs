@@ -1,6 +1,21 @@
 #![no_std]
 #![feature(never_type)]
 
+/// Convert a negative error code to a Result
+trait NegErr {
+    fn neg_err(&self) -> Result<u32, u32>;
+}
+
+impl NegErr for i32 {
+    fn neg_err(&self) -> Result<u32, u32> {
+        if *self >= 0 {
+            Ok(*self as u32)
+        } else {
+            Err((-*self) as u32)
+        }
+    }
+}
+
 macro_rules! zephyr_bindings {
     ($context:ident) => {
         #[inline(always)]
@@ -20,6 +35,8 @@ pub mod kernel {
     use core::alloc::{GlobalAlloc, Layout};
     use core::ptr;
     use libc::c_void;
+
+    use super::NegErr;
 
     zephyr_bindings!(kernel);
 
@@ -61,6 +78,52 @@ pub mod kernel {
         #[inline]
         unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
             zephyr_sys::raw::k_free(ptr as *mut _)
+        }
+    }
+
+    use core::cell::UnsafeCell;
+    use core::mem::MaybeUninit;
+
+    pub struct KMutex(UnsafeCell<MaybeUninit<zephyr_sys::raw::k_mutex>>);
+
+    unsafe impl Send for KMutex {}
+    unsafe impl Sync for KMutex {}
+
+    impl KMutex {
+        pub const fn uninit() -> Self {
+            KMutex(UnsafeCell::new(MaybeUninit::uninit()))
+        }
+
+        #[inline]
+        pub unsafe fn init(&self) {
+            zephyr_sys::syscalls::kernel::k_mutex_init((*self.0.get()).as_mut_ptr())
+        }
+
+        pub unsafe fn lock(&self) {
+            zephyr_sys::syscalls::kernel::k_mutex_lock(
+                (*self.0.get()).as_mut_ptr(),
+                zephyr_sys::raw::K_FOREVER,
+            )
+            .neg_err()
+            .expect("mutex lock");
+        }
+
+        pub unsafe fn unlock(&self) {
+            zephyr_sys::syscalls::kernel::k_mutex_unlock((*self.0.get()).as_mut_ptr());
+        }
+
+        pub unsafe fn try_lock(&self) -> bool {
+            match zephyr_sys::syscalls::kernel::k_mutex_lock(
+                (*self.0.get()).as_mut_ptr(),
+                zephyr_sys::raw::K_NO_WAIT as i32,
+            )
+            .neg_err()
+            {
+                Ok(_) => Ok(true),
+                Err(zephyr_sys::raw::EAGAIN) => Ok(false),
+                Err(e) => Err(e),
+            }
+            .expect("mutex try_lock")
         }
     }
 }
