@@ -8,6 +8,9 @@ pub extern "C" fn hello_rust() {
     zephyr::kernel::k_str_out("Hello from Rust kernel with direct kernel call\n");
     zephyr::any::k_str_out("Hello from Rust kernel with runtime-detect syscall\n");
 
+    println!("Time {:?}", zephyr::any::k_uptime_get_ms());
+    println!("Time {:?}", std::time::Instant::now());
+
     unsafe {
         TEST_MUTEX.lock();
         TEST_MUTEX.unlock();

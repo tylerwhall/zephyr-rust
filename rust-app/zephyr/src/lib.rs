@@ -1,6 +1,11 @@
 #![no_std]
 #![feature(never_type)]
 
+#[macro_use]
+extern crate derive_more;
+
+use core::time::Duration;
+
 /// Convert a negative error code to a Result
 trait NegErr {
     fn neg_err(&self) -> Result<u32, u32>;
@@ -16,6 +21,45 @@ impl NegErr for i32 {
     }
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, From)]
+pub struct TimeMs(i64);
+
+impl TimeMs {
+    pub const fn zero() -> Self {
+        Self(0)
+    }
+
+    pub fn checked_add(self, rhs: Self) -> Option<Self> {
+        self.0.checked_add(rhs.0).map(Into::into)
+    }
+
+    pub fn checked_sub(self, rhs: Self) -> Option<Self> {
+        self.0.checked_sub(rhs.0).map(Into::into)
+    }
+
+    pub fn checked_add_duration(self, other: &Duration) -> Option<Self> {
+        self.checked_add(other.into())
+    }
+
+    pub fn checked_sub_duration(self, other: &Duration) -> Option<Self> {
+        self.checked_sub(other.into())
+    }
+}
+
+impl From<&Duration> for TimeMs {
+    fn from(dur: &Duration) -> Self {
+        TimeMs(dur.as_secs() as i64 * 1000 + dur.subsec_millis() as i64)
+    }
+}
+
+impl From<TimeMs> for Duration {
+    fn from(dur: TimeMs) -> Self {
+        let secs = dur.0 / 1000;
+        let ms = (dur.0 % 1000) as u32;
+        Duration::new(secs as u64, ms * 1000 * 1000)
+    }
+}
+
 macro_rules! zephyr_bindings {
     ($context:ident) => {
         #[inline(always)]
@@ -26,6 +70,11 @@ macro_rules! zephyr_bindings {
         #[inline(always)]
         pub fn k_str_out(s: &str) {
             k_str_out_raw(s.as_bytes())
+        }
+
+        #[inline(always)]
+        pub fn k_uptime_get_ms() -> crate::TimeMs {
+            unsafe { crate::TimeMs(zephyr_sys::syscalls::$context::k_uptime_get()) }
         }
     };
 }
