@@ -1,0 +1,8 @@
+[package]
+name = "zephyr-logger"
+version = "0.1.0"
+authors = ["Chris Redmon <credmonster@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+log = "0.4"
