@@ -11,6 +11,8 @@ crate-type = ["staticlib"]
 zephyr-sys = { path = "./zephyr-sys" }
 zephyr = { path = "./zephyr" }
 zephyr-macros = { path = "./zephyr-macros" }
+zephyr-logger = { path = "./zephyr-logger" }
+log = "0.4"
 
 [profile.release]
 panic = "abort"
