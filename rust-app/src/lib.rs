@@ -3,6 +3,8 @@ extern crate log;
 
 extern crate zephyr_logger;
 
+use std::time::Duration;
+
 use log::LevelFilter;
 use zephyr_macros::k_mutex_define;
 
@@ -14,6 +16,7 @@ pub extern "C" fn hello_rust() {
     zephyr::kernel::k_str_out("Hello from Rust kernel with direct kernel call\n");
     zephyr::any::k_str_out("Hello from Rust kernel with runtime-detect syscall\n");
 
+    std::thread::sleep(Duration::from_millis(1));
     println!("Time {:?}", zephyr::any::k_uptime_get_ms());
     println!("Time {:?}", std::time::Instant::now());
 
