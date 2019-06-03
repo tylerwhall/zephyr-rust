@@ -1,9 +1,9 @@
 use core::time::Duration;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, From)]
-pub struct TimeMs(i64);
+pub struct InstantMs(i64);
 
-impl TimeMs {
+impl InstantMs {
     pub const fn zero() -> Self {
         Self(0)
     }
@@ -25,14 +25,26 @@ impl TimeMs {
     }
 }
 
-impl From<&Duration> for TimeMs {
+impl From<&Duration> for InstantMs {
     fn from(dur: &Duration) -> Self {
-        TimeMs(dur.as_secs() as i64 * 1000 + dur.subsec_millis() as i64)
+        InstantMs(dur.as_secs() as i64 * 1000 + dur.subsec_millis() as i64)
     }
 }
 
-impl From<TimeMs> for Duration {
-    fn from(dur: TimeMs) -> Self {
+impl From<InstantMs> for Duration {
+    fn from(dur: InstantMs) -> Self {
+        let secs = dur.0 / 1000;
+        let ms = (dur.0 % 1000) as u32;
+        Duration::new(secs as u64, ms * 1000 * 1000)
+    }
+}
+
+/// 32-bit time in ms. Used for sleep duration.
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, From, Into)]
+pub struct DurationMs(i32);
+
+impl From<DurationMs> for Duration {
+    fn from(dur: DurationMs) -> Self {
         let secs = dur.0 / 1000;
         let ms = (dur.0 % 1000) as u32;
         Duration::new(secs as u64, ms * 1000 * 1000)

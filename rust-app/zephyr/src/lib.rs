@@ -36,8 +36,13 @@ macro_rules! zephyr_bindings {
         }
 
         #[inline(always)]
-        pub fn k_uptime_get_ms() -> crate::TimeMs {
-            unsafe { crate::TimeMs::from(zephyr_sys::syscalls::$context::k_uptime_get()) }
+        pub fn k_uptime_get_ms() -> crate::InstantMs {
+            unsafe { crate::InstantMs::from(zephyr_sys::syscalls::$context::k_uptime_get()) }
+        }
+
+        #[inline(always)]
+        pub fn k_sleep(ms: crate::DurationMs) -> crate::DurationMs {
+            unsafe { crate::DurationMs::from(zephyr_sys::syscalls::$context::k_sleep(ms.into())) }
         }
     };
 }
