@@ -135,18 +135,26 @@ Supported Architectures
 * x86
 * armv7m
 
+Really anything that works with Zephyr and Rust should work. Only need to
+define a target.json and add a case for it in CMakelists.
+
 TODO
 ****
 
-* syscall bindings for inline functions in kernel mode
-* println
-* alloc
+* thread local storage
+* alloc from user mode
+* abstraction for pointers to kernel objects
 * safe wrappers (threads, semaphores, etc.)
+* panic
+* test runner
 
 Complete
 ========
 
-* generate syscall bindings
+* generate syscall bindings (including inline functions in kernel mode)
+* minimal port of rust libstd
+* println
+* alloc from kernel mode (Box)
 * split into zephyr-sys and zephyr crates
 
 License
