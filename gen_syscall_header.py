@@ -129,9 +129,23 @@ def gen_defines_inner(ret, argc, kernel_only=False, user_only=False, define=Fals
     newline()
     sys.stdout.write("\t{")
     newline()
-    sys.stdout.write("__builtin_unreachable();")
+    sys.stdout.write("\t\t__builtin_unreachable();")
     newline()
     sys.stdout.write("\t}")
+    newline()
+
+    gen_fn(ret, argc, "z_kernelctx_##name", extern=True)
+    newline()
+    sys.stdout.write("\t{")
+    newline()
+    if define:
+        sys.stdout.write("\t\t")
+        gen_call_impl(ret, argc)
+    sys.stdout.write("\t}")
+
+    if kernel_only:
+        sys.stdout.write("\n\n");
+        return
     newline()
 
     gen_fn(ret, argc, "z_userctx_##name", extern=True)
@@ -190,10 +204,16 @@ sys.stdout.write("#ifndef GEN_SYSCALL_H\n#define GEN_SYSCALL_H\n\n")
 sys.stdout.write("#include <syscall.h>\n")
 
 for i in range(11):
-    sys.stdout.write("#if defined(__ZEPHYR_DEFINE_SYSCALLS__) && defined(CONFIG_USERSPACE)\n")
+    sys.stdout.write("#if defined(__ZEPHYR_DEFINE_SYSCALLS__)\n")
+
+    sys.stdout.write("#if defined(CONFIG_USERSPACE)\n")
     gen_defines(i, define=True)
     sys.stdout.write("#else\n")
-    gen_defines(i, kernel_only=True)
+    gen_defines(i, define=True, kernel_only=True)
+    sys.stdout.write("#endif\n\n")
+
+    sys.stdout.write("#else\n")
+    gen_defines(i)
     sys.stdout.write("#endif\n\n")
 
 sys.stdout.write("#endif /* GEN_SYSCALL_H */\n")

@@ -13,7 +13,7 @@ struct CallbacksInner {
     /// k_impl_* real functions that bindgen picked up
     kernel: Vec<String>,
     /// z_anyctx_* definitions that we generate for every syscall
-    user: Vec<String>,
+    all: Vec<String>,
 }
 #[derive(Clone, Debug, Default)]
 struct Callbacks(Arc<Mutex<CallbacksInner>>);
@@ -26,7 +26,7 @@ impl ParseCallbacks for Callbacks {
         if name.starts_with(KERNEL) {
             inner.kernel.push(name[KERNEL.len()..].into());
         } else if name.starts_with(ANY) {
-            inner.user.push(name[ANY.len()..].into());
+            inner.all.push(name[ANY.len()..].into());
         }
         None
     }
@@ -67,22 +67,39 @@ fn main() {
     // Namespace aliases to syscalls by their valid contexts
     let mut out = File::create(out_path.join("syscalls.rs")).unwrap();
     let syscalls = callbacks.0.lock().unwrap();
+
+    // The kernel impl of some syscalls are inline. We generate C thunks with the "z_kernelctx"
+    // prefix for all kernel syscall functions regardless of whether they are inline. If they are
+    // not inline, we would rather have the rust code call the zephyr symbol directly instead of
+    // using the thunk. The unused thunks for the real functions get garbage collected by the
+    // linker. Here we get the set of syscalls that do not have a direct kernel z_impl symbol.
+    let mut kernel_inline = syscalls.all.clone();
+    kernel_inline.retain(|call| !syscalls.kernel.iter().any(|k| k == call));
+
     writeln!(&mut out, "pub mod kernel {{").unwrap();
+    // Directly reference the z_impl kernel function for those that exist
     for syscall in syscalls.kernel.iter() {
-        if syscalls.user.iter().any(|c| c == syscall) {
-            writeln!(
-                &mut out,
-                "    pub use super::super::raw::z_impl_{} as {};",
-                syscall, syscall
-            )
-            .unwrap();
-        }
+        writeln!(
+            &mut out,
+            "    pub use super::super::raw::z_impl_{} as {};",
+            syscall, syscall
+        )
+        .unwrap();
+    }
+    // For inline functions, use our generated C thunk
+    for syscall in kernel_inline.iter() {
+        writeln!(
+            &mut out,
+            "    pub use super::super::raw::z_kernelctx_{} as {};",
+            syscall, syscall
+        )
+        .unwrap();
     }
     writeln!(&mut out, "}}").unwrap();
     writeln!(&mut out, "pub mod user {{").unwrap();
     if userspace {
         // If userspace enabled, output each userspace-context syscall here
-        for syscall in syscalls.user.iter() {
+        for syscall in syscalls.all.iter() {
             writeln!(
                 &mut out,
                 "    pub use super::super::raw::z_userctx_{} as {};",
@@ -98,7 +115,7 @@ fn main() {
     writeln!(&mut out, "pub mod any {{").unwrap();
     if userspace {
         // If userspace, put the any-context functions in the root of the module
-        for syscall in syscalls.user.iter() {
+        for syscall in syscalls.all.iter() {
             writeln!(
                 &mut out,
                 "    pub use super::super::raw::z_anyctx_{} as {};",
