@@ -1,3 +1,7 @@
+// Work around compile error on x86 with clang < 3.9.0 where __float128 is not
+// defined
+#define _GCC_MAX_ALIGN_T
+
 #include <rust_syscall_macros.h>
 #include <kernel.h>
 
