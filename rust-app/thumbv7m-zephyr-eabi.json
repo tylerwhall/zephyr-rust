@@ -14,7 +14,7 @@
   "executables": true,
   "linker": "rust-lld",
   "linker-flavor": "ld.lld",
-  "llvm-target": "thumbv7m-none-eabi",
+  "llvm-target": "thumbv7m-none-gnueabi",
   "max-atomic-width": 32,
   "os": "zephyr",
   "panic-strategy": "abort",
