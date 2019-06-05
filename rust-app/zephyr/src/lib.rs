@@ -4,6 +4,8 @@
 #[macro_use]
 extern crate derive_more;
 
+pub mod kobj;
+pub mod mutex;
 mod time;
 
 pub use time::*;
@@ -23,8 +25,22 @@ impl NegErr for i32 {
     }
 }
 
+pub mod context {
+    /// Kernel, user, or runtime-detect (any)
+    pub unsafe trait Context {}
+
+    pub struct Kernel;
+    unsafe impl Context for Kernel {}
+
+    pub struct User;
+    unsafe impl Context for User {}
+
+    pub struct Any;
+    unsafe impl Context for Any {}
+}
+
 macro_rules! zephyr_bindings {
-    ($context:ident) => {
+    ($context:ident, $context_struct:path) => {
         #[inline(always)]
         pub fn k_str_out_raw(s: &[u8]) {
             unsafe { zephyr_sys::syscalls::$context::k_str_out(s.as_ptr() as *mut _, s.len()) };
@@ -44,6 +60,23 @@ macro_rules! zephyr_bindings {
         pub fn k_sleep(ms: crate::DurationMs) -> crate::DurationMs {
             unsafe { crate::DurationMs::from(zephyr_sys::syscalls::$context::k_sleep(ms.into())) }
         }
+
+        impl crate::mutex::MutexSyscalls for $context_struct {
+            unsafe fn k_mutex_init(mutex: *mut zephyr_sys::raw::k_mutex) {
+                zephyr_sys::syscalls::$context::k_mutex_init(mutex)
+            }
+
+            unsafe fn k_mutex_lock(
+                mutex: *mut zephyr_sys::raw::k_mutex,
+                timeout: zephyr_sys::raw::s32_t,
+            ) -> libc::c_int {
+                zephyr_sys::syscalls::$context::k_mutex_lock(mutex, timeout)
+            }
+
+            unsafe fn k_mutex_unlock(mutex: *mut zephyr_sys::raw::k_mutex) {
+                zephyr_sys::syscalls::$context::k_mutex_unlock(mutex)
+            }
+        }
     };
 }
 
@@ -55,15 +88,15 @@ pub mod kernel {
 
     use super::NegErr;
 
-    zephyr_bindings!(kernel);
+    zephyr_bindings!(kernel, crate::context::Kernel);
 
     pub fn k_thread_user_mode_enter<F>(mut f: F) -> !
     where
-        F: FnOnce(),
+        F: FnOnce() + Send + Sync,
     {
         extern "C" fn run_closure<F>(p1: *mut c_void, _p2: *mut c_void, _p3: *mut c_void)
         where
-            F: FnOnce(),
+            F: FnOnce() + Send + Sync,
         {
             let f = unsafe { ptr::read(p1 as *mut F) };
             f();
@@ -149,7 +182,7 @@ pub mod user {
     #[cfg(feature = "have_std")]
     use std::ffi::CStr;
 
-    zephyr_bindings!(user);
+    zephyr_bindings!(user, crate::context::User);
 
     #[cfg(feature = "have_std")]
     pub struct ZephyrDevice(*mut zephyr_sys::raw::device);
@@ -183,5 +216,5 @@ pub mod user {
 }
 
 pub mod any {
-    zephyr_bindings!(any);
+    zephyr_bindings!(any, crate::context::Any);
 }

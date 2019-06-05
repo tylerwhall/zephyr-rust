@@ -17,18 +17,19 @@ pub fn k_mutex_define(item: TokenStream) -> TokenStream {
         );
     };
 
-    let section = Literal::string(&format!("_k_mutex.static.{}", ident));
+    let section = Literal::string(&format!("._k_mutex.static.{}", ident));
     let ctor = Ident::new(&format!("_rust_mutex_init_{}", ident), ident.span());
     let ctor_ptr = Ident::new(&format!("_ctor_rust_mutex_init_{}", ident), ident.span());
     let expanded = quote! {
         // The static storage for the mutex, itself
         #[link_section = #section]
-        static #ident: zephyr::kernel::KMutex = zephyr::kernel::KMutex::uninit();
+        static #ident: zephyr::mutex::global::k_mutex = unsafe { zephyr::mutex::global::k_mutex::uninit() };
 
         // A constructor function that calls its init
         #[allow(non_snake_case)]
         extern "C" fn #ctor() {
-            unsafe { #ident.init() }
+            use zephyr::mutex::RawMutex;
+            unsafe { #ident.init::<zephyr::context::Kernel>() }
         }
 
         // Add a pointer to the constructor to .ctors table

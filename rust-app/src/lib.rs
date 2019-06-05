@@ -6,9 +6,28 @@ extern crate zephyr_logger;
 use std::time::Duration;
 
 use log::LevelFilter;
-use zephyr_macros::k_mutex_define;
 
-k_mutex_define!(TEST_MUTEX);
+use zephyr::mutex::*;
+
+zephyr_macros::k_mutex_define!(MUTEX);
+
+fn mutex_test() {
+    let data = MutexData::new(1u32);
+
+    // Bind the static mutex to our local data. This would make more sense if
+    // the data were static, but that requires app mem regions for user mode.
+    let mutex = unsafe { Mutex::new(&MUTEX, &data) };
+
+    unsafe {
+        // No safe interface implemented yet
+        let current = zephyr_sys::syscalls::any::k_current_get();
+        zephyr_sys::syscalls::any::k_object_access_grant(mutex.kobj(), current);
+    }
+
+    zephyr::any::k_str_out("Locking\n");
+    let _val = mutex.lock::<zephyr::context::Any>();
+    zephyr::any::k_str_out("Unlocking\n");
+}
 
 #[no_mangle]
 pub extern "C" fn hello_rust() {
@@ -20,10 +39,7 @@ pub extern "C" fn hello_rust() {
     println!("Time {:?}", zephyr::any::k_uptime_get_ms());
     println!("Time {:?}", std::time::Instant::now());
 
-    unsafe {
-        TEST_MUTEX.lock();
-        TEST_MUTEX.unlock();
-    }
+    mutex_test();
 
     {
         let boxed = Box::new(1u8);
@@ -43,6 +59,10 @@ pub extern "C" fn hello_rust() {
     }
 
     zephyr::kernel::k_thread_user_mode_enter(|| {
+        zephyr::user::k_str_out("Hello from Rust userspace with forced user-mode syscall\n");
+
+        mutex_test();
+
         zephyr_logger::init(LevelFilter::Info);
 
         trace!("TEST: trace!()");
@@ -52,6 +72,7 @@ pub extern "C" fn hello_rust() {
         error!("TEST: error!()");
 
         zephyr::user::k_str_out("Hello from Rust userspace with forced user-mode syscall\n");
+
         zephyr::any::k_str_out("Hello from Rust userspace with runtime-detect syscall\nNext call will crash if userspace is working.\n");
 
         // This will compile, but crash if CONFIG_USERSPACE is working
