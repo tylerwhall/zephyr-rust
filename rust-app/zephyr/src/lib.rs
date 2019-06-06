@@ -63,6 +63,16 @@ macro_rules! zephyr_bindings {
             unsafe { crate::DurationMs::from(zephyr_sys::syscalls::$context::k_sleep(ms.into())) }
         }
 
+        #[inline(always)]
+        pub fn k_thread_custom_data_get() -> *mut u8 {
+            unsafe { zephyr_sys::syscalls::$context::k_thread_custom_data_get() as *mut u8 }
+        }
+
+        #[inline(always)]
+        pub fn k_thread_custom_data_set(value: *mut u8) {
+            unsafe { zephyr_sys::syscalls::$context::k_thread_custom_data_set(value as *mut _) };
+        }
+
         impl crate::mutex::MutexSyscalls for $context_struct {
             unsafe fn k_mutex_init(mutex: *mut zephyr_sys::raw::k_mutex) {
                 zephyr_sys::syscalls::$context::k_mutex_init(mutex)

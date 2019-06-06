@@ -6,12 +6,16 @@ extern crate log;
 extern crate zephyr_logger;
 
 use std::time::Duration;
+use std::cell::RefCell;
 
 use log::LevelFilter;
+use core::ffi::c_void;
 
 use zephyr::mutex::*;
 use zephyr::thread::ThreadSyscalls;
 use zephyr::device::DeviceSyscalls;
+
+thread_local!(static TLS: RefCell<u8> = RefCell::new(1));
 
 zephyr_macros::k_mutex_define!(MUTEX);
 
@@ -25,6 +29,19 @@ fn mutex_test() {
     zephyr::any::k_str_out("Locking\n");
     let _val = mutex.lock::<zephyr::context::Any>();
     zephyr::any::k_str_out("Unlocking\n");
+}
+
+#[no_mangle]
+pub extern "C" fn hello_rust_second_thread(_a: *const c_void, _b: *const c_void, _c: *const c_void) {
+    println!("Hello from second thread");
+
+    TLS.with(|f| {
+        println!("second thread: f = {}", *f.borrow());
+        assert!(*f.borrow() == 1);
+        *f.borrow_mut() = 55;
+        println!("second thread: now f = {}", *f.borrow());
+        assert!(*f.borrow() == 55);
+    });
 }
 
 #[no_mangle]
@@ -65,6 +82,14 @@ pub extern "C" fn hello_rust() {
         for _ in &a[..=(len - 1)] {}
     }
 
+    TLS.with(|f| {
+        println!("main thread: f = {}", *f.borrow());
+        assert!(*f.borrow() == 1);
+        *f.borrow_mut() = 2;
+        println!("main thread: now f = {}", *f.borrow());
+        assert!(*f.borrow() == 2);
+    });
+
     zephyr::kernel::k_thread_user_mode_enter(|| {
         zephyr::user::k_str_out("Hello from Rust userspace with forced user-mode syscall\n");
 
@@ -77,6 +102,14 @@ pub extern "C" fn hello_rust() {
         info!("TEST: info!()");
         warn!("TEST: warn!()");
         error!("TEST: error!()");
+
+        TLS.with(|f| {
+            println!("main thread: f = {}", *f.borrow());
+            assert!(*f.borrow() == 2);
+            *f.borrow_mut() = 3;
+            println!("main thread: now f = {}", *f.borrow());
+            assert!(*f.borrow() == 3);
+        });
 
         zephyr::user::k_str_out("Hello from Rust userspace with forced user-mode syscall\n");
 
