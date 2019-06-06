@@ -14,5 +14,7 @@ compiler_builtins = { version = '0.1.2', optional = true }
 derive_more = { version = '0.14.1', default-features = false, features = ['no_std'] }
 
 [features]
+defaults = [ 'usermode', 'rustc-dep-of-std' ]
 usermode = []
 rustc-dep-of-std = ['core', 'compiler_builtins', 'zephyr-sys/rustc-dep-of-std']
+have_std = []
