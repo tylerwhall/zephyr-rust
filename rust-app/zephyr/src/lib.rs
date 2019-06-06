@@ -6,6 +6,7 @@ extern crate derive_more;
 
 pub mod kobj;
 pub mod mutex;
+pub mod thread;
 mod time;
 
 pub use time::*;

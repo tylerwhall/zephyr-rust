@@ -6,7 +6,12 @@ use core::ops::Deref;
 ///
 /// This implies locking is done in the kernel and this is therefore Send + Sync. e.g. mutex,
 /// semaphore, fifo. Implement this for the raw Zephyr C structs.
-pub unsafe trait KObj {}
+pub unsafe trait KObj {
+    // This is safe, itself, but obviously unsafe to use the mut void pointer
+    fn as_void_ptr(&self) -> *mut libc::c_void {
+        self as *const _ as *mut _
+    }
+}
 
 pub struct StaticKObj<T>(UnsafeCell<MaybeUninit<T>>);
 

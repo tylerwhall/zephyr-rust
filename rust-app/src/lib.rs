@@ -8,6 +8,7 @@ use std::time::Duration;
 use log::LevelFilter;
 
 use zephyr::mutex::*;
+use zephyr::thread::ThreadSyscalls;
 
 zephyr_macros::k_mutex_define!(MUTEX);
 
@@ -18,12 +19,6 @@ fn mutex_test() {
     // the data were static, but that requires app mem regions for user mode.
     let mutex = unsafe { Mutex::new(&MUTEX, &data) };
 
-    unsafe {
-        // No safe interface implemented yet
-        let current = zephyr_sys::syscalls::any::k_current_get();
-        zephyr_sys::syscalls::any::k_object_access_grant(mutex.kobj(), current);
-    }
-
     zephyr::any::k_str_out("Locking\n");
     let _val = mutex.lock::<zephyr::context::Any>();
     zephyr::any::k_str_out("Unlocking\n");
@@ -31,6 +26,8 @@ fn mutex_test() {
 
 #[no_mangle]
 pub extern "C" fn hello_rust() {
+    use zephyr::context::Kernel as Context;
+
     println!("Hello Rust println");
     zephyr::kernel::k_str_out("Hello from Rust kernel with direct kernel call\n");
     zephyr::any::k_str_out("Hello from Rust kernel with runtime-detect syscall\n");
@@ -39,6 +36,7 @@ pub extern "C" fn hello_rust() {
     println!("Time {:?}", zephyr::any::k_uptime_get_ms());
     println!("Time {:?}", std::time::Instant::now());
 
+    Context::k_current_get().k_object_access_grant::<Context, _>(&MUTEX);
     mutex_test();
 
     {

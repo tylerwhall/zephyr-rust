@@ -21,11 +21,13 @@ pub use zephyr_sys::raw::k_mutex as KMutex;
 /// the same structure name, we trick gen_kobject_list.py into whitelisting the
 /// address of this struct as a kernel object.
 pub mod global {
-    use crate::kobj::StaticKObj;
+    use crate::kobj::*;
     use core::ops::Deref;
 
     #[allow(non_camel_case_types)]
     pub struct k_mutex(StaticKObj<super::KMutex>);
+
+    unsafe impl KObj for k_mutex {}
 
     impl k_mutex {
         pub const unsafe fn uninit() -> Self {
