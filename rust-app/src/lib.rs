@@ -70,7 +70,7 @@ pub extern "C" fn hello_rust() {
     current.k_object_access_grant::<Context, _>(&TLS_SEM);
     mutex_test();
 
-    if let Some(device) = Context::device_get_binding(cstr!("nonexistent")) {
+    if let Some(_device) = Context::device_get_binding(cstr!("nonexistent")) {
         println!("Got device");
     } else {
         println!("No device");
