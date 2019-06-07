@@ -7,6 +7,7 @@ extern crate derive_more;
 pub mod device;
 pub mod kobj;
 pub mod mutex;
+pub mod semaphore;
 pub mod thread;
 mod time;
 

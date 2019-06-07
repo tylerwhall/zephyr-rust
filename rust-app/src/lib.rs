@@ -5,19 +5,21 @@ extern crate log;
 
 extern crate zephyr_logger;
 
-use std::time::Duration;
 use std::cell::RefCell;
+use std::time::Duration;
 
-use log::LevelFilter;
 use core::ffi::c_void;
+use log::LevelFilter;
 
-use zephyr::mutex::*;
-use zephyr::thread::ThreadSyscalls;
 use zephyr::device::DeviceSyscalls;
+use zephyr::mutex::*;
+use zephyr::semaphore::*;
+use zephyr::thread::ThreadSyscalls;
 
 thread_local!(static TLS: RefCell<u8> = RefCell::new(1));
 
 zephyr_macros::k_mutex_define!(MUTEX);
+zephyr_macros::k_sem_define!(TLS_SEM, 0, 1);
 
 fn mutex_test() {
     let data = MutexData::new(1u32);
@@ -32,7 +34,11 @@ fn mutex_test() {
 }
 
 #[no_mangle]
-pub extern "C" fn hello_rust_second_thread(_a: *const c_void, _b: *const c_void, _c: *const c_void) {
+pub extern "C" fn hello_rust_second_thread(
+    _a: *const c_void,
+    _b: *const c_void,
+    _c: *const c_void,
+) {
     println!("Hello from second thread");
 
     TLS.with(|f| {
@@ -42,6 +48,9 @@ pub extern "C" fn hello_rust_second_thread(_a: *const c_void, _b: *const c_void,
         println!("second thread: now f = {}", *f.borrow());
         assert!(*f.borrow() == 55);
     });
+
+    // Let thread 1 access TLS after we have already set it. Value should not be seen on thread 1
+    TLS_SEM.give::<zephyr::context::Kernel>();
 }
 
 #[no_mangle]
@@ -56,7 +65,9 @@ pub extern "C" fn hello_rust() {
     println!("Time {:?}", zephyr::any::k_uptime_get_ms());
     println!("Time {:?}", std::time::Instant::now());
 
-    Context::k_current_get().k_object_access_grant::<Context, _>(&MUTEX);
+    let current = Context::k_current_get();
+    current.k_object_access_grant::<Context, _>(&MUTEX);
+    current.k_object_access_grant::<Context, _>(&TLS_SEM);
     mutex_test();
 
     if let Some(device) = Context::device_get_binding(cstr!("nonexistent")) {
@@ -82,6 +93,8 @@ pub extern "C" fn hello_rust() {
         for _ in &a[..=(len - 1)] {}
     }
 
+    TLS_SEM.take::<Context>();
+    assert!(!TLS_SEM.try_take::<Context>());
     TLS.with(|f| {
         println!("main thread: f = {}", *f.borrow());
         assert!(*f.borrow() == 1);
@@ -89,6 +102,7 @@ pub extern "C" fn hello_rust() {
         println!("main thread: now f = {}", *f.borrow());
         assert!(*f.borrow() == 2);
     });
+    TLS_SEM.give::<Context>();
 
     zephyr::kernel::k_thread_user_mode_enter(|| {
         zephyr::user::k_str_out("Hello from Rust userspace with forced user-mode syscall\n");
@@ -103,6 +117,7 @@ pub extern "C" fn hello_rust() {
         warn!("TEST: warn!()");
         error!("TEST: error!()");
 
+        assert!(TLS_SEM.try_take::<Context>());
         TLS.with(|f| {
             println!("main thread: f = {}", *f.borrow());
             assert!(*f.borrow() == 2);
