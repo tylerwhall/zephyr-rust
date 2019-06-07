@@ -1,4 +1,6 @@
 #[macro_use]
+extern crate cstr;
+#[macro_use]
 extern crate log;
 
 extern crate zephyr_logger;
@@ -9,6 +11,7 @@ use log::LevelFilter;
 
 use zephyr::mutex::*;
 use zephyr::thread::ThreadSyscalls;
+use zephyr::device::DeviceSyscalls;
 
 zephyr_macros::k_mutex_define!(MUTEX);
 
@@ -38,6 +41,12 @@ pub extern "C" fn hello_rust() {
 
     Context::k_current_get().k_object_access_grant::<Context, _>(&MUTEX);
     mutex_test();
+
+    if let Some(device) = Context::device_get_binding(cstr!("nonexistent")) {
+        println!("Got device");
+    } else {
+        println!("No device");
+    }
 
     {
         let boxed = Box::new(1u8);

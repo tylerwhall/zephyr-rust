@@ -8,8 +8,9 @@ edition = "2018"
 crate-type = ["staticlib"]
 
 [dependencies]
+cstr = "0.1.7"
 zephyr-sys = { path = "./zephyr-sys" }
-zephyr = { path = "./zephyr" }
+zephyr = { path = "./zephyr", features = ["have_std"] }
 zephyr-macros = { path = "./zephyr-macros" }
 zephyr-logger = { path = "./zephyr-logger" }
 log = "0.4"

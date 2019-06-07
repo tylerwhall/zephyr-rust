@@ -4,6 +4,7 @@
 #[macro_use]
 extern crate derive_more;
 
+pub mod device;
 pub mod kobj;
 pub mod mutex;
 pub mod thread;
@@ -191,15 +192,19 @@ pub mod user {
     #[cfg(feature = "have_std")]
     #[inline(always)]
     pub fn device_get_binding(device_name: &CStr) -> ZephyrDevice {
-        ZephyrDevice(unsafe { zephyr_sys::syscalls::user::device_get_binding(device_name.as_ptr()) })
+        ZephyrDevice(unsafe {
+            zephyr_sys::syscalls::user::device_get_binding(device_name.as_ptr())
+        })
     }
 
+    // TODO: move to uart.rs
     #[cfg(feature = "have_std")]
     #[inline(always)]
     pub fn uart_poll_out(device: &ZephyrDevice, out_char: char) {
         unsafe { zephyr_sys::syscalls::user::uart_poll_out(device.0, out_char as u8) };
     }
 
+    // TODO: move to uart.rs
     #[cfg(feature = "have_std")]
     #[inline(always)]
     pub fn uart_poll_in(device: &ZephyrDevice, in_char: &mut char) -> i32 {
@@ -209,6 +214,7 @@ pub mod user {
         rc
     }
 
+    // TODO: move to uart.rs
     #[cfg(feature = "have_std")]
     #[inline(always)]
     pub fn uart_err_check(device: &ZephyrDevice) -> i32 {
