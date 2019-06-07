@@ -1,5 +1,3 @@
-use core::ops::{Deref, DerefMut};
-
 use zephyr_sys::raw::k_sem;
 
 use super::NegErr;
