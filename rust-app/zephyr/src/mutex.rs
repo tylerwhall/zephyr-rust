@@ -12,37 +12,7 @@ unsafe impl KObj for k_mutex {}
 
 pub use zephyr_sys::raw::k_mutex as KMutex;
 
-/// Defines a newtype struct k_mutex appropriate for static initialization that
-/// looks to zephyr like its own.
-///
-/// Creating uninitialized variables in Rust requires a union which is in the
-/// implementation of MaybeUninit. gen_kobject_list.py ignores members of unions
-/// so fails to recognise that our StaticKobj contains a struct k_mutex. By using
-/// the same structure name, we trick gen_kobject_list.py into whitelisting the
-/// address of this struct as a kernel object.
-pub mod global {
-    use crate::kobj::*;
-    use core::ops::Deref;
-
-    #[allow(non_camel_case_types)]
-    pub struct k_mutex(StaticKObj<super::KMutex>);
-
-    unsafe impl KObj for k_mutex {}
-
-    impl k_mutex {
-        pub const unsafe fn uninit() -> Self {
-            k_mutex(StaticKObj::uninit())
-        }
-    }
-
-    impl Deref for k_mutex {
-        type Target = StaticKObj<super::KMutex>;
-
-        fn deref(&self) -> &Self::Target {
-            &self.0
-        }
-    }
-}
+crate::make_static_wrapper!(k_mutex, zephyr_sys::raw::k_mutex);
 
 /// Raw syscall API
 pub trait MutexSyscalls {
