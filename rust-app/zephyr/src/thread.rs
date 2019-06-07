@@ -22,11 +22,12 @@ macro_rules! trait_impl {
             }
 
             fn k_object_access_grant<K: KObj>(kobj: &K, thread: ThreadId) {
-                if !zephyr_sys::raw::RUST_CONFIG_USERSPACE {
-                    // Avoid unnecessary call to stub function
-                    return;
-                }
                 unsafe {
+                    if !zephyr_sys::raw::RUST_CONFIG_USERSPACE {
+                        // Avoid unnecessary call to stub function
+                        return;
+                    }
+
                     zephyr_sys::syscalls::$context::k_object_access_grant(
                         kobj.as_void_ptr(),
                         thread.0,
