@@ -10,6 +10,7 @@ pub mod mutex;
 pub mod semaphore;
 pub mod thread;
 mod time;
+pub mod uart;
 
 pub use time::*;
 
@@ -144,45 +145,7 @@ pub mod kernel {
 }
 
 pub mod user {
-    #[cfg(feature = "have_std")]
-    use std::ffi::CStr;
-
     zephyr_bindings!(user, crate::context::User);
-
-    #[cfg(feature = "have_std")]
-    pub struct ZephyrDevice(*mut zephyr_sys::raw::device);
-
-    #[cfg(feature = "have_std")]
-    #[inline(always)]
-    pub fn device_get_binding(device_name: &CStr) -> ZephyrDevice {
-        ZephyrDevice(unsafe {
-            zephyr_sys::syscalls::user::device_get_binding(device_name.as_ptr())
-        })
-    }
-
-    // TODO: move to uart.rs
-    #[cfg(feature = "have_std")]
-    #[inline(always)]
-    pub fn uart_poll_out(device: &ZephyrDevice, out_char: char) {
-        unsafe { zephyr_sys::syscalls::user::uart_poll_out(device.0, out_char as u8) };
-    }
-
-    // TODO: move to uart.rs
-    #[cfg(feature = "have_std")]
-    #[inline(always)]
-    pub fn uart_poll_in(device: &ZephyrDevice, in_char: &mut char) -> i32 {
-        let mut munge: u8 = 0;
-        let rc: i32 = unsafe { zephyr_sys::syscalls::user::uart_poll_in(device.0, &mut munge) };
-        *in_char = munge as char;
-        rc
-    }
-
-    // TODO: move to uart.rs
-    #[cfg(feature = "have_std")]
-    #[inline(always)]
-    pub fn uart_err_check(device: &ZephyrDevice) -> i32 {
-        (unsafe { zephyr_sys::syscalls::user::uart_err_check(device.0) })
-    }
 }
 
 pub mod any {
