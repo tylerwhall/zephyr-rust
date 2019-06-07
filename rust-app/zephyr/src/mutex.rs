@@ -88,7 +88,7 @@ impl<'a> RawMutex for &'a KMutex {
         .neg_err()
         {
             Ok(_) => Ok(true),
-            Err(zephyr_sys::raw::EAGAIN) => Ok(false),
+            Err(zephyr_sys::raw::EBUSY) => Ok(false),
             Err(e) => Err(e),
         }
         .expect("mutex try_lock")
