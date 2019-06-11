@@ -4,7 +4,7 @@ use crate::device::Device;
 pub trait UartSyscalls {
     fn uart_poll_out(device: &Device, out_char: char);
 
-    fn uart_poll_in(device: &Device, in_char: &mut char) -> i32;
+    fn uart_poll_in(device: &Device) -> Result<Option<char>, u32>;
 
     fn uart_err_check(device: &Device) -> i32;
 
@@ -27,16 +27,23 @@ macro_rules! trait_impl {
             }
 
             #[inline(always)]
-            fn uart_poll_in(device: &Device, in_char: &mut char) -> i32 {
+            fn uart_poll_in(device: &Device) -> Result<Option<char>, u32> {
                 let mut munge: u8 = 0;
-                let rc: i32 = unsafe {
+                let rc = unsafe {
                     zephyr_sys::syscalls::$context::uart_poll_in(
                         device as *const _ as *mut _,
                         &mut munge,
                     )
-                };
-                *in_char = munge as char;
-                rc
+                }
+                .neg_err()
+                .map(|_| munge as char);
+
+                // remap a return value of -1 from uart_poll_in() to Ok(None)
+                match rc {
+                    Ok(c) => Ok(Some(c)),
+                    Err(1) => Ok(None),
+                    Err(e) => Err(e),
+                }
             }
 
             #[inline(always)]
