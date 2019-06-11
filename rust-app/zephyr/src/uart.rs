@@ -6,7 +6,7 @@ pub trait UartSyscalls {
 
     fn uart_poll_in(device: &Device) -> Result<Option<char>, u32>;
 
-    fn uart_err_check(device: &Device) -> i32;
+    fn uart_err_check(device: &Device) -> Option<u32>;
 
     fn uart_config_get(device: &Device) -> Result<UartConfig, u32>;
 
@@ -47,10 +47,16 @@ macro_rules! trait_impl {
             }
 
             #[inline(always)]
-            fn uart_err_check(device: &Device) -> i32 {
-                (unsafe {
+            fn uart_err_check(device: &Device) -> Option<u32> {
+                let rc = unsafe {
                     zephyr_sys::syscalls::$context::uart_err_check(device as *const _ as *mut _)
-                })
+                }
+                .neg_err();
+
+                match rc {
+                    Ok(_) => None,
+                    Err(e) => Some(e),
+                }
             }
 
             #[inline(always)]
