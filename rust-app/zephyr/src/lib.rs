@@ -14,6 +14,9 @@ pub mod uart;
 
 pub use time::*;
 
+// Set from environment from build.rs
+pub const CONFIG_USERSPACE: bool = cfg!(usermode);
+
 /// Convert a negative error code to a Result
 trait NegErr {
     fn neg_err(&self) -> Result<u32, u32>;
