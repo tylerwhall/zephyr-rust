@@ -22,7 +22,7 @@ macro_rules! trait_impl {
                     // All devices are static in Zephyr, so static lifetime
                     // Option<&T> is guaranteed to have the null pointer optimization, so we can cast
                     // https://doc.rust-lang.org/nomicon/ffi.html#the-nullable-pointer-optimization
-                    core::mem::transmute(zephyr_sys::syscalls::user::device_get_binding(
+                    core::mem::transmute(zephyr_sys::syscalls::$context::device_get_binding(
                         device_name.as_ptr(),
                     ))
                 }
