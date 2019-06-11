@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.13.1)
 include($ENV{ZEPHYR_BASE}/cmake/app/boilerplate.cmake NO_POLICY_SCOPE)
 project(hello_world)
 
-target_sources(app PRIVATE src/main.c)
+target_sources(app PRIVATE src/main.c rust_obj.obj)
 
 # Use a clang_target known to clang so headers will be processed correctly with
 # bindgen. rust_target may point to a custom json target.
@@ -28,11 +28,6 @@ add_custom_command(OUTPUT ${rust_syscall_macros_h}
   > ${rust_syscall_macros_h}
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/gen_syscall_header.py
   )
-
-add_library(syscall_thunk OBJECT syscall_thunk.c)
-target_link_libraries(syscall_thunk zephyr_interface)
-# High level target that means all headers have been generated
-add_dependencies(syscall_thunk offsets_h)
 
 set(rust_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/zephyr-bindgen)
 set(rust_build_dir ${CMAKE_CURRENT_BINARY_DIR}/zephyr-bindgen)
@@ -81,9 +76,32 @@ ExternalProject_Add(
     BUILD_BYPRODUCTS ${rust_staticlib}
 )
 
-add_library(rust_lib STATIC IMPORTED)
-add_dependencies(rust_lib rust_project)
-set_target_properties(rust_lib PROPERTIES IMPORTED_LOCATION ${rust_staticlib})
-# This should be a dependency of rust_lib, but adding it as an INTERFACE lib doesn't do anything
-target_link_libraries(app PRIVATE syscall_thunk)
-target_link_libraries(app PUBLIC rust_lib)
+add_library(rust_obj OBJECT syscall-thunk.c rust-smem.c)
+target_link_libraries(rust_obj zephyr_interface)
+# High level target that means all headers have been generated
+add_dependencies(rust_obj offsets_h)
+
+# Relocatable single object library containing all Rust code. This allows using
+# a linker script during this link to rename sections, putting data/bss in the
+# rust shared memory section. The .obj suffix is significant because
+# gen_app_partitions.py searches for specially named sections in all .obj files
+# in the build output.
+if(CONFIG_USERSPACE)
+    set(rust_ldscript -Wl,-T ${CMAKE_CURRENT_SOURCE_DIR}/rust-smem.ld)
+endif()
+set(RUST_OBJ_CFLAGS ${CMAKE_C_FLAGS})
+separate_arguments(RUST_OBJ_CFLAGS)
+add_custom_command(
+  OUTPUT rust_obj.obj
+  COMMAND ${CMAKE_C_COMPILER} ${RUST_OBJ_CFLAGS}
+    -nostdlib
+    -static
+    -no-pie
+    -Wl,-r
+    ${rust_ldscript}
+    -Wl,--whole-archive ${rust_staticlib}
+    -Wl,--no-whole-archive $<TARGET_OBJECTS:rust_obj>
+    -o rust_obj.obj
+  DEPENDS ${rust_staticlib} $<TARGET_OBJECTS:rust_obj>
+  COMMAND_EXPAND_LISTS
+)

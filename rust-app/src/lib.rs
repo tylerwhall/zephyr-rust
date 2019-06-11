@@ -16,6 +16,9 @@ use zephyr::mutex::*;
 use zephyr::semaphore::*;
 use zephyr::thread::ThreadSyscalls;
 
+// Use this mem pool for global allocs instead of kmalloc
+zephyr::global_sys_mem_pool!(rust_std_mem_pool);
+
 thread_local!(static TLS: RefCell<u8> = RefCell::new(1));
 
 zephyr_macros::k_mutex_define!(MUTEX);
@@ -33,12 +36,19 @@ fn mutex_test() {
     zephyr::any::k_str_out("Unlocking\n");
 }
 
+fn thread_join_std_mem_domain(_context: zephyr::context::Kernel) {
+    use zephyr::context::Kernel as C;
+    zephyr::static_mem_domain!(rust_std_domain).add_thread::<C>(C::k_current_get());
+}
+
 #[no_mangle]
 pub extern "C" fn hello_rust_second_thread(
     _a: *const c_void,
     _b: *const c_void,
     _c: *const c_void,
 ) {
+    thread_join_std_mem_domain(zephyr::context::Kernel);
+
     println!("Hello from second thread");
 
     TLS.with(|f| {
@@ -104,7 +114,10 @@ pub extern "C" fn hello_rust() {
     });
     TLS_SEM.give::<Context>();
 
+    thread_join_std_mem_domain(Context);
     zephyr::kernel::k_thread_user_mode_enter(|| {
+        use zephyr::context::User as Context;
+
         zephyr::user::k_str_out("Hello from Rust userspace with forced user-mode syscall\n");
 
         mutex_test();
