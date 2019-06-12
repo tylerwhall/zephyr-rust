@@ -63,7 +63,7 @@ macro_rules! trait_impl {
             fn uart_config_get(device: &Device) -> Result<UartConfig, u32> {
                 let mut config = UartConfig::default();
                 unsafe {
-                    zephyr_sys::syscalls::user::uart_config_get(
+                    zephyr_sys::syscalls::$context::uart_config_get(
                         device as *const _ as *mut _,
                         &mut config.0,
                     )
@@ -75,7 +75,7 @@ macro_rules! trait_impl {
             #[inline(always)]
             fn uart_configure(device: &Device, config: &UartConfig) -> Result<(), u32> {
                 unsafe {
-                    zephyr_sys::syscalls::user::uart_configure(
+                    zephyr_sys::syscalls::$context::uart_configure(
                         device as *const _ as *mut _,
                         &config.0,
                     )
