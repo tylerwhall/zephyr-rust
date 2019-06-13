@@ -6,6 +6,7 @@ extern crate derive_more;
 
 pub mod device;
 pub mod kobj;
+pub mod memdomain;
 pub mod mempool;
 pub mod mutex;
 pub mod semaphore;

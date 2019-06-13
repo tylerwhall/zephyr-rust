@@ -4,6 +4,10 @@ use crate::kobj::KObj;
 pub struct ThreadId(zephyr_sys::raw::k_tid_t);
 
 impl ThreadId {
+    pub fn tid(&self) -> zephyr_sys::raw::k_tid_t {
+        self.0
+    }
+
     pub fn k_object_access_grant<C: ThreadSyscalls, K: KObj>(&self, kobj: &K) {
         C::k_object_access_grant(kobj, *self)
     }
