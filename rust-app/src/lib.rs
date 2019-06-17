@@ -54,6 +54,12 @@ macro_rules! zassert {
 }
 
 #[no_mangle]
+pub extern "C" fn hello_rust_test() {
+    zassert!(true, "true should be true");
+    //zassert!(false, "false should not be true");
+}
+
+#[no_mangle]
 pub extern "C" fn hello_rust() {
     use zephyr::context::Kernel as Context;
 

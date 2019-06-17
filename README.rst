@@ -127,6 +127,23 @@ Sample Output
          0x0000035d (0x86a9)
          Fatal fault in thread 0x00400060! Aborting.
 
+Testing
+*******
+
+The Zephyr test runner can be used:
+
+.. code-block:: console
+
+    $ZEPHYR_BASE/scripts/sanitycheck --testcase-root test -p native_posix -N
+
+Or you can build and run the test manually:
+
+.. code-block:: console
+
+    cd test
+    mkdir -p build-posix && cd build-posix
+    cmake -GNinja -DBOARD=native_posix ..
+    ninja run
 
 Supported Architectures
 ***********************
