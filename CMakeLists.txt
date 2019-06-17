@@ -2,11 +2,6 @@
 
 cmake_minimum_required(VERSION 3.13.1)
 
-include($ENV{ZEPHYR_BASE}/cmake/app/boilerplate.cmake NO_POLICY_SCOPE)
-project(hello_world)
-
-target_sources(app PRIVATE src/main.c rust_obj.obj)
-
 # Use a clang_target known to clang so headers will be processed correctly with
 # bindgen. rust_target may point to a custom json target.
 if(${ARCH} STREQUAL "posix" OR ${ARCH} STREQUAL "x86")
@@ -42,8 +37,13 @@ add_custom_command(OUTPUT ${zephyr_bindgen}
 )
 
 set(rust_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/rust-app)
-set(rust_build_dir ${CMAKE_CURRENT_BINARY_DIR}/rust-app)
-set(rust_staticlib ${rust_build_dir}/${rust_target}/release/librust_app.a)
+set(rust_sysroot ${CMAKE_CURRENT_BINARY_DIR}/sysroot)
+set(rust_sysroot_build ${CMAKE_CURRENT_BINARY_DIR}/sysroot-build)
+set(rust_app_build ${CMAKE_CURRENT_BINARY_DIR}/app)
+set(rust_staticlib ${rust_app_build}/${rust_target}/release/librust_app.a)
+if(NOT DEFINED CARGO_MANIFEST)
+    set(CARGO_MANIFEST ${CMAKE_SOURCE_DIR}/Cargo.toml)
+endif()
 
 zephyr_get_include_directories_for_lang_as_string(       C includes)
 zephyr_get_compile_definitions_for_lang_as_string(       C definitions)
@@ -56,7 +56,7 @@ include(ExternalProject)
 
 ExternalProject_Add(
     rust_project
-    PREFIX     ${rust_build_dir}
+    PREFIX     ${CMAKE_CURRENT_BINARY_DIR}
     SOURCE_DIR ${rust_src_dir}
     BUILD_IN_SOURCE 1
     BUILD_ALWAYS 1
@@ -67,19 +67,21 @@ ExternalProject_Add(
         "ZEPHYR_BINDGEN=${zephyr_bindgen}"
         "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
         "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
-        "SYSROOT=${rust_build_dir}/sysroot"
+        "SYSROOT=${rust_sysroot}"
+        "SYSROOT_BUILD=${rust_sysroot_build}"
+        "APP_BUILD=${rust_app_build}"
         "RUST_TARGET_PATH=${rust_src_dir}"
-        "CARGO_TARGET_DIR=${rust_build_dir}"
         "RUST_TARGET=${rust_target}"
+        "CARGO_MANIFEST=${CARGO_MANIFEST}"
         ./build.sh
     INSTALL_COMMAND ""
     BUILD_BYPRODUCTS ${rust_staticlib}
 )
 
-add_library(rust_obj OBJECT syscall-thunk.c rust-smem.c)
-target_link_libraries(rust_obj zephyr_interface)
+add_library(rust_c OBJECT syscall-thunk.c rust-smem.c)
+target_link_libraries(rust_c zephyr_interface)
 # High level target that means all headers have been generated
-add_dependencies(rust_obj offsets_h)
+add_dependencies(rust_c offsets_h)
 
 # Relocatable single object library containing all Rust code. This allows using
 # a linker script during this link to rename sections, putting data/bss in the
@@ -91,8 +93,9 @@ if(CONFIG_USERSPACE)
 endif()
 set(RUST_OBJ_CFLAGS ${CMAKE_C_FLAGS})
 separate_arguments(RUST_OBJ_CFLAGS)
+set(rust_obj ${CMAKE_CURRENT_BINARY_DIR}/rust_obj.obj)
 add_custom_command(
-  OUTPUT rust_obj.obj
+  OUTPUT ${rust_obj}
   COMMAND ${CMAKE_C_COMPILER} ${RUST_OBJ_CFLAGS}
     -nostdlib
     -static
@@ -100,8 +103,11 @@ add_custom_command(
     -Wl,-r
     ${rust_ldscript}
     -Wl,--whole-archive ${rust_staticlib}
-    -Wl,--no-whole-archive $<TARGET_OBJECTS:rust_obj>
+    -Wl,--no-whole-archive $<TARGET_OBJECTS:rust_c>
     -o rust_obj.obj
-  DEPENDS ${rust_staticlib} $<TARGET_OBJECTS:rust_obj>
+  DEPENDS ${rust_staticlib} $<TARGET_OBJECTS:rust_c>
   COMMAND_EXPAND_LISTS
 )
+add_custom_target(rust_final DEPENDS ${rust_obj})
+zephyr_library_import(rust ${rust_obj})
+add_dependencies(rust rust_final)

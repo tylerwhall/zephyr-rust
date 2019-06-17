@@ -1,0 +1,22 @@
+[package]
+name = "rust-app"
+version = "0.1.0"
+authors = ["Tyler Hall <tylerwhall@gmail.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+cstr = "0.1.7"
+# Fix these path dependencies
+zephyr-sys = { path = "../../rust-app/zephyr-sys" }
+zephyr = { path = "../../rust-app/zephyr", features = ["have_std"] }
+zephyr-macros = { path = "../../rust-app/zephyr-macros" }
+zephyr-logger = { path = "../../rust-app/zephyr-logger" }
+log = "0.4"
+
+[profile.release]
+panic = "abort"
+lto = true
+debug = true
