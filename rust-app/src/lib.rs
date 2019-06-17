@@ -44,6 +44,15 @@ pub extern "C" fn hello_rust_second_thread(_a: *const c_void, _b: *const c_void,
     });
 }
 
+macro_rules! zassert {
+    ($cond:expr, $($msg_args:tt)+) => {
+        if !$cond {
+            println!("assertion failed at {}:{}: {}", file!(), line!(), format_args!($($msg_args)+));
+            zephyr::kernel::ztest_test_fail();
+        }
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn hello_rust() {
     use zephyr::context::Kernel as Context;

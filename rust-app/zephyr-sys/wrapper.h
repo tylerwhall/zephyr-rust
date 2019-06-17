@@ -6,6 +6,9 @@
 #include <kernel.h>
 #include <device.h>
 #include <uart.h>
+#ifdef CONFIG_ZTEST
+#include <ztest.h>
+#endif
 
 // Create a constant we can use from Rust in all cases
 #ifdef CONFIG_USERSPACE

@@ -188,6 +188,14 @@ pub mod kernel {
             .expect("mutex try_lock")
         }
     }
+
+    #[inline(always)]
+    pub fn ztest_test_fail() {
+        #[cfg(feature = "have_ztest")]
+        unsafe { zephyr_sys::raw::ztest_test_fail() };
+        #[cfg(not(feature = "have_ztest"))]
+        panic!();
+    }
 }
 
 pub mod user {
