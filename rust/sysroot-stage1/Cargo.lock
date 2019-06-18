@@ -216,7 +216,7 @@ dependencies = [
  "rustc_msan 0.0.0",
  "rustc_tsan 0.0.0",
  "unwind 0.0.0",
- "zephyr 0.1.0",
+ "zephyr-core 0.1.0",
 ]
 
 [[package]]
@@ -251,7 +251,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "zephyr"
+name = "zephyr-core"
 version = "0.1.0"
 dependencies = [
  "compiler_builtins 0.1.16",

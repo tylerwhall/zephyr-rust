@@ -9,12 +9,6 @@ crate-type = ["staticlib"]
 
 [dependencies]
 cstr = "0.1.7"
-# Fix these path dependencies
-zephyr-sys = { path = "../../rust/zephyr-sys" }
-zephyr = { path = "../../rust/zephyr", features = ["have_std"] }
-zephyr-macros = { path = "../../rust/zephyr-macros" }
-zephyr-logger = { path = "../../rust/zephyr-logger" }
-log = "0.4"
 
 [profile.release]
 panic = "abort"

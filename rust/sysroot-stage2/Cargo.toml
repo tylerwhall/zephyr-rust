@@ -1,0 +1,18 @@
+[package]
+authors = ["Tyler Hall <tylerwhall@gmail.com>"]
+name = "sysroot"
+version = "0.0.0"
+
+[dependencies.zephyr]
+path = "../zephyr"
+
+[dependencies.zephyr-macros]
+path = "../zephyr-macros"
+
+[dependencies.zephyr-logger]
+path = "../zephyr-logger"
+
+[profile.release]
+lto = true
+panic = "abort"
+debug = true

@@ -1,21 +1,14 @@
-#[cfg(feature = "have_std")]
 use std::ffi::CStr;
-
-use crate::kobj::KObj;
 
 pub use zephyr_sys::raw::device as Device;
 
-unsafe impl KObj for Device {}
-
 pub trait DeviceSyscalls {
-    #[cfg(feature = "have_std")]
     fn device_get_binding(device_name: &CStr) -> Option<&'static Device>;
 }
 
 macro_rules! trait_impl {
     ($context:ident, $context_struct:path) => {
         impl DeviceSyscalls for $context_struct {
-            #[cfg(feature = "have_std")]
             #[inline(always)]
             fn device_get_binding(device_name: &CStr) -> Option<&'static Device> {
                 unsafe {

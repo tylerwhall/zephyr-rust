@@ -13,6 +13,9 @@ pub unsafe trait KObj {
     }
 }
 
+// On behalf of the 'zephyr' crate
+unsafe impl KObj for zephyr_sys::raw::device {}
+
 pub struct StaticKObj<T>(UnsafeCell<MaybeUninit<T>>);
 
 unsafe impl<T: KObj> Send for StaticKObj<T> {}

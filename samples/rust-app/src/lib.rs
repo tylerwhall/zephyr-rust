@@ -3,6 +3,8 @@ extern crate cstr;
 #[macro_use]
 extern crate log;
 
+extern crate zephyr_macros;
+extern crate zephyr;
 extern crate zephyr_logger;
 
 use std::cell::RefCell;
