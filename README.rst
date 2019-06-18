@@ -73,6 +73,10 @@ Build
 
 Build and run on QEMU (or posix native) as follows:
 
+.. code-block:: console
+
+    cd samples/rust-app
+
 Native:
 
 .. code-block:: console
