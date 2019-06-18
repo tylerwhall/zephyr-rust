@@ -53,7 +53,8 @@ Acquire Zephyr source, export ZEPHYR_BASE, and source the Zephyr env script.
 Install Zephyr's "West" build tool. Needed for ZEPHYR_MODULES support.
 
 .. code-block:: console
-pip3 install --user west
+
+    pip3 install --user west
 
 Rust toolchain
 ==============
