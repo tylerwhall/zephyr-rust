@@ -141,11 +141,9 @@ define a target.json and add a case for it in CMakelists.
 TODO
 ****
 
-* thread local storage
-* alloc from user mode
-* abstraction for pointers to kernel objects
-* safe wrappers (threads, semaphores, etc.)
-* panic
+* Build as a Zephyr module
+* Separate Rust app from zephyr crates and sysroot (be able to build multiple apps)
+* Kconfig for enabling Rust and configuring the heap
 * test runner
 
 Complete
@@ -156,6 +154,24 @@ Complete
 * println
 * alloc from kernel mode (Box)
 * split into zephyr-sys and zephyr crates
+* thread local storage
+* alloc from user mode
+* abstraction for pointers to kernel objects
+* safe wrappers (threads, semaphores, etc.)
+* panic
+
+Features Not Planned to Support
+===============================
+
+* std::thread. Requires thread resources to be dynamically allocated. This is
+  possible, but not common for Zephyr.
+* Defining static threads in Rust. Zephyr uses many layers of
+  architecture-specific C macros that would not be wise to try to duplicate
+  exactly in Rust. Possibly could generate C code like in the "cpp" crate, but
+  for now just define threads in C and point them at a Rust FFI entry point.
+* std::sync::{Mutex, RwLock}. Might be possible but would at least require
+  dynamic kernel object allocation. The small number of uses in libstd are
+  patched out.
 
 License
 *******
