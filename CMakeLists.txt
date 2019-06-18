@@ -36,7 +36,7 @@ add_custom_command(OUTPUT ${zephyr_bindgen}
           cargo -v build --release --target-dir=${rust_build_dir}
 )
 
-set(rust_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/rust-app)
+set(rust_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/rust)
 set(rust_sysroot ${CMAKE_CURRENT_BINARY_DIR}/sysroot)
 set(rust_sysroot_build ${CMAKE_CURRENT_BINARY_DIR}/sysroot-build)
 set(rust_app_build ${CMAKE_CURRENT_BINARY_DIR}/app)

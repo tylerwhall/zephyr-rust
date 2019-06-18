@@ -1,6 +1,6 @@
-[submodule "rust-app/libc"]
-	path = rust-app/libc
+[submodule "rust/libc"]
+	path = rust/libc
 	url = https://github.com/tylerwhall/libc.git
-[submodule "rust-app/rust"]
-	path = rust-app/rust
+[submodule "rust/rust"]
+	path = rust/rust
 	url = https://github.com/tylerwhall/rust.git
