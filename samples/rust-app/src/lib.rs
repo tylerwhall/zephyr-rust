@@ -42,7 +42,7 @@ fn thread_join_std_mem_domain(_context: zephyr::context::Kernel) {
 }
 
 #[no_mangle]
-pub extern "C" fn hello_rust_second_thread(
+pub extern "C" fn rust_second_thread(
     _a: *const c_void,
     _b: *const c_void,
     _c: *const c_void,
@@ -64,7 +64,7 @@ pub extern "C" fn hello_rust_second_thread(
 }
 
 #[no_mangle]
-pub extern "C" fn hello_rust() {
+pub extern "C" fn rust_main() {
     use zephyr::context::Kernel as Context;
 
     println!("Hello Rust println");
