@@ -3,7 +3,10 @@ Rust on Zephyr RTOS
 
 Overview
 ********
-Zephyr_ project template for building a cargo project and linking it into a Zephyr image.
+Zephyr_ module for building a cargo project and linking it into a Zephyr image.
+Add this directory to ZEPHYR_MODULES to build a Cargo library project (located
+in the Zephyr app's source directory by default) and link it into the Zephyr
+app.
 
 .. _Zephyr: https://github.com/zephyrproject-rtos/zephyr
 
@@ -46,6 +49,11 @@ Acquire Zephyr source, export ZEPHYR_BASE, and source the Zephyr env script.
     git clone https://github.com/zephyrproject-rtos/zephyr.git $HOME/src/zephyr
     export ZEPHYR_BASE=$HOME/src/zephyr
     . $ZEPHYR_BASE/zephyr-env.sh
+
+Install Zephyr's "West" build tool. Needed for ZEPHYR_MODULES support.
+
+.. code-block:: console
+pip3 install --user west
 
 Rust toolchain
 ==============
