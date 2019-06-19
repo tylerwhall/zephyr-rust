@@ -87,6 +87,7 @@ ExternalProject_Add(
 )
 
 add_library(rust_c OBJECT syscall-thunk.c rust-smem.c)
+add_dependencies(rust_c rust_syscall_macros_h_target)
 target_link_libraries(rust_c zephyr_interface)
 # High level target that means all headers have been generated
 add_dependencies(rust_c offsets_h)
