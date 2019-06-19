@@ -39,11 +39,18 @@ add_custom_command(OUTPUT ${zephyr_bindgen}
 set(rust_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/rust)
 set(rust_sysroot ${CMAKE_CURRENT_BINARY_DIR}/sysroot)
 set(rust_sysroot_build ${CMAKE_CURRENT_BINARY_DIR}/sysroot-build)
+set(rust_generated_project ${CMAKE_CURRENT_BINARY_DIR}/rust-app)
 set(rust_app_build ${CMAKE_CURRENT_BINARY_DIR}/app)
 set(rust_staticlib ${rust_app_build}/${rust_target}/release/librust_app.a)
-if(NOT DEFINED CARGO_MANIFEST)
-    set(CARGO_MANIFEST ${CMAKE_SOURCE_DIR}/Cargo.toml)
+if(NOT DEFINED CARGO_SOURCE_DIR)
+    set(CARGO_SOURCE_DIR ${CMAKE_SOURCE_DIR})
 endif()
+
+add_custom_command(OUTPUT ${rust_generated_project}/Cargo.toml
+  COMMAND ${rust_src_dir}/genproject.sh ${CARGO_SOURCE_DIR} ${rust_generated_project}
+  DEPENDS ${rust_src_dir}/genproject.sh
+)
+add_custom_target(rust_generated_project DEPENDS ${rust_generated_project}/Cargo.toml)
 
 zephyr_get_include_directories_for_lang_as_string(       C includes)
 zephyr_get_compile_definitions_for_lang_as_string(       C definitions)
@@ -60,7 +67,7 @@ ExternalProject_Add(
     SOURCE_DIR ${rust_src_dir}
     BUILD_IN_SOURCE 1
     BUILD_ALWAYS 1
-    DEPENDS rust_syscall_macros_h_target zephyr_bindgen_target
+    DEPENDS rust_syscall_macros_h_target zephyr_bindgen_target rust_generated_project
     CONFIGURE_COMMAND ""
     BUILD_COMMAND
         env
@@ -72,7 +79,7 @@ ExternalProject_Add(
         "APP_BUILD=${rust_app_build}"
         "RUST_TARGET_PATH=${rust_src_dir}"
         "RUST_TARGET=${rust_target}"
-        "CARGO_MANIFEST=${CARGO_MANIFEST}"
+        "CARGO_MANIFEST=${rust_generated_project}/Cargo.toml"
         ./build.sh
     INSTALL_COMMAND ""
     BUILD_BYPRODUCTS ${rust_staticlib}

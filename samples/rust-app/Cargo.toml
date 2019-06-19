@@ -1,16 +1,8 @@
 [package]
-name = "rust-app"
+name = "app"
 version = "0.1.0"
 authors = ["Tyler Hall <tylerwhall@gmail.com>"]
 edition = "2018"
 
-[lib]
-crate-type = ["staticlib"]
-
 [dependencies]
 cstr = "0.1.7"
-
-[profile.release]
-panic = "abort"
-lto = true
-debug = true
