@@ -112,10 +112,12 @@ add_custom_command(
     ${rust_ldscript}
     -Wl,--whole-archive ${rust_staticlib}
     -Wl,--no-whole-archive $<TARGET_OBJECTS:rust_c>
-    -o rust_obj.obj
+    -o ${rust_obj}
   DEPENDS ${rust_staticlib} $<TARGET_OBJECTS:rust_c>
   COMMAND_EXPAND_LISTS
 )
 add_custom_target(rust_final DEPENDS ${rust_obj})
-zephyr_library_import(rust ${rust_obj})
-add_dependencies(rust rust_final)
+if(CONFIG_RUST)
+    zephyr_library_import(rust ${rust_obj})
+    add_dependencies(rust rust_final)
+endif()
