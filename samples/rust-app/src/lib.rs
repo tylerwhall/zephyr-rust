@@ -18,9 +18,6 @@ use zephyr::mutex::*;
 use zephyr::semaphore::*;
 use zephyr::thread::ThreadSyscalls;
 
-// Use this mem pool for global allocs instead of kmalloc
-zephyr::global_sys_mem_pool!(rust_std_mem_pool);
-
 thread_local!(static TLS: RefCell<u8> = RefCell::new(1));
 
 zephyr_macros::k_mutex_define!(MUTEX);

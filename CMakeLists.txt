@@ -73,6 +73,7 @@ ExternalProject_Add(
         env
         "ZEPHYR_BINDGEN=${zephyr_bindgen}"
         "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
+        "CONFIG_RUST_ALLOC_POOL=${CONFIG_RUST_ALLOC_POOL}"
         "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
         "SYSROOT=${rust_sysroot}"
         "SYSROOT_BUILD=${rust_sysroot_build}"
