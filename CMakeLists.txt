@@ -111,10 +111,15 @@ add_custom_command(
     -no-pie
     -Wl,-r
     ${rust_ldscript}
+    -Wl,-T ${CMAKE_CURRENT_SOURCE_DIR}/gnu-stack.ld
     -Wl,--whole-archive ${rust_staticlib}
     -Wl,--no-whole-archive $<TARGET_OBJECTS:rust_c>
     -o ${rust_obj}
-  DEPENDS ${rust_staticlib} $<TARGET_OBJECTS:rust_c>
+  DEPENDS
+    ${rust_staticlib}
+    $<TARGET_OBJECTS:rust_c>
+    ${CMAKE_CURRENT_SOURCE_DIR}/rust-smem.ld
+    ${CMAKE_CURRENT_SOURCE_DIR}/gnu-stack.ld
   COMMAND_EXPAND_LISTS
 )
 add_custom_target(rust_final DEPENDS ${rust_obj})
