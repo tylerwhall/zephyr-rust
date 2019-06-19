@@ -1,0 +1,6 @@
+menuconfig RUST
+	bool "Rust"
+	select THREAD_CUSTOM_DATA
+	select CPLUSPLUS
+	help
+	  Rust language support.
