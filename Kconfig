@@ -4,3 +4,44 @@ menuconfig RUST
 	select CPLUSPLUS
 	help
 	  Rust language support.
+
+if RUST
+choice RUST_GLOBAL_ALLOCATOR
+	prompt "Rust global allocator"
+	default RUST_ALLOC_POOL
+	help
+	  The global allocator can either use k_malloc or a dedicated sys mem
+	  pool for Rust allocations. A dedicated pool is required for userspace
+	  because the pool must be placed in a shared memory region accessible
+	  to all Rust userspace threads.
+
+config RUST_ALLOC_KMALLOC
+	bool "k_malloc"
+	depends on !USERSPACE
+	help
+	  Adjust the pool size with CONFIG_HEAP_MEM_POOL_SIZE. Must be non-zero.
+
+config RUST_ALLOC_POOL
+	bool "Dedicated memory pool"
+	help
+	  Required for userspace.
+endchoice
+
+if RUST_ALLOC_POOL
+config RUST_HEAP_MEM_POOL_SIZE
+	int "Rust heap memory pool size (in bytes)"
+	default 1024
+	help
+	  This option specifies the size of the heap memory pool created
+	  specifically to act as the Rust global allocator.  Must be a power of
+	  2. A size of zero means that no heap memory pool is defined.
+
+config RUST_HEAP_MEM_POOL_MIN_SIZE
+	int "The smallest blocks in the Rust heap memory pool (in bytes)"
+	default 16
+	help
+	  This option specifies the size of the smallest block in the pool.
+	  Option must be a power of 2 and lower than or equal to the size
+	  of the entire pool.
+endif
+endif
