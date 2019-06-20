@@ -1,0 +1,11 @@
+[package]
+name = "zephyr-futures"
+version = "0.1.0"
+authors = ["Tyler Hall <tylerwhall@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+zephyr = { path = "../zephyr" }
+log = "0.4"
+futures-preview = "=0.3.0-alpha.17"
+futures-util-preview = "=0.3.0-alpha.17"

@@ -1,0 +1,237 @@
+extern crate alloc;
+extern crate zephyr_core;
+
+use core::cell::{UnsafeCell, RefCell};
+use core::pin::Pin;
+use core::task::{Context, Poll, Waker};
+use core::marker::PhantomData;
+use alloc::sync::{Arc, Weak};
+
+use futures::future::Future;
+use futures::stream::Stream;
+use futures::task::ArcWake;
+use futures_util::future::FutureExt;
+use log::trace;
+
+use zephyr_core::mutex::*;
+use zephyr_core::poll::*;
+use zephyr_core::semaphore::*;
+
+struct Reactor {
+    events: Vec<KPollEvent>,
+    // Wakers corresponding to each event
+    wakers: Vec<Waker>,
+}
+
+impl Reactor {
+    fn new() -> Self {
+        Reactor {
+            events: Vec::new(),
+            wakers: Vec::new(),
+        }
+    }
+
+    fn register(&mut self, signal: &'static impl PollableKobj, context: &mut Context) {
+        let len = self.events.len();
+        unsafe {
+            self.events.reserve(1);
+            self.events.set_len(len + 1);
+            self.events[len].init(signal, PollMode::NotifyOnly);
+        }
+        self.wakers.push(context.waker().clone());
+    }
+
+    /// Returns true if events was non empty and something is ready. False if
+    /// there is nothing to wait on. Fired events are removed.
+    fn poll<C: PollSyscalls>(&mut self) -> bool {
+        if self.events.is_empty() {
+            return false;
+        }
+        self.events[..].poll::<C>().unwrap();
+
+        assert_eq!(self.events.len(), self.wakers.len());
+        let mut i = 0;
+        while i < self.events.len() {
+            if self.events[i].ready() {
+                self.wakers[i].wake_by_ref();
+                trace!("Ready {}", i);
+                // Remove current element and replace with last. Continue search
+                // at current position.
+                self.events.swap_remove(i);
+                self.wakers.swap_remove(i);
+            } else {
+                i += 1;
+            }
+        }
+        true
+    }
+}
+
+thread_local! {
+    static REACTOR: RefCell<Option<Reactor>> = RefCell::new(None);
+}
+
+struct Task {
+    future: UnsafeCell<Pin<Box<dyn Future<Output = ()>>>>,
+    executor: ExecutorHandle,
+}
+
+// The future is not required to be thread safe, but it is only used from the unsafe poll function.
+// Holding an Arc reference and only using the safe interface to wake the task is thread safe
+// because it doesn't access the future. We guarantee single thread access to the future because a
+// task is only created and owned by one executor and the executor is not send or sync.
+unsafe impl Send for Task {}
+unsafe impl Sync for Task {}
+
+impl Task {
+    fn new<F: Future<Output = ()>>(future: F, executor: ExecutorHandle) -> Self
+    where
+        F: 'static,
+    {
+        Task {
+            future: UnsafeCell::new(Box::pin(future.fuse())),
+            executor,
+        }
+    }
+
+    /// Unsafe because this mutates the future with no locking.
+    /// We use multiple Arc references to tasks for the run queue and wakers, but
+    /// only the single executor should access the future contained within, so it
+    /// is safe for it to be the sole writer.
+    unsafe fn poll(&self, context: &mut Context) -> Poll<()> {
+        let pin_mut = &mut *self.future.get();
+        pin_mut.as_mut().poll(context)
+    }
+}
+
+impl ArcWake for Task {
+    fn wake_by_ref(arc_self: &Arc<Self>) {
+        arc_self.executor.push_runnable(arc_self.clone());
+    }
+}
+
+#[derive(Default)]
+struct ExecutorInner {
+    runnable: Vec<Arc<Task>>,
+}
+
+impl ExecutorInner {
+    fn push_runnable(&mut self, task: Arc<Task>) {
+        if !self.runnable.iter().any(|other| Arc::ptr_eq(other, &task)) {
+            self.runnable.push(task);
+        }
+    }
+
+    fn pop_runnable(&mut self) -> Option<Arc<Task>> {
+        self.runnable.pop()
+    }
+}
+
+// Because we've marked Tasks as Send + Sync so we can use Arc references to wake them, we could
+// get an auto impl of Send. But the thread safety of Task depends on the true owner of the task
+// that calls poll being not Send or Sync. Since we're not requiring spawned futures to be Send or
+// Sync and Executor is the effective owner, add a PhantomData here as if we directly own a Future
+// that is not explicitly Send or Sync.
+pub struct Executor(Arc<Mutex<'static, ExecutorInner>>, PhantomData<Future<Output = ()>>);
+#[derive(Clone)]
+struct ExecutorHandle(Weak<Mutex<'static, ExecutorInner>>);
+
+impl Executor {
+    /// Unsafe because the client guarantees the static mutex is intended for
+    /// this purpose.
+    pub unsafe fn new(mutex: &'static KMutex) -> Self {
+        Executor(Arc::new(Mutex::new(mutex, Default::default())), PhantomData)
+    }
+
+    fn pop_runnable<C: MutexSyscalls>(&self) -> Option<Arc<Task>> {
+        self.0.lock::<C>().pop_runnable()
+    }
+
+    fn push_runnable<C: MutexSyscalls>(&self, task: Arc<Task>) {
+        self.0.lock::<C>().push_runnable(task);
+    }
+
+    fn weak_handle(&self) -> ExecutorHandle {
+        ExecutorHandle(Arc::downgrade(&self.0))
+    }
+
+    pub fn spawn<C: MutexSyscalls, F: Future<Output = ()>>(&self, _c: C, f: F)
+    where
+        F: 'static,
+    {
+        let task = Arc::new(Task::new(f, self.weak_handle()));
+        self.push_runnable::<C>(task);
+    }
+
+    pub fn run<C: MutexSyscalls + PollSyscalls>(&mut self) {
+        let reactor = Reactor::new();
+        //let waker = task.clone().into_waker();
+        //let mut context = Context::from_waker(&waker);
+
+        REACTOR.with(move |r| {
+            r.replace(Some(reactor));
+
+            loop {
+                while let Some(task) = self.pop_runnable::<C>() {
+                    let waker = task.clone().into_waker();
+                    let mut context = Context::from_waker(&waker);
+                    // Don't care about the result of poll. If the future is
+                    // not complete, it will likely either have been
+                    // registered with the reactor for I/O, or somewhere
+                    // there's a live reference to the waker. If not,
+                    // there's no way this could ever be marked runnable in
+                    // the future, so we always drop our reference we took
+                    // from the ready queue.
+                    // The future is fused, so if the task is woken after it
+                    // completes here, it will get added to the ready queue
+                    // and harmlessly polled once more.
+                    let _ = unsafe { task.poll(&mut context) };
+                }
+
+                let mut reactor = r.replace(None);
+                trace!("Reactor poll wait");
+                if !reactor.as_mut().unwrap().poll::<C>() {
+                    break;
+                }
+                trace!("Reactor poll finished");
+                r.replace(reactor);
+            }
+            r.replace(None);
+        })
+    }
+}
+
+impl ExecutorHandle {
+    fn push_runnable(&self, task: Arc<Task>) {
+        // Do nothing if our weak reference is invalid
+        if let Some(executor) = self.0.upgrade() {
+            executor.lock::<zephyr::context::Any>().push_runnable(task);
+        }
+    }
+}
+
+pub struct SemaphoreStream(&'static KSem);
+
+impl SemaphoreStream {
+    pub fn new(sem: &'static KSem) -> Self {
+        SemaphoreStream(sem)
+    }
+}
+
+impl Stream for SemaphoreStream {
+    type Item = ();
+
+    fn poll_next(self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
+        if self.0.try_take::<zephyr::context::Any>() {
+            Poll::Ready(Some(()))
+        } else {
+            REACTOR.with(|r| {
+                r.borrow_mut()
+                    .as_mut()
+                    .expect("polled semaphore outside of reactor context")
+                    .register(self.0, context);
+            });
+            Poll::Pending
+        }
+    }
+}
