@@ -55,6 +55,12 @@ impl From<InstantMs> for Duration {
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, From, Into)]
 pub struct DurationMs(i32);
 
+impl DurationMs {
+    pub fn new(ms: i32) -> Self {
+        DurationMs(ms)
+    }
+}
+
 impl From<DurationMs> for Duration {
     fn from(dur: DurationMs) -> Self {
         let secs = dur.0 / 1000;
