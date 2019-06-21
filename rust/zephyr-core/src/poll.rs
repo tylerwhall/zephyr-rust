@@ -1,7 +1,7 @@
 use libc::{c_int, c_void};
 use zephyr_sys::raw::{
     _poll_types_bits__POLL_TYPE_SEM_AVAILABLE, _poll_types_bits__POLL_TYPE_SIGNAL, k_poll_event,
-    k_poll_modes_K_POLL_MODE_NOTIFY_ONLY, K_POLL_TYPE_IGNORE,
+    k_poll_modes_K_POLL_MODE_NOTIFY_ONLY, K_POLL_STATE_NOT_READY, K_POLL_TYPE_IGNORE,
 };
 
 use crate::kobj::*;
@@ -34,6 +34,8 @@ pub trait PollEventFuncs {
     fn new() -> Self;
 
     fn init<'e, 'o: 'e, O: PollableKobj>(&'e mut self, kobj: &'o O, mode: PollMode);
+
+    fn ready(&self) -> bool;
 }
 
 impl PollEventFuncs for KPollEvent {
@@ -59,6 +61,10 @@ impl PollEventFuncs for KPollEvent {
                 kobj.as_void_ptr(),
             )
         }
+    }
+
+    fn ready(&self) -> bool {
+        self.state() != K_POLL_STATE_NOT_READY
     }
 }
 
