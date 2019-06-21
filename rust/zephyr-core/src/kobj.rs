@@ -71,6 +71,11 @@ macro_rules! make_static_wrapper {
                 pub const unsafe fn uninit() -> Self {
                     $k_type(StaticKObj::uninit())
                 }
+
+                /// Get the real k_obj type. Same as deref twice.
+                pub fn kobj(&self) -> &$k_path {
+                    self.deref().deref()
+                }
             }
 
             impl Deref for $k_type {
