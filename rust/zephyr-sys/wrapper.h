@@ -7,7 +7,7 @@
 #include <misc/mempool.h>
 #include <device.h>
 #include <uart.h>
-#include <drivers/console/uart_pipe.h>
+#include <uart_buffered.h>
 
 // Create a constant we can use from Rust in all cases
 #ifdef CONFIG_USERSPACE

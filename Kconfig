@@ -45,3 +45,16 @@ config RUST_HEAP_MEM_POOL_MIN_SIZE
 	  of the entire pool.
 endif
 endif
+
+config UART_BUFFERED
+	bool "UART fifo buffered driver"
+	depends on SERIAL && UART_INTERRUPT_DRIVEN
+	select POLL
+	help
+	  Allows wrapping the raw UART API with software RX and TX FIFOs that
+	  can be accessed from user space. Interrupt handlers move data between
+	  the hardware fifos and memory. This way, interrupt handlers do not
+	  need to be specifically written to deal with application-specific
+	  UART use cases from kernel mode. Signals are provided for a thread to
+	  be woken on read or write readiness. Behaves similarly to a UNIX
+	  file, supporting blocking and non-blocking reads and writes.

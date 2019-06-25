@@ -2,6 +2,8 @@
 
 cmake_minimum_required(VERSION 3.13.1)
 
+add_subdirectory(uart-buffered)
+
 # Use a clang_target known to clang so headers will be processed correctly with
 # bindgen. rust_target may point to a custom json target.
 if(${ARCH} STREQUAL "posix" OR ${ARCH} STREQUAL "x86")

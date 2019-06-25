@@ -12,6 +12,9 @@ path = "../zephyr-macros"
 [dependencies.zephyr-logger]
 path = "../zephyr-logger"
 
+[dependencies.zephyr-uart-buffered]
+path = "../zephyr-uart-buffered"
+
 [profile.release]
 lto = true
 panic = "abort"

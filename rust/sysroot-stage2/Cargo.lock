@@ -36,6 +36,7 @@ dependencies = [
  "zephyr 0.1.0",
  "zephyr-logger 0.1.0",
  "zephyr-macros 0.1.0",
+ "zephyr-uart-buffered 0.1.0",
 ]
 
 [[package]]
@@ -61,6 +62,10 @@ dependencies = [
  "proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 0.6.12 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "zephyr-uart-buffered"
+version = "0.1.0"
 
 [metadata]
 "checksum cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)" = "b486ce3ccf7ffd79fdeb678eac06a9e6c09fc88d33836340becb8fffe87c5e33"
