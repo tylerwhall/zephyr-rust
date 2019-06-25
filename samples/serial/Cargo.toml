@@ -5,4 +5,3 @@ authors = ["Tyler Hall <tylerwhall@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-cstr = "0.1.7"
