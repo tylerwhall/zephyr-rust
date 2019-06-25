@@ -11,10 +11,9 @@ Run
 ===
 
 .. code-block:: console
-    sh ../run.sh
+    ninja run
 
-A `run.sh` script has been provided which adds the following line to the qemu
-command:
+CMakeLists.txt adds the following line to the qemu command:
 
 .. code-block:: console
     -serial tcp:localhost:4444,server,nowait
