@@ -6,6 +6,7 @@
 extern void rust_main(void);
 extern u8_t *rust_uart_cb(u8_t *buf, size_t *off);
 
+// TODO: move these and the device under an API struct
 static struct {
     // Must be power of 2;
     u8_t buf[16];
@@ -14,6 +15,7 @@ static struct {
 } uart_rx_fifo;
 
 K_SEM_DEFINE(uart_rx_sem, 0, 1);
+static struct k_timer uart_buffered_rx_timer;
 
 static struct {
     // Must be power of 2;
@@ -111,6 +113,11 @@ static void uart_buffered_write(struct device *uart, const u8_t *buf, size_t len
     }
 }
 
+static void uart_buffered_rx_fifo_timeout(struct k_timer *timer)
+{
+    k_sem_give(&uart_rx_sem);
+}
+
 static void uart_buffered_rx(struct device *uart)
 {
     bool pushed = false;
@@ -130,8 +137,13 @@ static void uart_buffered_rx(struct device *uart)
         }
     }
 
-    if (pushed) {
+    if (fifo_used(&uart_rx_fifo) >= fifo_capacity(&uart_rx_fifo) / 2) {
+        /* Wake reader now if more than half full */
+        k_timer_stop(&uart_buffered_rx_timer);
         k_sem_give(&uart_rx_sem);
+    } else if (!fifo_empty(&uart_rx_fifo)) {
+        /* Make sure reader is woken eventually if any data is available */
+        k_timer_start(&uart_buffered_rx_timer, K_MSEC(1), 0);
     }
 }
 
@@ -189,6 +201,7 @@ static void uart_buffered_setup(struct device *uart)
 
     while (uart_fifo_read(uart, &c, 1)) {};
 
+    k_timer_init(&uart_buffered_rx_timer, uart_buffered_rx_fifo_timeout, NULL);
     uart_irq_callback_set(uart, uart_buffered_irq);
     uart_irq_rx_enable(uart);
 }
