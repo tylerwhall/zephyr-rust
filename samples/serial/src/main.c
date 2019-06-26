@@ -15,16 +15,101 @@ static struct {
 
 K_SEM_DEFINE(uart_rx_sem, 0, 1);
 
+static struct {
+    // Must be power of 2;
+    u8_t buf[16];
+    u16_t write;
+    u16_t read;
+} uart_tx_fifo;
+
+K_SEM_DEFINE(uart_tx_sem, 0, 1);
+
 #define fifo_capacity(fifo) (sizeof((fifo)->buf))
 #define fifo_mask(fifo, val) ((val) & (fifo_capacity(fifo) - 1))
 #define fifo_write_advance(fifo) fifo_mask(fifo, (fifo)->write++)
 #define fifo_read_advance(fifo) fifo_mask(fifo, (fifo)->read++)
+#define fifo_read(fifo) fifo_mask(fifo, (fifo)->read)
 
 #define fifo_used(fifo) ((fifo)->write - (fifo)->read)
 #define fifo_full(fifo) (fifo_used(fifo) >= fifo_capacity(fifo))
 #define fifo_empty(fifo) (fifo_used(fifo) == 0)
 #define fifo_push(fifo, val) { assert(!fifo_full(fifo)); (fifo)->buf[fifo_write_advance(fifo)] = val; }
 #define fifo_pop(fifo) ({ assert(!fifo_empty(fifo)); (fifo)->buf[fifo_read_advance(fifo)]; })
+#define fifo_peek(fifo) ({ assert(!fifo_empty(fifo)); (fifo)->buf[fifo_read(fifo)]; })
+
+static void uart_buffered_tx(struct device *uart)
+{
+    uart_irq_tx_disable(uart);
+
+    while (!fifo_empty(&uart_tx_fifo)) {
+        u8_t c = fifo_peek(&uart_tx_fifo);
+        if (uart_fifo_fill(uart, &c, 1) == 1) {
+            fifo_pop(&uart_tx_fifo);
+        } else {
+            uart_irq_tx_enable(uart);
+            break;
+        }
+        compiler_barrier(); /* Should be a CPU barrier on SMP, but no Zephyr API */
+    }
+
+    /* Wake the writer if the fifo is half full or less */
+    if (fifo_used(&uart_tx_fifo) <= fifo_capacity(&uart_tx_fifo) / 2) {
+        k_sem_give(&uart_tx_sem);
+    }
+}
+
+static int uart_buffered_write_nb(struct device *uart, const u8_t *buf, size_t len)
+{
+    u16_t current_read, current_write;
+    u16_t last_read = uart_tx_fifo.read;
+    u16_t last_write = uart_tx_fifo.write;
+    int pos = 0;
+
+    compiler_barrier(); /* Should be a CPU barrier on SMP, but no Zephyr API */
+
+    while (pos < len) {
+        if (fifo_full(&uart_tx_fifo)) {
+            if (pos == 0)
+                pos = -EAGAIN;
+            break;
+        }
+        fifo_push(&uart_tx_fifo, buf[pos++]);
+    }
+
+    compiler_barrier(); /* Should be a CPU barrier on SMP, but no Zephyr API */
+
+    /*
+     * To avoid making a syscall on every write, determine if it's possible the tx irq is disabled.
+     * - If fifo is non-empty, we might need to enable (current_read != current_write)
+     * - If the fifo was observed empty before we added something, we need to
+     *   enable because the transition to fifo empty would have disabled it.
+     *   (last_read == last_write)
+     * - If the fifo was observed non-empty initially, we may still need to
+     *   enable. The irq could have run and drained it at some point while we
+     *   were filling it. We can detect this by the read index changing.
+     *   (last_read != current_read)
+     */
+    current_read = uart_tx_fifo.read;
+    current_write = uart_tx_fifo.write;
+    if (current_read != current_write && (last_read == last_write || last_read != current_read)) {
+        uart_irq_tx_enable(uart);
+    }
+
+    return pos;
+}
+
+static void uart_buffered_write(struct device *uart, const u8_t *buf, size_t len)
+{
+    while (len) {
+        int ret = uart_buffered_write_nb(uart, buf, len);
+        if (ret < 0) {
+            k_sem_take(&uart_tx_sem, K_FOREVER);
+            continue;
+        }
+        buf += ret;
+        len -= ret;
+    }
+}
 
 static void uart_buffered_rx(struct device *uart)
 {
@@ -56,6 +141,9 @@ static void uart_buffered_irq(struct device *uart)
     if (uart_irq_is_pending(uart)) {
         if (uart_irq_rx_ready(uart)) {
             uart_buffered_rx(uart);
+        }
+        if (uart_irq_tx_ready(uart)) {
+            uart_buffered_tx(uart);
         }
     }
 }
@@ -105,6 +193,8 @@ static void uart_buffered_setup(struct device *uart)
     uart_irq_rx_enable(uart);
 }
 
+static const char output[] = "Test output string\n";
+
 void main(void)
 {
     struct device *uart = device_get_binding(CONFIG_UART_PIPE_ON_DEV_NAME);
@@ -135,6 +225,9 @@ void main(void)
         printk("Got: ");
         k_str_out(buf, len);
         printk("\n");
+
+        /* Blocking write */
+        uart_buffered_write(uart, (const u8_t *)output, sizeof(output));
     }
 
     //rust_main();
