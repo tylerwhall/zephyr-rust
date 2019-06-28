@@ -158,18 +158,21 @@ static void k_poll_signal_wait(struct k_poll_signal *signal)
 static void uart_buffered_tx(struct uart_buffered_tx *uart)
 {
 	struct fifo_handle *fifo = uart_buffered_tx_handle(uart);
-
-	uart_irq_tx_disable(fifo->device);
+	bool disable_irq = true;
 
 	while (!fifo_empty(fifo)) {
 		u8_t c = fifo_peek(fifo);
 		if (uart_fifo_fill(fifo->device, &c, 1) == 1) {
 			fifo_pop(fifo);
 		} else {
-			uart_irq_tx_enable(fifo->device);
+			disable_irq = false;
 			break;
 		}
 		compiler_barrier(); /* Should be a CPU barrier on SMP, but no Zephyr API */
+	}
+
+	if (disable_irq) {
+		uart_irq_tx_disable(fifo->device);
 	}
 
 	/* Wake the writer if the fifo is half full or less */
