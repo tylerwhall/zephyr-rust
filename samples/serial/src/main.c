@@ -155,6 +155,7 @@ static void k_poll_signal_wait(struct k_poll_signal *signal)
 	k_poll_signal_reset(signal);
 }
 
+/* TX interrupt handler */
 static void uart_buffered_tx(struct uart_buffered_tx *uart)
 {
 	struct fifo_handle *fifo = uart_buffered_tx_handle(uart);
@@ -165,6 +166,7 @@ static void uart_buffered_tx(struct uart_buffered_tx *uart)
 		if (uart_fifo_fill(fifo->device, &c, 1) == 1) {
 			fifo_pop(fifo);
 		} else {
+			/* Still want to send more (fifo not empty) */
 			disable_irq = false;
 			break;
 		}
@@ -181,12 +183,13 @@ static void uart_buffered_tx(struct uart_buffered_tx *uart)
 	}
 }
 
-static int uart_buffered_write_nb(struct fifo_handle *fifo, const u8_t *buf,
+static int uart_buffered_write_nb(struct uart_buffered_tx *tx, const u8_t *buf,
 				  size_t len)
 {
-	u16_t current_read, current_write;
+	u16_t current_read;
+	struct fifo_handle *fifo = uart_buffered_rx_handle(tx);
 	u16_t last_read = fifo->fifo->read;
-	u16_t last_write = fifo->fifo->write;
+	bool was_empty = fifo_empty(fifo);
 	int pos = 0;
 
 	compiler_barrier(); /* Should be a CPU barrier on SMP, but no Zephyr API */
@@ -204,32 +207,28 @@ static int uart_buffered_write_nb(struct fifo_handle *fifo, const u8_t *buf,
 
 	/*
 	 * To avoid making a syscall on every write, determine if it's possible the tx irq is disabled.
-	 * - If fifo is non-empty, we might need to enable (current_read != current_write)
+	 * - If fifo is non-empty, we might need to enable
 	 * - If the fifo was observed empty before we added something, we need to
 	 *   enable because the transition to fifo empty would have disabled it.
-	 *   (last_read == last_write)
-	 * - If the fifo was observed non-empty initially, we may still need to
-	 *   enable. The irq could have run and drained it at some point while we
-	 *   were filling it. We can detect this by the read index changing.
-	 *   (last_read != current_read)
+	 * - If the fifo was changed by the irq handler between observations, we can't
+	 *   be sure if it became empty in the handler and was disabled, so we must
+	 *   enable it.
 	 */
 	current_read = fifo->fifo->read;
-	current_write = fifo->fifo->write;
-	if (current_read != current_write &&
-	    (last_read == last_write || last_read != current_read)) {
+	if (!fifo_empty(fifo) && (was_empty || last_read != current_read)) {
 		uart_irq_tx_enable(fifo->device);
 	}
 
 	return pos;
 }
 
-static void uart_buffered_write(struct uart_buffered_tx *uart, const u8_t *buf,
+static void uart_buffered_write(struct uart_buffered_tx *tx, const u8_t *buf,
 				size_t len)
 {
-	struct fifo_handle *fifo = uart_buffered_tx_handle(uart);
+	struct fifo_handle *fifo = uart_buffered_tx_handle(tx);
 
 	while (len) {
-		int ret = uart_buffered_write_nb(fifo, buf, len);
+		int ret = uart_buffered_write_nb(tx, buf, len);
 		if (ret < 0) {
 			k_poll_signal_wait(fifo->signal);
 			continue;
@@ -249,19 +248,22 @@ static void uart_buffered_rx_timeout(struct k_timer *timer)
 static void uart_buffered_rx(struct uart_buffered_rx *uart)
 {
 	struct fifo_handle *fifo = uart_buffered_rx_handle(uart);
+	bool disable_irq = true;
 
-	while (true) {
+	while (!fifo_full(fifo)) {
 		u8_t c;
-		int ret = uart_fifo_read(fifo->device, &c, 1);
-		if (ret <= 0)
-			break;
-
-		if (!fifo_full(fifo)) {
+		if (uart_fifo_read(fifo->device, &c, 1) == 1) {
 			printk("Uart got %c\n", c);
 			fifo_push(fifo, c);
 		} else {
-			printk("Uart dropped %c\n", c);
+			/* Still want to receive more (fifo not full) */
+			disable_irq = false;
+			break;
 		}
+	}
+
+	if (disable_irq) {
+		uart_irq_rx_disable(fifo->device);
 	}
 
 	if (fifo_used(fifo) >= fifo_capacity(fifo) / 2) {
@@ -295,17 +297,37 @@ static void uart_buffered_irq(struct device *uart,
 static int uart_buffered_read_nb(struct uart_buffered_rx *rx, u8_t *buf,
 				 size_t len)
 {
+	u16_t current_write;
 	struct fifo_handle *fifo = uart_buffered_rx_handle(rx);
+	u16_t last_write = fifo->fifo->write;
+	bool was_full = fifo_full(fifo);
 	int pos = 0;
+
+	compiler_barrier(); /* Should be a CPU barrier on SMP, but no Zephyr API */
 
 	while (pos < len) {
 		if (fifo_empty(fifo)) {
-			if (pos)
-				return pos;
-			else
-				return -EAGAIN;
+			if (pos == 0)
+				pos = -EAGAIN;
+			break;
 		}
 		buf[pos++] = fifo_pop(fifo);
+	}
+
+	compiler_barrier(); /* Should be a CPU barrier on SMP, but no Zephyr API */
+
+	/*
+	 * To avoid making a syscall on every read, determine if it's possible the rx irq is disabled.
+	 * - If fifo is not full, we might need to enable
+	 * - If the fifo was observed full before we added something, we need to
+	 *   enable because the transition to fifo full would have disabled it.
+	 * - If the fifo was changed by the irq handler between observations, we can't
+	 *   be sure if it became full in the handler and was disabled, so we must
+	 *   enable it.
+	 */
+	current_write = fifo->fifo->write;
+	if (!fifo_full(fifo) && (was_full || last_write != current_write)) {
+		uart_irq_rx_enable(fifo->device);
 	}
 
 	return pos;
@@ -317,12 +339,20 @@ static size_t uart_buffered_read(struct uart_buffered_rx *rx, u8_t *buf,
 	struct fifo_handle *fifo = uart_buffered_rx_handle(rx);
 	size_t pos = 0;
 
-	while (fifo_empty(fifo)) {
-		k_poll_signal_wait(fifo->signal);
-	}
-
-	while (!fifo_empty(fifo) && pos < len) {
-		buf[pos++] = fifo_pop(fifo);
+	while (len) {
+		int ret = uart_buffered_read_nb(rx, buf, len);
+		if (ret < 0) {
+			if (pos > 0) {
+				/* Return if we have anything */
+				break;
+			} else {
+				/* Wait until we have something */
+				k_poll_signal_wait(fifo->signal);
+				continue;
+			}
+		}
+		buf += ret;
+		len -= ret;
 	}
 
 	return pos;
