@@ -24,12 +24,14 @@ zephyr_macros::k_mutex_define!(MUTEX);
 zephyr_macros::k_sem_define!(TLS_SEM, 0, 1);
 
 fn mutex_test() {
-    let data = MutexData::new(1u32);
+    let data = 1u32;
 
     // Bind the static mutex to our local data. This would make more sense if
     // the data were static, but that requires app mem regions for user mode.
     let mutex = unsafe { Mutex::new(&MUTEX, &data) };
 
+    // Should allow cloning directly if the data is a reference.
+    let _other_mutex = mutex.clone();
     zephyr::any::k_str_out("Locking\n");
     let _val = mutex.lock::<zephyr::context::Any>();
     zephyr::any::k_str_out("Unlocking\n");

@@ -70,57 +70,67 @@ impl<'a> RawMutex for &'a KMutex {
 /// Using this is safe, but creating it is not. Creator must ensure it is not
 /// possible to get a reference to the data elsewhere. Lifetime bounds ensure the
 /// mutex kobject lives at least as long as the data it protects.
-#[derive(Copy)]
-pub struct Mutex<'m: 'd, 'd, T> {
+pub struct Mutex<'m, T> {
     mutex: &'m KMutex,
-    data: &'d MutexData<T>,
+    data: MutexData<T>,
 }
 
-impl<'m: 'd, 'd, T> Mutex<'m, 'd, T> {
-    pub unsafe fn new(mutex: &'m KMutex, data: &'d MutexData<T>) -> Self {
-        Mutex { mutex, data }
+impl<'m, T> Mutex<'m, T> {
+    pub unsafe fn new(mutex: &'m KMutex, data: T) -> Self {
+        Mutex {
+            mutex,
+            data: MutexData::new(data),
+        }
     }
 
     pub unsafe fn kobj(&self) -> *mut libc::c_void {
         self.mutex as *const _ as *mut _
     }
 
-    pub fn lock<C: MutexSyscalls>(&self) -> MutexGuard<'d, T, C> {
+    pub fn lock<'a, C: MutexSyscalls>(&'a self) -> MutexGuard<'a, T, C> {
         unsafe {
             self.mutex.lock::<C>();
         }
-        MutexGuard(self.clone(), PhantomData)
-    }
-}
-
-impl<'m: 'd, 'd, T> Clone for Mutex<'m, 'd, T> {
-    fn clone(&self) -> Self {
-        Mutex {
-            mutex: self.mutex,
-            data: self.data,
+        MutexGuard {
+            mutex: self,
+            _syscalls: PhantomData,
         }
     }
 }
 
-pub struct MutexGuard<'a, T, C: MutexSyscalls>(Mutex<'a, 'a, T>, PhantomData<C>);
-
-impl<'a, T, C: MutexSyscalls> Drop for MutexGuard<'a, T, C> {
-    fn drop(&mut self) {
-        unsafe { self.0.mutex.unlock::<C>() }
+/// Allow cloning a mutex where the data is a reference. This allows multiple references to static
+/// data with a static lock without wrapping those references in another Arc layer.
+impl<'m, 'd, T> Clone for Mutex<'m, &'d T> {
+    fn clone(&self) -> Self {
+        Mutex {
+            mutex: self.mutex,
+            data: unsafe { MutexData::new(&*self.data.0.get()) },
+        }
     }
 }
 
-impl<'a, T, C: MutexSyscalls> Deref for MutexGuard<'a, T, C> {
+pub struct MutexGuard<'a, T: 'a, C: MutexSyscalls> {
+    mutex: &'a Mutex<'a, T>,
+    _syscalls: PhantomData<C>,
+}
+
+impl<'a, T: 'a, C: MutexSyscalls> Drop for MutexGuard<'a, T, C> {
+    fn drop(&mut self) {
+        unsafe { self.mutex.mutex.unlock::<C>() }
+    }
+}
+
+impl<'a, T: 'a, C: MutexSyscalls> Deref for MutexGuard<'a, T, C> {
     type Target = T;
 
     fn deref(&self) -> &T {
-        unsafe { &*self.0.data.0.get() }
+        unsafe { &*self.mutex.data.0.get() }
     }
 }
 
-impl<'a, T, C: MutexSyscalls> DerefMut for MutexGuard<'a, T, C> {
+impl<'a, T: 'a, C: MutexSyscalls> DerefMut for MutexGuard<'a, T, C> {
     fn deref_mut(&mut self) -> &mut T {
-        unsafe { &mut *self.0.data.0.get() }
+        unsafe { &mut *self.mutex.data.0.get() }
     }
 }
 
