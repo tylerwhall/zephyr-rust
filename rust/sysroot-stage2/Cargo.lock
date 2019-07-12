@@ -170,6 +170,10 @@ dependencies = [
 [[package]]
 name = "zephyr-uart-buffered"
 version = "0.1.0"
+dependencies = [
+ "futures-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zephyr-futures 0.1.0",
+]
 
 [metadata]
 "checksum cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)" = "b486ce3ccf7ffd79fdeb678eac06a9e6c09fc88d33836340becb8fffe87c5e33"

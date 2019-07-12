@@ -1,11 +1,11 @@
 extern crate alloc;
 extern crate zephyr_core;
 
-use core::cell::{UnsafeCell, RefCell};
+use alloc::sync::{Arc, Weak};
+use core::cell::{RefCell, UnsafeCell};
+use core::marker::PhantomData;
 use core::pin::Pin;
 use core::task::{Context, Poll, Waker};
-use core::marker::PhantomData;
-use alloc::sync::{Arc, Weak};
 
 use futures::future::Future;
 use futures::stream::Stream;
@@ -71,6 +71,14 @@ thread_local! {
     static REACTOR: RefCell<Option<Reactor>> = RefCell::new(None);
 }
 
+#[inline(never)]
+pub fn current_reactor_register(signal: &'static impl PollableKobj, context: &mut Context) {
+    match REACTOR.try_with(|r| r.borrow_mut().as_mut().map(|r| r.register(signal, context))) {
+        Ok(None) | Err(_) => panic!("register with no reactor"),
+        Ok(Some(_)) => (),
+    }
+}
+
 struct Task {
     future: UnsafeCell<Pin<Box<dyn Future<Output = ()>>>>,
     executor: ExecutorHandle,
@@ -132,7 +140,10 @@ impl ExecutorInner {
 // that calls poll being not Send or Sync. Since we're not requiring spawned futures to be Send or
 // Sync and Executor is the effective owner, add a PhantomData here as if we directly own a Future
 // that is not explicitly Send or Sync.
-pub struct Executor(Arc<Mutex<'static, ExecutorInner>>, PhantomData<Future<Output = ()>>);
+pub struct Executor(
+    Arc<Mutex<'static, ExecutorInner>>,
+    PhantomData<Future<Output = ()>>,
+);
 #[derive(Clone)]
 struct ExecutorHandle(Weak<Mutex<'static, ExecutorInner>>);
 

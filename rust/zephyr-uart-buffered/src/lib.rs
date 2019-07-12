@@ -5,11 +5,17 @@ use zephyr_core::poll::KPollSignal;
 use zephyr_core::NegErr;
 use zephyr_sys::raw::{uart_buffered_rx_handle, uart_buffered_tx_handle};
 
+mod futures;
+
+pub use crate::futures::{UartBufferedRxAsync, UartBufferedTxAsync};
+
 pub struct UartBufferedRx {
     handle: uart_buffered_rx_handle,
 }
 
 impl UartBufferedRx {
+    /// Unsafe because this is passed from C and caller must guarantee there is
+    /// only one instance created per handle.
     pub unsafe fn new(handle: uart_buffered_rx_handle) -> Self {
         UartBufferedRx { handle }
     }
@@ -44,6 +50,10 @@ impl UartBufferedRx {
     pub fn get_signal(&self) -> &'static KPollSignal {
         unsafe { &*self.handle.fifo.signal }
     }
+
+    pub fn into_async(self) -> UartBufferedRxAsync {
+        UartBufferedRxAsync::new(self)
+    }
 }
 
 pub struct UartBufferedTx {
@@ -51,6 +61,8 @@ pub struct UartBufferedTx {
 }
 
 impl UartBufferedTx {
+    /// Unsafe because this is passed from C and caller must guarantee there is
+    /// only one instance created per handle.
     pub unsafe fn new(handle: uart_buffered_tx_handle) -> Self {
         UartBufferedTx { handle }
     }
@@ -84,5 +96,9 @@ impl UartBufferedTx {
     /// lifetime because uart buffered can only be declared statically.
     pub fn get_signal(&self) -> &'static KPollSignal {
         unsafe { &*self.handle.fifo.signal }
+    }
+
+    pub fn into_async(self) -> UartBufferedTxAsync {
+        UartBufferedTxAsync::new(self)
     }
 }
