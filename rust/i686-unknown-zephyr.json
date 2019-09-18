@@ -10,7 +10,7 @@
   "relocation-model": "static",
   "linker-flavor": "gcc",
   "linker-is-gnu": true,
-  "llvm-target": "i686-unknown-linux-gnu",
+  "llvm-target": "i686-elf",
   "max-atomic-width": 64,
   "os": "zephyr",
   "position-independent-executables": false,
