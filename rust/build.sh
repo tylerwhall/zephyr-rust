@@ -1,7 +1,7 @@
 #!/bin/sh -ex
 
 HOST=$(rustc -vV | grep host: | cut -d ' ' -f 2)
-VERSION="+nightly-2019-05-22"
+VERSION="+nightly-2019-09-16"
 CARGO_ARGS="${VERSION} -v build --target=${RUST_TARGET} --release"
 
 publish_sysroot() {

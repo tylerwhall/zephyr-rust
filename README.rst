@@ -65,7 +65,7 @@ so long as we are using rust-src from rustup.
 
 .. code-block:: console
 
-    rustup toolchain install nightly-2019-05-22
+    rustup toolchain install nightly-2019-09-16
     rustup default nightly-2019-05-22
     rustup component add rustfmt
     rustup component add rust-src
