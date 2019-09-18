@@ -7,5 +7,5 @@ edition = "2018"
 [dependencies]
 zephyr = { path = "../zephyr" }
 log = "0.4"
-futures-preview = "=0.3.0-alpha.17"
-futures-util-preview = "=0.3.0-alpha.17"
+futures-preview = "=0.3.0-alpha.18"
+futures-util-preview = "=0.3.0-alpha.18"

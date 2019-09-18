@@ -142,7 +142,7 @@ impl ExecutorInner {
 // that is not explicitly Send or Sync.
 pub struct Executor(
     Arc<Mutex<'static, ExecutorInner>>,
-    PhantomData<Future<Output = ()>>,
+    PhantomData<dyn Future<Output = ()>>,
 );
 #[derive(Clone)]
 struct ExecutorHandle(Weak<Mutex<'static, ExecutorInner>>);
@@ -184,8 +184,8 @@ impl Executor {
 
             loop {
                 while let Some(task) = self.pop_runnable::<C>() {
-                    let waker = task.clone().into_waker();
-                    let mut context = Context::from_waker(&waker);
+                    let waker = futures::task::waker_ref(&task);
+                    let mut context = Context::from_waker(&*waker);
                     // Don't care about the result of poll. If the future is
                     // not complete, it will likely either have been
                     // registered with the reactor for I/O, or somewhere
