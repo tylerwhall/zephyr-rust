@@ -30,13 +30,7 @@ publish_sysroot() {
 cargo ${CARGO_ARGS} \
     --target-dir=${SYSROOT_BUILD}-stage1 \
     --manifest-path=./sysroot-stage1/Cargo.toml -p std
-publish_sysroot ${SYSROOT_BUILD}-stage2 ${SYSROOT}-stage1 ${SYSROOT_BUILD}-stage1
-# Build Zephyr crates
-RUSTFLAGS="${RUSTFLAGS} --sysroot ${SYSROOT}-stage1" cargo ${CARGO_ARGS} \
-    --target-dir=${SYSROOT_BUILD}-stage2 \
-    --manifest-path=./sysroot-stage2/Cargo.toml
-
-publish_sysroot ${APP_BUILD} ${SYSROOT} ${SYSROOT_BUILD}-stage1 ${SYSROOT_BUILD}-stage2
+publish_sysroot ${APP_BUILD} ${SYSROOT} ${SYSROOT_BUILD}-stage1
 
 export RUSTFLAGS="${RUSTFLAGS} --sysroot ${SYSROOT}"
 cargo ${CARGO_ARGS} --target-dir=${APP_BUILD} --manifest-path=${CARGO_MANIFEST}

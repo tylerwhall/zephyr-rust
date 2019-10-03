@@ -5,3 +5,8 @@ authors = ["Tyler Hall <tylerwhall@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+futures-preview = "=0.3.0-alpha.18"
+zephyr = { path = "../../rust/zephyr" }
+zephyr-macros = { path = "../../rust/zephyr-macros" }
+zephyr-futures = { path = "../../rust/zephyr-futures" }
+zephyr-uart-buffered = { path = "../../rust/zephyr-uart-buffered" }

@@ -1,14 +1,9 @@
-extern crate futures;
-extern crate futures_util;
 extern crate libc;
-extern crate zephyr;
-extern crate zephyr_futures;
-extern crate zephyr_macros;
 
 use libc::c_void;
 
 use futures::future;
-use futures_util::stream::StreamExt;
+use futures::stream::StreamExt;
 
 use zephyr::semaphore::*;
 use zephyr_futures::{Executor, SemaphoreStream};

@@ -1,11 +1,6 @@
 #![feature(async_await)]
 
-extern crate futures;
-extern crate zephyr;
 extern crate zephyr_sys;
-extern crate zephyr_uart_buffered;
-extern crate zephyr_macros;
-extern crate zephyr_futures;
 
 use futures::{StreamExt, AsyncBufReadExt, AsyncWriteExt};
 use futures::io::BufReader;

@@ -6,3 +6,7 @@ edition = "2018"
 
 [dependencies]
 cstr = "0.1.7"
+log = "0.4"
+zephyr = { path = "../../rust/zephyr" }
+zephyr-macros = { path = "../../rust/zephyr-macros" }
+zephyr-logger = { path = "../../rust/zephyr-logger" }
