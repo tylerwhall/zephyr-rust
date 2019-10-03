@@ -1,7 +1,7 @@
 #!/bin/sh -ex
 
 HOST=$(rustc -vV | grep host: | cut -d ' ' -f 2)
-VERSION="+nightly-2019-09-16"
+VERSION="+1.37.0"
 CARGO_ARGS="${VERSION} -v build --target=${RUST_TARGET} --release"
 
 publish_sysroot() {
@@ -26,6 +26,9 @@ publish_sysroot() {
     mv ${SYSROOT_LIB_HOST}-new ${SYSROOT_LIB_HOST}
 }
 
+# Unstable features are required for building std. Also allow in the app
+# project for now because they're often needed for low level embedded.
+export RUSTC_BOOTSTRAP=1
 # Build std
 cargo ${CARGO_ARGS} \
     --target-dir=${SYSROOT_BUILD}-stage1 \

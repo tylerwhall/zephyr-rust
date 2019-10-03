@@ -59,14 +59,16 @@ Install Zephyr's "West" build tool. Needed for ZEPHYR_MODULES support.
 Rust toolchain
 ==============
 
-A nightly compiler is required to use unstable features that are unavoidable
-when implementing libstd. The nightly date is arbitrary, but needs to be locked
-so long as we are using rust-src from rustup.
+The compiler version must exactly match the version of standard library
+included as a submodule of this project. In practice, using a different
+compiler version often fails to compile because of Rust internally making heavy
+use of unstable compiler features.
+
+The current base is stable-1.37.0.
 
 .. code-block:: console
 
-    rustup toolchain install nightly-2019-09-16
-    rustup default nightly-2019-05-22
+    rustup toolchain install 1.37.0
     rustup component add rustfmt
     rustup component add rust-src
 
