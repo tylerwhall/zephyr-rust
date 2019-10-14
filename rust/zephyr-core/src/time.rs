@@ -33,13 +33,17 @@ impl InstantMs {
 impl TryFrom<&Duration> for InstantMs {
     type Error = TryFromDurationError;
 
+    #[inline(always)]
     fn try_from(dur: &Duration) -> Result<Self, Self::Error> {
-        let secs = i64::try_from(dur.as_secs())?;
-        let ms = i64::from(dur.subsec_millis());
-        secs.checked_mul(1000)
-            .and_then(|secs| secs.checked_add(ms))
-            .ok_or(TryFromDurationError(()))
-            .map(InstantMs)
+        let secs = dur.as_secs();
+        // Allow for a very large duration, but not so large that multiplying by 1000 will
+        // overflow. This is cheaper on 32-bit than doing a checked 64-bit multiply.
+        let secs = if secs & 0x000f_ffff_ffff_ffffu64 == secs {
+            secs as i64 * 1000 + dur.subsec_millis() as i64
+        } else {
+            return Err(TryFromDurationError);
+        };
+        Ok(InstantMs(secs))
     }
 }
 
@@ -77,7 +81,7 @@ impl TryFrom<&Duration> for DurationMs {
         let ms = i32::try_from(dur.subsec_millis())?;
         secs.checked_mul(1000)
             .and_then(|secs| secs.checked_add(ms))
-            .ok_or(TryFromDurationError(()))
+            .ok_or(TryFromDurationError)
             .map(DurationMs)
     }
 }
@@ -91,7 +95,7 @@ fn try_from_duration() {
 */
 
 #[derive(Clone, Copy, Debug)]
-pub struct TryFromDurationError(());
+pub struct TryFromDurationError;
 
 impl fmt::Display for TryFromDurationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -101,6 +105,6 @@ impl fmt::Display for TryFromDurationError {
 
 impl From<TryFromIntError> for TryFromDurationError {
     fn from(_e: TryFromIntError) -> Self {
-        TryFromDurationError(())
+        TryFromDurationError
     }
 }
