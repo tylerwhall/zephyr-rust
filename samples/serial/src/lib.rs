@@ -2,12 +2,15 @@
 
 extern crate zephyr_sys;
 
+use std::time::Duration;
+
 use futures::{StreamExt, AsyncBufReadExt, AsyncWriteExt};
 use futures::io::BufReader;
 
 use zephyr_sys::raw::{uart_buffered_rx_handle, uart_buffered_tx_handle};
 use zephyr_uart_buffered::{UartBufferedRx, UartBufferedTx};
 use zephyr_futures::Executor;
+use zephyr_futures::delay::Delay;
 
 zephyr_macros::k_mutex_define!(EXECUTOR_MUTEX);
 
@@ -16,6 +19,8 @@ async fn echo<R: AsyncBufReadExt + Unpin, W: AsyncWriteExt + Unpin>(rx: R, mut t
     while let Some(line) = lines.next().await {
         let line = line.unwrap();
         println!("got line: {}", line);
+        println!("sleeping");
+        Delay::new(Duration::from_secs(1)).await;
         let line = line.into_bytes();
         tx.write_all(&line).await.unwrap();
     }

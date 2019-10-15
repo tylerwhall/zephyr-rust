@@ -6,6 +6,7 @@ use core::cell::{RefCell, UnsafeCell};
 use core::marker::PhantomData;
 use core::pin::Pin;
 use core::task::{Context, Poll, Waker};
+use std::time::Instant;
 
 use futures::future::Future;
 use futures::stream::Stream;
@@ -16,11 +17,17 @@ use log::trace;
 use zephyr_core::mutex::*;
 use zephyr_core::poll::*;
 use zephyr_core::semaphore::*;
+use zephyr_core::{DurationMs};
+
+pub mod delay;
+
+use delay::{TimerReactor, TimerPoll};
 
 struct Reactor {
     events: Vec<KPollEvent>,
     // Wakers corresponding to each event
     wakers: Vec<Waker>,
+    timers: TimerReactor,
 }
 
 impl Reactor {
@@ -28,6 +35,7 @@ impl Reactor {
         Reactor {
             events: Vec::new(),
             wakers: Vec::new(),
+            timers: TimerReactor::new(),
         }
     }
 
@@ -41,13 +49,17 @@ impl Reactor {
         self.wakers.push(context.waker().clone());
     }
 
+    fn register_timer(&mut self, deadline: Instant, context: &mut Context) {
+        self.timers.register(deadline, context)
+    }
+
     /// Returns true if events was non empty and something is ready. False if
     /// there is nothing to wait on. Fired events are removed.
-    fn poll<C: PollSyscalls>(&mut self) -> bool {
-        if self.events.is_empty() {
+    fn poll<C: PollSyscalls>(&mut self, timeout: Option<DurationMs>) -> bool {
+        if self.events.is_empty() && timeout.is_none() {
             return false;
         }
-        self.events[..].poll::<C>().unwrap();
+        self.events[..].poll_timeout::<C>(timeout).unwrap();
 
         assert_eq!(self.events.len(), self.wakers.len());
         let mut i = 0;
@@ -74,6 +86,18 @@ thread_local! {
 #[inline(never)]
 pub fn current_reactor_register(signal: &'static impl PollableKobj, context: &mut Context) {
     match REACTOR.try_with(|r| r.borrow_mut().as_mut().map(|r| r.register(signal, context))) {
+        Ok(None) | Err(_) => panic!("register with no reactor"),
+        Ok(Some(_)) => (),
+    }
+}
+
+#[inline(never)]
+pub fn current_reactor_register_timer(deadline: Instant, context: &mut Context) {
+    match REACTOR.try_with(|r| {
+        r.borrow_mut()
+            .as_mut()
+            .map(|r| r.register_timer(deadline, context))
+    }) {
         Ok(None) | Err(_) => panic!("register with no reactor"),
         Ok(Some(_)) => (),
     }
@@ -199,13 +223,18 @@ impl Executor {
                     let _ = unsafe { task.poll(&mut context) };
                 }
 
-                let mut reactor = r.replace(None);
-                trace!("Reactor poll wait");
-                if !reactor.as_mut().unwrap().poll::<C>() {
+                let mut reactor_borrow = r.borrow_mut();
+                let reactor = reactor_borrow.as_mut().unwrap();
+                let timeout = match reactor.timers.poll() {
+                    TimerPoll::Idle => None,
+                    TimerPoll::Delay(timeout) => Some(timeout),
+                    TimerPoll::Woken => continue,
+                };
+                trace!("Reactor poll wait. Timeout {:?}", timeout);
+                if !reactor.poll::<C>(timeout) {
                     break;
                 }
                 trace!("Reactor poll finished");
-                r.replace(reactor);
             }
             r.replace(None);
         })
