@@ -19,6 +19,17 @@ impl InstantMs {
         self.0.checked_sub(rhs.0).map(Into::into)
     }
 
+    /// Subtract two instants. Return a DurationMs suitable for use as a timeout parameter for
+    /// Zephyr system calls. The difference will saturate at i32::MAX.
+    pub fn sub_timeout(self, rhs: Self) -> DurationMs {
+        if rhs.0 > self.0 {
+            DurationMs(0)
+        } else {
+            let difference = self.0 - rhs.0;
+            DurationMs(difference.try_into().unwrap_or(core::i32::MAX))
+        }
+    }
+
     pub fn checked_add_duration(self, other: &Duration) -> Option<Self> {
         let other = other.try_into().ok()?;
         self.checked_add(other)
