@@ -8,6 +8,26 @@ Add this directory to ZEPHYR_MODULES to build a Cargo library project (located
 in the Zephyr app's source directory by default) and link it into the Zephyr
 app.
 
+Features
+========
+
+* Generated bindings for all syscalls
+* Safe wrappers for some Zephyr APIs (mutex, semaphore, timers, k_poll, UART)
+* Basic libstd port (no_std not necessary)
+* Heap (std::alloc) (CONFIG_RUST_ALLOC_POOL, CONFIG_RUST_HEAP_MEM_POOL_SIZE)
+* Thread-local storage
+* Kernel or user-mode Rust
+    * Rust globals and heap in a Rust-specific memory segment that can be granted to specific threads
+    * Syscalls compile to direct C function calls when !CONFIG_USERSPACE
+    * Note: running kernel and user-mode Rust at the same time could pose a security risk, since there is one shared global allocator
+* Minimal std::futures executor
+    * Supports dynamic tasks and timers
+    * Currently single-threaded
+    * async/await UART example
+* Implemented as a Zephyr module for inclusion in existing Zephyr projects
+* No modifications to Zephyr source
+
+
 .. _Zephyr: https://github.com/zephyrproject-rtos/zephyr
 
 Building and Running
@@ -176,20 +196,6 @@ TODO
 * Separate Rust app from zephyr crates and sysroot (be able to build multiple apps)
 * Kconfig for enabling Rust and configuring the heap
 * test runner
-
-Complete
-========
-
-* generate syscall bindings (including inline functions in kernel mode)
-* minimal port of rust libstd
-* println
-* alloc from kernel mode (Box)
-* split into zephyr-sys and zephyr crates
-* thread local storage
-* alloc from user mode
-* abstraction for pointers to kernel objects
-* safe wrappers (threads, semaphores, etc.)
-* panic
 
 Features Not Planned to Support
 ===============================
