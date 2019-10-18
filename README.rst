@@ -17,13 +17,17 @@ Features
 * Heap (std::alloc) (CONFIG_RUST_ALLOC_POOL, CONFIG_RUST_HEAP_MEM_POOL_SIZE)
 * Thread-local storage
 * Kernel or user-mode Rust
-    * Rust globals and heap in a Rust-specific memory segment that can be granted to specific threads
-    * Syscalls compile to direct C function calls when !CONFIG_USERSPACE
-    * Note: running kernel and user-mode Rust at the same time could pose a security risk, since there is one shared global allocator
+
+  * Rust globals and heap in a Rust-specific memory segment that can be granted to specific threads
+  * Syscalls compile to direct C function calls when !CONFIG_USERSPACE
+  * Note: running kernel and user-mode Rust at the same time could pose a security risk, since there is one shared global allocator
+
 * Minimal std::futures executor
-    * Supports dynamic tasks and timers
-    * Currently single-threaded
-    * async/await UART example
+
+  * Supports dynamic tasks and timers
+  * Currently single-threaded
+  * async/await UART example
+
 * Implemented as a Zephyr module for inclusion in existing Zephyr projects
 * No modifications to Zephyr source
 
