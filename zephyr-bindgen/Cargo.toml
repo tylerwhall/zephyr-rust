@@ -3,6 +3,10 @@ name = "zephyr-bindgen"
 version = "0.1.0"
 authors = ["Steven Walter <stevenrwalter@gmail.com>"]
 edition = "2018"
+description = "Zephyr syscall bindings generator for Rust"
+license = "Apache-2.0"
+repository = "https://github.com/tylerwhall/zephyr-rust.git"
+homepage = "https://github.com/tylerwhall/zephyr-rust"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
