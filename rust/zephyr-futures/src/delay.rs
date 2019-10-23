@@ -5,6 +5,7 @@ use std::time::{Duration, Instant};
 
 use zephyr_core::{InstantMs, DurationMs};
 
+#[derive(Debug)]
 pub struct Delay(Instant);
 
 impl Delay {
