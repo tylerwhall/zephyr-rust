@@ -1,8 +1,17 @@
 #!/bin/sh -ex
 
 HOST=$(rustc -vV | grep host: | cut -d ' ' -f 2)
-VERSION="+1.37.0"
-CARGO_ARGS="${VERSION} -v build --target=${RUST_TARGET} --release"
+CARGO_ARGS="-v build --target=${RUST_TARGET} --release"
+VERSION="1.37.0"
+CURRENT_CARGO_VERSION=$(cargo -vV | grep ^release: | cut -d ' ' -f 2)
+
+# Assert cargo version matches the certified version
+if [ "${CURRENT_CARGO_VERSION}x" != "${VERSION}x" ]; then
+    echo "Error: Current cargo version: ${CURRENT_CARGO_VERSION}, expected: ${VERSION}"
+    echo "If using rustup, it should be automatically installed. If not, run"
+    echo "rustup toolchain install ${VERSION}"
+    exit 1
+fi
 
 publish_sysroot() {
     local CLEAN_DIR_IF_CHANGED=$1
