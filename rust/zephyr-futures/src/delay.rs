@@ -3,7 +3,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll, Waker};
 use std::time::{Duration, Instant};
 
-use zephyr_core::{InstantMs, DurationMs};
+use zephyr_core::{DurationMs, InstantMs};
 
 #[derive(Debug)]
 pub struct Delay(Instant);
