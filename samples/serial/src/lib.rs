@@ -5,6 +5,7 @@ extern crate zephyr_sys;
 use std::time::Duration;
 
 use futures::{StreamExt, AsyncBufReadExt, AsyncWriteExt};
+use futures::task::LocalSpawnExt;
 use futures::io::BufReader;
 
 use zephyr_sys::raw::{uart_buffered_rx_handle, uart_buffered_tx_handle};
@@ -36,6 +37,6 @@ pub extern "C" fn rust_main(rx: uart_buffered_rx_handle, tx: uart_buffered_tx_ha
     let tx = unsafe { UartBufferedTx::new(tx) }.into_async();
 
     let mut executor = unsafe { Executor::new(&EXECUTOR_MUTEX) };
-    executor.spawn(C, echo(rx, tx));
+    executor.spawn_local(echo(rx, tx)).unwrap();
     executor.run::<C>();
 }

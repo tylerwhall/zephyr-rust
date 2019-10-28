@@ -8,20 +8,20 @@ use core::pin::Pin;
 use core::task::{Context, Poll, Waker};
 use std::time::Instant;
 
-use futures::future::Future;
+use futures::future::{Future, LocalFutureObj};
 use futures::stream::Stream;
-use futures::task::ArcWake;
+use futures::task::{ArcWake, LocalSpawn, SpawnError};
 use futures_util::future::FutureExt;
 use log::trace;
 
 use zephyr_core::mutex::*;
 use zephyr_core::poll::*;
 use zephyr_core::semaphore::*;
-use zephyr_core::{DurationMs};
+use zephyr_core::DurationMs;
 
 pub mod delay;
 
-use delay::{TimerReactor, TimerPoll};
+use delay::{TimerPoll, TimerReactor};
 
 struct Reactor {
     events: Vec<KPollEvent>,
@@ -104,7 +104,7 @@ pub fn current_reactor_register_timer(deadline: Instant, context: &mut Context) 
 }
 
 struct Task {
-    future: UnsafeCell<Pin<Box<dyn Future<Output = ()>>>>,
+    future: UnsafeCell<LocalFutureObj<'static, ()>>,
     executor: ExecutorHandle,
 }
 
@@ -116,12 +116,9 @@ unsafe impl Send for Task {}
 unsafe impl Sync for Task {}
 
 impl Task {
-    fn new<F: Future<Output = ()>>(future: F, executor: ExecutorHandle) -> Self
-    where
-        F: 'static,
-    {
+    fn new(future: LocalFutureObj<'static, ()>, executor: ExecutorHandle) -> Self {
         Task {
-            future: UnsafeCell::new(Box::pin(future.fuse())),
+            future: UnsafeCell::new(future),
             executor,
         }
     }
@@ -132,7 +129,7 @@ impl Task {
     /// is safe for it to be the sole writer.
     unsafe fn poll(&self, context: &mut Context) -> Poll<()> {
         let pin_mut = &mut *self.future.get();
-        pin_mut.as_mut().poll(context)
+        pin_mut.poll_unpin(context)
     }
 }
 
@@ -190,14 +187,6 @@ impl Executor {
         ExecutorHandle(Arc::downgrade(&self.0))
     }
 
-    pub fn spawn<C: MutexSyscalls, F: Future<Output = ()>>(&self, _c: C, f: F)
-    where
-        F: 'static,
-    {
-        let task = Arc::new(Task::new(f, self.weak_handle()));
-        self.push_runnable::<C>(task);
-    }
-
     pub fn run<C: MutexSyscalls + PollSyscalls>(&mut self) {
         let reactor = Reactor::new();
         //let waker = task.clone().into_waker();
@@ -238,6 +227,14 @@ impl Executor {
             }
             r.replace(None);
         })
+    }
+}
+
+impl LocalSpawn for Executor {
+    fn spawn_local_obj(&mut self, future: LocalFutureObj<'static, ()>) -> Result<(), SpawnError> {
+        let task = Arc::new(Task::new(future, self.weak_handle()));
+        self.push_runnable::<zephyr::context::Any>(task);
+        Ok(())
     }
 }
 
