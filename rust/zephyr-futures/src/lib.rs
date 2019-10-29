@@ -166,7 +166,7 @@ pub struct Executor(
     PhantomData<dyn Future<Output = ()>>,
 );
 #[derive(Clone)]
-struct ExecutorHandle(Weak<Mutex<'static, ExecutorInner>>);
+pub struct ExecutorHandle(Weak<Mutex<'static, ExecutorInner>>);
 
 impl Executor {
     /// Unsafe because the client guarantees the static mutex is intended for
@@ -183,7 +183,7 @@ impl Executor {
         self.0.lock::<C>().push_runnable(task);
     }
 
-    fn weak_handle(&self) -> ExecutorHandle {
+    pub fn spawner(&self) -> ExecutorHandle {
         ExecutorHandle(Arc::downgrade(&self.0))
     }
 
@@ -232,7 +232,7 @@ impl Executor {
 
 impl LocalSpawn for Executor {
     fn spawn_local_obj(&mut self, future: LocalFutureObj<'static, ()>) -> Result<(), SpawnError> {
-        let task = Arc::new(Task::new(future, self.weak_handle()));
+        let task = Arc::new(Task::new(future, self.spawner()));
         self.push_runnable::<zephyr::context::Any>(task);
         Ok(())
     }
@@ -243,6 +243,18 @@ impl ExecutorHandle {
         // Do nothing if our weak reference is invalid
         if let Some(executor) = self.0.upgrade() {
             executor.lock::<zephyr::context::Any>().push_runnable(task);
+        }
+    }
+}
+
+impl LocalSpawn for ExecutorHandle {
+    fn spawn_local_obj(&mut self, future: LocalFutureObj<'static, ()>) -> Result<(), SpawnError> {
+        if let Some(executor) = self.0.upgrade() {
+            let task = Arc::new(Task::new(future, self.clone()));
+            executor.lock::<zephyr::context::Any>().push_runnable(task);
+            Ok(())
+        } else {
+            Err(SpawnError::shutdown())
         }
     }
 }
