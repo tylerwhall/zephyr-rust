@@ -4,14 +4,14 @@ extern crate zephyr_sys;
 
 use std::time::Duration;
 
-use futures::{StreamExt, AsyncBufReadExt, AsyncWriteExt};
-use futures::task::LocalSpawnExt;
 use futures::io::BufReader;
+use futures::task::LocalSpawnExt;
+use futures::{AsyncBufReadExt, AsyncWriteExt, StreamExt};
 
+use zephyr_futures::delay::Delay;
+use zephyr_futures::Executor;
 use zephyr_sys::raw::{uart_buffered_rx_handle, uart_buffered_tx_handle};
 use zephyr_uart_buffered::{UartBufferedRx, UartBufferedTx};
-use zephyr_futures::Executor;
-use zephyr_futures::delay::Delay;
 
 zephyr_macros::k_mutex_define!(EXECUTOR_MUTEX);
 
