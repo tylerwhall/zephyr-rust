@@ -24,4 +24,5 @@ app = { path = "${crate_dir}" }
 panic = "abort"
 lto = true
 debug = true
+opt-level = "s"
 EOF
