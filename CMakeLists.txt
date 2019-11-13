@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-
-cmake_minimum_required(VERSION 3.13.1)
+cmake_minimum_required(VERSION 3.8.2)
 
 add_subdirectory(uart-buffered)
 
@@ -92,8 +91,7 @@ ExternalProject_Add(
     INSTALL_COMMAND ""
     BUILD_BYPRODUCTS ${rust_staticlib}
 )
-
-add_library(rust_c OBJECT syscall-thunk.c rust-smem.c)
+add_library(rust_c STATIC syscall-thunk.c rust-smem.c)
 add_dependencies(rust_c rust_syscall_macros_h_target)
 target_link_libraries(rust_c zephyr_interface)
 # High level target that means all headers have been generated
@@ -120,11 +118,11 @@ add_custom_command(
     ${rust_ldscript}
     -Wl,-T ${CMAKE_CURRENT_SOURCE_DIR}/gnu-stack.ld
     -Wl,--whole-archive ${rust_staticlib}
-    -Wl,--no-whole-archive $<TARGET_OBJECTS:rust_c>
+    -Wl,--no-whole-archive ${CMAKE_CURRENT_BINARY_DIR}/$<TARGET_FILE_NAME:rust_c>
     -o ${rust_obj}
   DEPENDS
     ${rust_staticlib}
-    $<TARGET_OBJECTS:rust_c>
+    rust_c
     ${CMAKE_CURRENT_SOURCE_DIR}/rust-smem.ld
     ${CMAKE_CURRENT_SOURCE_DIR}/gnu-stack.ld
   COMMAND_EXPAND_LISTS
