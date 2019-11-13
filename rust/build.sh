@@ -1,7 +1,7 @@
 #!/bin/sh -ex
 
 HOST=$(rustc -vV | grep host: | cut -d ' ' -f 2)
-CARGO_ARGS="-v build --target=${RUST_TARGET} --release"
+CARGO_ARGS="-v build --target=${RUST_TARGET_SPEC} --release"
 VERSION="1.37.0"
 CURRENT_CARGO_VERSION=$(cargo -vV | grep ^release: | cut -d ' ' -f 2)
 

@@ -87,8 +87,8 @@ ExternalProject_Add(
         "SYSROOT=${rust_sysroot}"
         "SYSROOT_BUILD=${rust_sysroot_build}"
         "APP_BUILD=${rust_app_build}"
-        "RUST_TARGET_PATH=${rust_src_dir}"
         "RUST_TARGET=${rust_target}"
+        "RUST_TARGET_SPEC=${rust_src_dir}/${rust_target}.json"
         "CARGO_MANIFEST=${rust_generated_project}/Cargo.toml"
         ./build.sh
     INSTALL_COMMAND ""
