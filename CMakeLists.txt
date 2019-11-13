@@ -30,17 +30,20 @@ add_custom_command(OUTPUT ${rust_syscall_macros_h}
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/gen_syscall_header.py
   )
 
-set(rust_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/zephyr-bindgen)
-set(rust_build_dir ${CMAKE_CURRENT_BINARY_DIR}/zephyr-bindgen)
-set(zephyr_bindgen ${rust_build_dir}/release/zephyr-bindgen)
-add_custom_target(zephyr_bindgen_target DEPENDS ${zephyr_bindgen})
+if(NOT ZEPHYR_BINDGEN)
+    set(zephyr_bindgen_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/zephyr-bindgen)
+    set(zephyr_bindgen_build_dir ${CMAKE_CURRENT_BINARY_DIR}/zephyr-bindgen)
+    set(ZEPHYR_BINDGEN ${zephyr_bindgen_build_dir}/release/zephyr-bindgen)
+    add_custom_target(zephyr_bindgen_target DEPENDS ${ZEPHYR_BINDGEN})
+    set(zephyr_bindgen_target zephyr_bindgen_target)
 
-add_custom_command(OUTPUT ${zephyr_bindgen}
-    WORKING_DIRECTORY ${rust_src_dir}
-    DEPENDS ${rust_syscall_macros_h}
-    COMMAND
-          cargo -v build --release --target-dir=${rust_build_dir}
-)
+    add_custom_command(OUTPUT ${ZEPHYR_BINDGEN}
+        WORKING_DIRECTORY ${zephyr_bindgen_src_dir}
+        DEPENDS ${rust_syscall_macros_h}
+        COMMAND
+              cargo -v build --release --target-dir=${zephyr_bindgen_build_dir}
+    )
+endif()
 
 set(rust_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/rust)
 set(rust_sysroot ${CMAKE_CURRENT_BINARY_DIR}/sysroot)
@@ -73,11 +76,11 @@ ExternalProject_Add(
     SOURCE_DIR ${rust_src_dir}
     BUILD_IN_SOURCE 1
     BUILD_ALWAYS 1
-    DEPENDS rust_syscall_macros_h_target zephyr_bindgen_target rust_generated_project
+    DEPENDS rust_syscall_macros_h_target ${zephyr_bindgen_target} rust_generated_project
     CONFIGURE_COMMAND ""
     BUILD_COMMAND
         env
-        "ZEPHYR_BINDGEN=${zephyr_bindgen}"
+        "ZEPHYR_BINDGEN=${ZEPHYR_BINDGEN}"
         "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
         "CONFIG_RUST_ALLOC_POOL=${CONFIG_RUST_ALLOC_POOL}"
         "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
@@ -91,6 +94,7 @@ ExternalProject_Add(
     INSTALL_COMMAND ""
     BUILD_BYPRODUCTS ${rust_staticlib}
 )
+
 add_library(rust_c STATIC syscall-thunk.c rust-smem.c)
 add_dependencies(rust_c rust_syscall_macros_h_target)
 target_link_libraries(rust_c zephyr_interface)
