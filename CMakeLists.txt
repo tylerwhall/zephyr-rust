@@ -68,32 +68,35 @@ set(external_project_cflags
     "${includes} ${definitions} -imacros ${AUTOCONF_H}"
 )
 
-include(ExternalProject)
+# Add the Cargo project only if CONFIG_RUST because this will alawys invoke Cargo.
+if (CONFIG_RUST)
+    include(ExternalProject)
 
-ExternalProject_Add(
-    rust_project
-    PREFIX     ${CMAKE_CURRENT_BINARY_DIR}
-    SOURCE_DIR ${rust_src_dir}
-    BUILD_IN_SOURCE 1
-    BUILD_ALWAYS 1
-    DEPENDS rust_syscall_macros_h_target ${zephyr_bindgen_target} rust_generated_project
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND
-        env
-        "ZEPHYR_BINDGEN=${ZEPHYR_BINDGEN}"
-        "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
-        "CONFIG_RUST_ALLOC_POOL=${CONFIG_RUST_ALLOC_POOL}"
-        "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
-        "SYSROOT=${rust_sysroot}"
-        "SYSROOT_BUILD=${rust_sysroot_build}"
-        "APP_BUILD=${rust_app_build}"
-        "RUST_TARGET=${rust_target}"
-        "RUST_TARGET_SPEC=${rust_src_dir}/${rust_target}.json"
-        "CARGO_MANIFEST=${rust_generated_project}/Cargo.toml"
-        ./build.sh
-    INSTALL_COMMAND ""
-    BUILD_BYPRODUCTS ${rust_staticlib}
-)
+    ExternalProject_Add(
+        rust_project
+        PREFIX     ${CMAKE_CURRENT_BINARY_DIR}
+        SOURCE_DIR ${rust_src_dir}
+        BUILD_IN_SOURCE 1
+        BUILD_ALWAYS 1
+        DEPENDS rust_syscall_macros_h_target ${zephyr_bindgen_target} rust_generated_project
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND
+            env
+            "ZEPHYR_BINDGEN=${ZEPHYR_BINDGEN}"
+            "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
+            "CONFIG_RUST_ALLOC_POOL=${CONFIG_RUST_ALLOC_POOL}"
+            "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
+            "SYSROOT=${rust_sysroot}"
+            "SYSROOT_BUILD=${rust_sysroot_build}"
+            "APP_BUILD=${rust_app_build}"
+            "RUST_TARGET=${rust_target}"
+            "RUST_TARGET_SPEC=${rust_src_dir}/${rust_target}.json"
+            "CARGO_MANIFEST=${rust_generated_project}/Cargo.toml"
+            ./build.sh
+        INSTALL_COMMAND ""
+        BUILD_BYPRODUCTS ${rust_staticlib}
+    )
+endif()
 
 add_library(rust_c STATIC syscall-thunk.c rust-smem.c)
 add_dependencies(rust_c rust_syscall_macros_h_target)
