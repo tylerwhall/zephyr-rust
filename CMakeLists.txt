@@ -124,6 +124,7 @@ add_custom_command(
     -Wl,-r
     ${rust_ldscript}
     -Wl,-T ${CMAKE_CURRENT_SOURCE_DIR}/gnu-stack.ld
+    -Wl,--build-id=none
     -Wl,--whole-archive ${rust_staticlib}
     -Wl,--no-whole-archive ${CMAKE_CURRENT_BINARY_DIR}/$<TARGET_FILE_NAME:rust_c>
     -o ${rust_obj}
