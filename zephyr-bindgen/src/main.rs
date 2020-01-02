@@ -51,6 +51,7 @@ fn main() {
         .parse_callbacks(Box::new(callbacks.clone()))
         // XXX: doesn't handle args with spaces in quotes
         .clang_args(flags.split(" "))
+        .opaque_type("z_x86_thread_stack_header")
         // Finish the builder and generate the bindings.
         .generate()
         // Unwrap the Result and panic on failure.
