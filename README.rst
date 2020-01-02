@@ -66,11 +66,12 @@ Add toolchain to ~/.zephyrrc. This is sourced by the Zephyr env script.
     export ZEPHYR_SDK_INSTALL_DIR=<sdk installation directory>
 
 
-Acquire Zephyr source, export ZEPHYR_BASE, and source the Zephyr env script.
+Acquire Zephyr source, export ZEPHYR_BASE, and source the Zephyr env script. The v1.14 LTS branch and v2.0 are supported.
+Building currently fails with >=v2.1 due to changes in syscall headers. See `issue 16 <https://github.com/tylerwhall/zephyr-rust/issues/16>`_.
 
 .. code-block:: console
 
-    git clone https://github.com/zephyrproject-rtos/zephyr.git $HOME/src/zephyr
+    git clone https://github.com/zephyrproject-rtos/zephyr.git $HOME/src/zephyr --branch v1.14.1
     export ZEPHYR_BASE=$HOME/src/zephyr
     . $ZEPHYR_BASE/zephyr-env.sh
 
