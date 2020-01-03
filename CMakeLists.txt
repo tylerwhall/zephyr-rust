@@ -96,47 +96,12 @@ if (CONFIG_RUST)
         INSTALL_COMMAND ""
         BUILD_BYPRODUCTS ${rust_staticlib}
     )
-endif()
 
-add_library(rust_c STATIC syscall-thunk.c rust-smem.c)
-add_dependencies(rust_c rust_syscall_macros_h_target)
-target_link_libraries(rust_c zephyr_interface)
-# High level target that means all headers have been generated
-add_dependencies(rust_c offsets_h)
+    # A regular Zephyr C library for our C code
+    zephyr_library_named(rust_c)
+    target_sources(rust_c PRIVATE syscall-thunk.c rust-smem.c)
+    add_dependencies(rust_c rust_syscall_macros_h_target)
 
-# Relocatable single object library containing all Rust code. This allows using
-# a linker script during this link to rename sections, putting data/bss in the
-# rust shared memory section. The .obj suffix is significant because
-# gen_app_partitions.py searches for specially named sections in all .obj files
-# in the build output.
-if(CONFIG_USERSPACE)
-    set(rust_ldscript -Wl,-T ${CMAKE_CURRENT_SOURCE_DIR}/rust-smem.ld)
-endif()
-set(RUST_OBJ_CFLAGS ${CMAKE_C_FLAGS})
-separate_arguments(RUST_OBJ_CFLAGS)
-set(rust_obj ${CMAKE_CURRENT_BINARY_DIR}/rust_obj.obj)
-add_custom_command(
-  OUTPUT ${rust_obj}
-  COMMAND ${CMAKE_C_COMPILER} ${RUST_OBJ_CFLAGS}
-    -nostdlib
-    -static
-    -no-pie
-    -Wl,-r
-    ${rust_ldscript}
-    -Wl,-T ${CMAKE_CURRENT_SOURCE_DIR}/gnu-stack.ld
-    -Wl,--build-id=none
-    -Wl,--whole-archive ${rust_staticlib}
-    -Wl,--no-whole-archive ${CMAKE_CURRENT_BINARY_DIR}/$<TARGET_FILE_NAME:rust_c>
-    -o ${rust_obj}
-  DEPENDS
-    ${rust_staticlib}
-    rust_c
-    ${CMAKE_CURRENT_SOURCE_DIR}/rust-smem.ld
-    ${CMAKE_CURRENT_SOURCE_DIR}/gnu-stack.ld
-  COMMAND_EXPAND_LISTS
-)
-add_custom_target(rust_final DEPENDS ${rust_obj})
-if(CONFIG_RUST)
     # Compatibility for Zephyr 1.14
     if (NOT COMMAND zephyr_library_import)
         # Add the imported library 'library_name', located at 'library_path' to the
@@ -151,6 +116,19 @@ if(CONFIG_RUST)
         endfunction()
     endif()
 
-    zephyr_library_import(rust ${rust_obj})
-    add_dependencies(rust rust_final)
+    zephyr_library_import(rust ${rust_staticlib})
+    if(CONFIG_USERSPACE)
+        if (NOT COMMAND zephyr_library_app_memory)
+            message(FATAL_ERROR "Your Zephyr version does not support locating \
+            objects in app memory. This is required to grant access from Rust \
+            user threads to Rust global variables. If using 1.14 LTS, please \
+            backport 1f9723af19af70506118f00db531c2b1dd1db1dd from upstream. \
+            A premade patch is available in \
+            patches/0001-cmake-app-mem-partion-flexibility.patch. \
+            Apply to Zephyr with 'git am'.")
+        endif()
+        set_property(TARGET zephyr_property_target
+                     APPEND PROPERTY COMPILE_OPTIONS
+                     "-l" librust_app.a "rust_std_partition")
+    endif()
 endif()
