@@ -25,8 +25,9 @@ static int rust_std_init(struct device *arg)
     ARG_UNUSED(arg);
 
 #ifdef CONFIG_USERSPACE
-    k_mem_domain_init(&rust_std_domain, 0, NULL);
-    k_mem_domain_add_partition(&rust_std_domain, &rust_std_partition);
+    struct k_mem_partition *rust_std_parts[] = { &rust_std_partition };
+
+    k_mem_domain_init(&rust_std_domain, ARRAY_SIZE(rust_std_parts), rust_std_parts);
 #endif
 #ifdef CONFIG_RUST_ALLOC_POOL
     sys_mem_pool_init(&rust_std_mem_pool);
