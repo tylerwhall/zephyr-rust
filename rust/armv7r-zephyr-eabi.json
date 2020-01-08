@@ -12,6 +12,7 @@
   "emit-debug-gdb-scripts": false,
   "env": "gnu",
   "executables": true,
+  "features": "+v7,+thumb-mode,+thumb2,+rclass",
   "linker-flavor": "gcc",
   "linker-is-gnu": true,
   "llvm-target": "armv7r-unknown-none-gnueabi",
