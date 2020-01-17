@@ -3,7 +3,7 @@ Rust on Zephyr RTOS
 
 Overview
 ********
-Zephyr_ module for building a cargo project and linking it into a Zephyr image.
+Zephyr_ module for building a Cargo project and linking it into a Zephyr image.
 Add this directory to ZEPHYR_MODULES to build a Cargo library project (located
 in the Zephyr app's source directory by default) and link it into the Zephyr
 app.
@@ -199,6 +199,7 @@ Supported Architectures
 * native_posix
 * x86
 * armv7m
+* armv7r
 
 Really anything that works with Zephyr and Rust should work. Only need to
 define a target.json and add a case for it in CMakelists.
@@ -206,10 +207,10 @@ define a target.json and add a case for it in CMakelists.
 TODO
 ****
 
-* Build as a Zephyr module
-* Separate Rust app from zephyr crates and sysroot (be able to build multiple apps)
-* Kconfig for enabling Rust and configuring the heap
-* test runner
+* Figure out how to fail tests through assertions in code
+* Support #[test]
+* CI
+* Ability to build multiple independent apps
 
 Features Not Planned to Support
 ===============================
