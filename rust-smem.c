@@ -14,7 +14,7 @@ K_APPMEM_PARTITION_DEFINE(rust_std_partition);
 
 #if defined(CONFIG_RUST_ALLOC_POOL)
 SYS_MEM_POOL_DEFINE(rust_std_mem_pool, NULL, CONFIG_RUST_HEAP_MEM_POOL_MIN_SIZE,
-                    CONFIG_RUST_HEAP_MEM_POOL_SIZE, 1, 4, RUST_STD_SECTION);
+                    CONFIG_RUST_HEAP_MEM_POOL_MAX_SIZE, CONFIG_RUST_HEAP_MEM_POOL_NMAX, 8, RUST_STD_SECTION);
 #elif CONFIG_HEAP_MEM_POOL_SIZE == 0
 #error CONFIG_HEAP_MEM_POOL_SIZE (k_malloc) must be non-zero if not using a Rust sys mem pool.
 #endif

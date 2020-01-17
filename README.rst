@@ -14,7 +14,7 @@ Features
 * Generated bindings for all syscalls
 * Safe wrappers for some Zephyr APIs (mutex, semaphore, timers, k_poll, UART)
 * Basic libstd port (no_std not necessary)
-* Heap (std::alloc) (CONFIG_RUST_ALLOC_POOL, CONFIG_RUST_HEAP_MEM_POOL_SIZE)
+* Heap (std::alloc) see CONFIG_RUST_ALLOC_POOL
 * Thread-local storage
 * Kernel or user-mode Rust
 

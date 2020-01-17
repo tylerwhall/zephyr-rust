@@ -28,21 +28,28 @@ config RUST_ALLOC_POOL
 endchoice
 
 if RUST_ALLOC_POOL
-config RUST_HEAP_MEM_POOL_SIZE
-	int "Rust heap memory pool size (in bytes)"
+config RUST_HEAP_MEM_POOL_MAX_SIZE
+	int "Rust heap memory pool block size (in bytes)"
 	default 1024
 	help
-	  This option specifies the size of the heap memory pool created
-	  specifically to act as the Rust global allocator.  Must be a power of
-	  2. A size of zero means that no heap memory pool is defined.
+	  This option specifies the max block size of the heap memory pool
+	  created specifically to act as the Rust global allocator.  Must be a
+	  power of 2. A size of zero means that no heap memory pool is defined.
 
 config RUST_HEAP_MEM_POOL_MIN_SIZE
 	int "The smallest blocks in the Rust heap memory pool (in bytes)"
-	default 16
+	default 32
 	help
-	  This option specifies the size of the smallest block in the pool.
-	  Option must be a power of 2 and lower than or equal to the size
-	  of the entire pool.
+	  This option specifies the size of the smallest block partition.
+	  Option must be a power of 2 and less than or equal to the heap block
+	  size.
+
+config RUST_HEAP_MEM_POOL_NMAX
+	int "Rust heap memory pool size (in blocks)"
+	default 8
+	help
+	  This option specifies the number of max block size blocks in the Rust
+	  heap.
 endif
 endif
 
