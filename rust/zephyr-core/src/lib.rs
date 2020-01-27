@@ -133,17 +133,32 @@ pub mod kernel {
         unreachable!()
     }
 
+    fn check_align(ptr: *mut u8, layout: Layout) -> *mut u8 {
+        if ptr as usize & (layout.align() - 1) != 0 {
+            unsafe {
+                zephyr_sys::raw::printk(
+                    "Rust unsatisfied alloc alignment\n\0".as_ptr() as *const libc::c_char
+                );
+            }
+            core::ptr::null_mut()
+        } else {
+            ptr
+        }
+    }
+
     pub struct KMalloc;
 
     unsafe impl GlobalAlloc for KMalloc {
         #[inline]
         unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-            zephyr_sys::raw::k_malloc(layout.size()) as *mut _
+            let ret = zephyr_sys::raw::k_malloc(layout.size()) as *mut _;
+            check_align(ret, layout)
         }
 
         #[inline]
         unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
-            zephyr_sys::raw::k_calloc(1, layout.size()) as *mut _
+            let ret = zephyr_sys::raw::k_calloc(1, layout.size()) as *mut _;
+            check_align(ret, layout)
         }
 
         #[inline]

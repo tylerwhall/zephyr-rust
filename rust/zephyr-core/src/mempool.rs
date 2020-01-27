@@ -9,9 +9,12 @@ unsafe impl Sync for MempoolAlloc {}
 
 unsafe impl GlobalAlloc for MempoolAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ret = zephyr_sys::raw::sys_mem_pool_alloc(self.0 as *const _ as *mut _, layout.size()) as *mut _;
+        let ret = zephyr_sys::raw::sys_mem_pool_alloc(self.0 as *const _ as *mut _, layout.size())
+            as *mut _;
         if ret as usize & (layout.align() - 1) != 0 {
-            zephyr_sys::raw::printk("Rust unsatisfied alloc alignment\n\0".as_ptr() as *const libc::c_char);
+            zephyr_sys::raw::printk(
+                "Rust unsatisfied alloc alignment\n\0".as_ptr() as *const libc::c_char
+            );
             core::ptr::null_mut()
         } else {
             ret
