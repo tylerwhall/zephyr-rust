@@ -100,7 +100,10 @@ pub enum PollError {
 pub trait PollEventsFuncs {
     fn poll<C: PollSyscalls>(&mut self) -> Result<(), PollError>;
     /// Returns true if events are ready, false if timeout.
-    fn poll_timeout<C: PollSyscalls>(&mut self, timeout: Option<DurationMs>) -> Result<bool, PollError>;
+    fn poll_timeout<C: PollSyscalls>(
+        &mut self,
+        timeout: Option<DurationMs>,
+    ) -> Result<bool, PollError>;
 }
 
 impl PollEventsFuncs for [KPollEvent] {
@@ -113,7 +116,10 @@ impl PollEventsFuncs for [KPollEvent] {
         }
     }
 
-    fn poll_timeout<C: PollSyscalls>(&mut self, timeout: Option<DurationMs>) -> Result<bool, PollError> {
+    fn poll_timeout<C: PollSyscalls>(
+        &mut self,
+        timeout: Option<DurationMs>,
+    ) -> Result<bool, PollError> {
         let timeout = timeout.unwrap_or(zephyr_sys::raw::K_FOREVER.into());
         match C::k_poll(self, timeout).neg_err() {
             Ok(_) => Ok(true),
