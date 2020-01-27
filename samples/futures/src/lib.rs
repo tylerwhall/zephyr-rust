@@ -4,6 +4,7 @@ use libc::c_void;
 
 use futures::future;
 use futures::stream::StreamExt;
+use futures::task::LocalSpawnExt;
 
 use zephyr::semaphore::*;
 use zephyr_futures::{Executor, SemaphoreStream};
@@ -33,6 +34,6 @@ pub extern "C" fn rust_test_main() {
             future::ready(())
         });
     let mut executor = unsafe { Executor::new(&EXECUTOR_MUTEX) };
-    executor.spawn(C, f);
+    executor.spawn_local(f).unwrap();
     executor.run::<C>();
 }

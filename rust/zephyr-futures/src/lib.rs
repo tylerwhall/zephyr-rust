@@ -8,10 +8,9 @@ use core::pin::Pin;
 use core::task::{Context, Poll, Waker};
 use std::time::Instant;
 
-use futures::future::{Future, LocalFutureObj};
+use futures::future::{Future, FutureExt, LocalFutureObj};
 use futures::stream::Stream;
 use futures::task::{ArcWake, LocalSpawn, SpawnError};
-use futures_util::future::FutureExt;
 use log::trace;
 
 use zephyr_core::mutex::*;
@@ -231,7 +230,7 @@ impl Executor {
 }
 
 impl LocalSpawn for Executor {
-    fn spawn_local_obj(&mut self, future: LocalFutureObj<'static, ()>) -> Result<(), SpawnError> {
+    fn spawn_local_obj(&self, future: LocalFutureObj<'static, ()>) -> Result<(), SpawnError> {
         let task = Arc::new(Task::new(future, self.spawner()));
         self.push_runnable::<zephyr::context::Any>(task);
         Ok(())
@@ -248,7 +247,7 @@ impl ExecutorHandle {
 }
 
 impl LocalSpawn for ExecutorHandle {
-    fn spawn_local_obj(&mut self, future: LocalFutureObj<'static, ()>) -> Result<(), SpawnError> {
+    fn spawn_local_obj(&self, future: LocalFutureObj<'static, ()>) -> Result<(), SpawnError> {
         if let Some(executor) = self.0.upgrade() {
             let task = Arc::new(Task::new(future, self.clone()));
             executor.lock::<zephyr::context::Any>().push_runnable(task);
