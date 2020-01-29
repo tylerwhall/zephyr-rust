@@ -20,15 +20,23 @@ else()
     message(FATAL_ERROR "Arch ${ARCH} not supported")
 endif()
 
-set(rust_syscall_macros_h ${ZEPHYR_BINARY_DIR}/include/generated/rust_syscall_macros.h)
-add_custom_target(rust_syscall_macros_h_target DEPENDS ${rust_syscall_macros_h})
-add_custom_command(OUTPUT ${rust_syscall_macros_h}
+set(all_syscalls ${ZEPHYR_BINARY_DIR}/include/generated/all_syscalls.h)
+set(syscall_thunks ${ZEPHYR_BINARY_DIR}/include/generated/syscall_thunks.c)
+set(syscalls_json  ${ZEPHYR_BINARY_DIR}/misc/generated/syscalls.json)
+add_custom_command(OUTPUT ${all_syscalls} ${syscall_thunks}
+  # Also, some files are written to include/generated/syscalls/
   COMMAND
   ${PYTHON_EXECUTABLE}
-  ${CMAKE_CURRENT_SOURCE_DIR}/gen_syscall_header.py
-  > ${rust_syscall_macros_h}
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/gen_syscall_header.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_syscalls.py
+  --json-file        ${syscalls_json}                     # Read this file
+  --thunks           ${syscall_thunks}
+  --all-syscalls     ${all_syscalls}
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+  DEPENDS ${syscalls_json}
+          ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_syscalls.py
   )
+add_custom_target(syscall_thunks_target DEPENDS
+                  ${all_syscalls} ${syscall_thunks} ${SYSCALL_LIST_H_TARGET})
 
 if(NOT ZEPHYR_BINDGEN)
     set(zephyr_bindgen_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/zephyr-bindgen)
@@ -39,7 +47,7 @@ if(NOT ZEPHYR_BINDGEN)
 
     add_custom_command(OUTPUT ${ZEPHYR_BINDGEN}
         WORKING_DIRECTORY ${zephyr_bindgen_src_dir}
-        DEPENDS ${rust_syscall_macros_h}
+        DEPENDS syscall_thunks_target
         COMMAND
               cargo -v build --release --target-dir=${zephyr_bindgen_build_dir}
     )
@@ -78,7 +86,7 @@ if (CONFIG_RUST)
         SOURCE_DIR ${rust_src_dir}
         BUILD_IN_SOURCE 1
         BUILD_ALWAYS 1
-        DEPENDS rust_syscall_macros_h_target ${zephyr_bindgen_target} rust_generated_project
+        DEPENDS syscall_thunks_target ${zephyr_bindgen_target} rust_generated_project
         CONFIGURE_COMMAND ""
         BUILD_COMMAND
             env
@@ -99,8 +107,11 @@ if (CONFIG_RUST)
 
     # A regular Zephyr C library for our C code
     zephyr_library_named(rust_c)
-    target_sources(rust_c PRIVATE syscall-thunk.c rust-smem.c)
-    add_dependencies(rust_c rust_syscall_macros_h_target)
+    target_sources(rust_c PRIVATE syscall-thunk-any.c rust-smem.c)
+    if(CONFIG_USERSPACE)
+        target_sources(rust_c PRIVATE syscall-thunk-kernel.c syscall-thunk-user.c)
+    endif()
+    add_dependencies(rust_c syscall_thunks_target)
 
     # Compatibility for Zephyr 1.14
     if (NOT COMMAND zephyr_library_import)

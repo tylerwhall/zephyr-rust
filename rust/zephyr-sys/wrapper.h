@@ -2,8 +2,8 @@
 // defined
 #define _GCC_MAX_ALIGN_T
 
-#include <rust_syscall_macros.h>
 #include <kernel.h>
+#include <all_syscalls.h>
 #include <misc/mempool.h>
 #include <device.h>
 #include <uart.h>
