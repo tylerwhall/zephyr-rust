@@ -106,15 +106,6 @@ Else you will get this error
 
     thread 'main' panicked at 'Unable to find libclang: "couldn\'t find any valid shared libraries matching: [\'libclang.so\', \'libclang-*.so\', \'libclang.so.*\']
 
-Zephyr backports (only if CONFIG_USERSPACE on 1.14)
-===================================================
-
-If using 1.14 LTS, backport 1f9723af19af70506118f00db531c2b1dd1db1dd from
-upstream.  A premade patch is available in
-patches/0001-cmake-app-mem-partion-flexibility.patch.  An error message will be
-thrown if attempting to build without this support. This will happen with the
-"rust-app" sample on qemu_x86.
-
 Build
 =====
 

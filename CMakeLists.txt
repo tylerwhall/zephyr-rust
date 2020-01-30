@@ -129,15 +129,6 @@ if (CONFIG_RUST)
 
     zephyr_library_import(rust ${rust_staticlib})
     if(CONFIG_USERSPACE)
-        if (NOT COMMAND zephyr_library_app_memory)
-            message(FATAL_ERROR "Your Zephyr version does not support locating \
-            objects in app memory. This is required to grant access from Rust \
-            user threads to Rust global variables. If using 1.14 LTS, please \
-            backport 1f9723af19af70506118f00db531c2b1dd1db1dd from upstream. \
-            A premade patch is available in \
-            patches/0001-cmake-app-mem-partion-flexibility.patch. \
-            Apply to Zephyr with 'git am'.")
-        endif()
         set_property(TARGET zephyr_property_target
                      APPEND PROPERTY COMPILE_OPTIONS
                      "-l" librust_app.a "rust_std_partition")
