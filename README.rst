@@ -91,11 +91,11 @@ included as a submodule of this project. In practice, using a different
 compiler version often fails to compile because of Rust internally making heavy
 use of unstable compiler features.
 
-The current base is stable-1.37.0.
+The current base is stable-1.41.1.
 
 .. code-block:: console
 
-    rustup toolchain install 1.37.0
+    rustup toolchain install 1.41.1
     rustup component add rustfmt
     rustup component add rust-src
 

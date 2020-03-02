@@ -12,14 +12,11 @@ path = "../compiler_builtins"
 [patch.crates-io.libc]
 path = "../libc"
 
-[patch.crates-io.backtrace-sys]
-path = "../patches/backtrace-rs/crates/backtrace-sys"
+[patch.crates-io]
+backtrace-sys = { path = '../patches/backtrace-rs/crates/backtrace-sys' }
 
-[patch.crates-io.rustc-std-workspace-alloc]
-path = "../rust/src/tools/rustc-std-workspace-alloc"
-
-[patch.crates-io.rustc-std-workspace-core]
-path = "../rust/src/tools/rustc-std-workspace-core"
+rustc-std-workspace-core = { path = '../rust/src/tools/rustc-std-workspace-core' }
+rustc-std-workspace-alloc = { path = '../rust/src/tools/rustc-std-workspace-alloc' }
 
 [profile.release]
 lto = true
