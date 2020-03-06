@@ -2,8 +2,8 @@
 
 HOST=$(rustc -vV | grep host: | cut -d ' ' -f 2)
 CARGO_ARGS="-v build --target=${RUST_TARGET_SPEC} --release"
-VERSION="1.41.1"
-CURRENT_RUSTC_VERSION=$(rustc -vV | grep ^release: | cut -d ' ' -f 2)
+VERSION="1.41"
+CURRENT_RUSTC_VERSION=$(rustc -vV | grep ^release: | cut -d ' ' -f 2 | cut -d '.' -f '1,2')
 
 # Assert cargo version matches the certified version
 if [ "${CURRENT_RUSTC_VERSION}x" != "${VERSION}x" ]; then
