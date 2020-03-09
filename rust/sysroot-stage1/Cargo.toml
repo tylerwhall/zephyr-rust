@@ -2,6 +2,7 @@
 authors = ["Tyler Hall <tylerwhall@gmail.com>"]
 name = "sysroot"
 version = "0.0.0"
+repository = "https://github.com/tylerwhall/zephyr-rust.git"
 
 [dependencies.std]
 path = "../rust/src/libstd"
