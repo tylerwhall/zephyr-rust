@@ -15,6 +15,9 @@ pub struct UartBufferedRx {
     handle: uart_buffered_rx_handle,
 }
 
+// Handle is not thread-safe but can be sent between threads
+unsafe impl Send for UartBufferedRx {}
+
 impl UartBufferedRx {
     /// Unsafe because this is passed from C and caller must guarantee there is
     /// only one instance created per handle.
@@ -61,6 +64,9 @@ impl UartBufferedRx {
 pub struct UartBufferedTx {
     handle: uart_buffered_tx_handle,
 }
+
+// Handle is not thread-safe but can be sent between threads
+unsafe impl Send for UartBufferedTx {}
 
 impl UartBufferedTx {
     /// Unsafe because this is passed from C and caller must guarantee there is
