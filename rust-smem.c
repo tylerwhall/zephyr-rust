@@ -1,6 +1,11 @@
 #include <zephyr.h>
 #include <init.h>
+#include <version.h>
+#if ZEPHYR_VERSION_CODE >= ZEPHYR_VERSION(2, 2, 0)
+#include <sys/mempool.h>
+#else
 #include <misc/mempool.h>
+#endif
 #include <app_memory/app_memdomain.h>
 
 struct k_mem_domain rust_std_domain;

@@ -28,7 +28,7 @@ macro_rules! trait_impl {
                     sem as *const _ as *mut _,
                     initial_count,
                     limit,
-                )
+                ); // TODO: return the error from here. Ignoring now for Zephyr 2.1 compat
             }
 
             fn k_sem_take(sem: &k_sem, timeout: DurationMs) -> libc::c_int {

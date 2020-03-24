@@ -86,7 +86,7 @@ macro_rules! zephyr_bindings {
 
         impl crate::mutex::MutexSyscalls for $context_struct {
             unsafe fn k_mutex_init(mutex: *mut zephyr_sys::raw::k_mutex) {
-                zephyr_sys::syscalls::$context::k_mutex_init(mutex)
+                zephyr_sys::syscalls::$context::k_mutex_init(mutex);
             }
 
             unsafe fn k_mutex_lock(
@@ -97,7 +97,8 @@ macro_rules! zephyr_bindings {
             }
 
             unsafe fn k_mutex_unlock(mutex: *mut zephyr_sys::raw::k_mutex) {
-                zephyr_sys::syscalls::$context::k_mutex_unlock(mutex)
+                // TODO: return the error from here. Ignoring now for Zephyr 2.1 compat
+                zephyr_sys::syscalls::$context::k_mutex_unlock(mutex);
             }
         }
     };

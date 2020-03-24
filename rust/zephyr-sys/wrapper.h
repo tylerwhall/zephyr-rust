@@ -4,9 +4,14 @@
 
 #include <kernel.h>
 #include <all_syscalls.h>
+#include <version.h>
+#if ZEPHYR_VERSION_CODE >= ZEPHYR_VERSION(2, 2, 0)
+#include <sys/mempool.h>
+#else
 #include <misc/mempool.h>
+#endif
 #include <device.h>
-#include <uart.h>
+#include <drivers/uart.h>
 #include <uart_buffered.h>
 
 // Create a constant we can use from Rust in all cases

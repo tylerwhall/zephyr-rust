@@ -55,8 +55,8 @@ Set up a Zephyr toolchain (e.g. Zephyr SDK_)
 
 .. code-block:: console
 
-    wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.10.3/zephyr-sdk-0.10.3-setup.run
-    sh zephyr-sdk-0.10.3-setup.run
+    wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.11.1/zephyr-sdk-0.11.1-setup.run
+    sh zephyr-sdk-0.11.1-setup.run
 
 Add toolchain to ~/.zephyrrc. This is sourced by the Zephyr env script.
 
@@ -67,13 +67,13 @@ Add toolchain to ~/.zephyrrc. This is sourced by the Zephyr env script.
 
 
 Acquire Zephyr source, export ZEPHYR_BASE, and source the Zephyr env script.
-Version 2.1 is the current tested version.
+Version 2.2 is the current tested version, and 2.1 should also work.
 Due to differences in the syscall header generation, v1.14 LTS is no longer supported.
 See `issue 16 <https://github.com/tylerwhall/zephyr-rust/issues/16>`_.
 
 .. code-block:: console
 
-    git clone https://github.com/zephyrproject-rtos/zephyr.git $HOME/src/zephyr --branch v2.1-branch
+    git clone https://github.com/zephyrproject-rtos/zephyr.git $HOME/src/zephyr --branch v2.2-branch
     export ZEPHYR_BASE=$HOME/src/zephyr
     . $ZEPHYR_BASE/zephyr-env.sh
 

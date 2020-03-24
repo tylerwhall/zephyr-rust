@@ -1,5 +1,5 @@
 #include <kernel.h>
-#include <uart.h>
+#include <drivers/uart.h>
 
 #include "uart_buffered.h"
 

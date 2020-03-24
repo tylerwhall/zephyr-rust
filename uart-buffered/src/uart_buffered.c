@@ -1,7 +1,7 @@
 #define __ZEPHYR_SUPERVISOR__
 
 #include <kernel.h>
-#include <uart.h>
+#include <drivers/uart.h>
 #include <logging/log.h>
 
 #include "uart_buffered.h"
