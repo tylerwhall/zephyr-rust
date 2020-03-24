@@ -1,5 +1,3 @@
-#![feature(async_await)]
-
 extern crate zephyr_sys;
 
 use std::time::Duration;
