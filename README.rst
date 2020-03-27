@@ -49,39 +49,16 @@ Make sure to clone the submodules recursively. This points to modified Rust libs
 Zephyr setup
 ============
 
-Set up a Zephyr toolchain (e.g. Zephyr SDK_)
+Refer to the Zephyr getting started guide_. This includes installing west,
+getting Zephyr source, and the Zephyr toolchain. Make sure you can build a C
+sample within Zephyr.
 
-.. _SDK: https://docs.zephyrproject.org/latest/getting_started/installation_linux.html#zephyr-sdk
+.. _guide: https://docs.zephyrproject.org/2.2.0/getting_started/index.html
 
-.. code-block:: console
-
-    wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.11.1/zephyr-sdk-0.11.1-setup.run
-    sh zephyr-sdk-0.11.1-setup.run
-
-Add toolchain to ~/.zephyrrc. This is sourced by the Zephyr env script.
-
-.. code-block:: shell
-
-    export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
-    export ZEPHYR_SDK_INSTALL_DIR=<sdk installation directory>
-
-
-Acquire Zephyr source, export ZEPHYR_BASE, and source the Zephyr env script.
-Version 2.2 is the current tested version, and 2.1 should also work.
-Due to differences in the syscall header generation, v1.14 LTS is no longer supported.
+Version 2.2 is the current tested version. Please try that if master doesn't
+work. Release 2.1 should also work. Due to differences in the syscall header
+generation, v1.14 LTS is no longer supported.
 See `issue 16 <https://github.com/tylerwhall/zephyr-rust/issues/16>`_.
-
-.. code-block:: console
-
-    git clone https://github.com/zephyrproject-rtos/zephyr.git $HOME/src/zephyr --branch v2.2-branch
-    export ZEPHYR_BASE=$HOME/src/zephyr
-    . $ZEPHYR_BASE/zephyr-env.sh
-
-Install Zephyr's "West" build tool. Needed for ZEPHYR_MODULES support.
-
-.. code-block:: console
-
-    pip3 install --user west
 
 Rust toolchain
 ==============
@@ -91,16 +68,19 @@ included as a submodule of this project. In practice, using a different
 compiler version often fails to compile because of Rust internally making heavy
 use of unstable compiler features.
 
-The current base is stable-1.41.1.
+The current base is stable-1.41.1. Rustup is the default workflow, and the
+rust-toolchain file in this repo should cause rustup to automatically install
+and use the right version. If not, manually install:
 
 .. code-block:: console
 
     rustup toolchain install 1.41.1
-    rustup component add rustfmt
-    rustup component add rust-src
 
-Also install clang. This is required by bindgen to generate syscall bindings.
-Else you will get this error
+If supplying your own rustc and cargo, make sure they are the version above.
+The build will fail if it detects a version mismatch.
+
+Also install clang from your distro. This is required by bindgen to generate
+syscall bindings. Else you will get this error
 
 .. code-block:: console
 
@@ -109,37 +89,40 @@ Else you will get this error
 Build
 =====
 
-Build and run on QEMU (or posix native) as follows:
-
 .. code-block:: console
 
-    cd samples/rust-app
+    west build -p auto -b <board name> samples/rust-app/
 
 Native:
 
 .. code-block:: console
 
-    mkdir -p build-posix && cd build-posix
-    cmake -GNinja -DBOARD=native_posix ..
+    west build -p auto -b native_posix samples/rust-app/
 
 qemu_x86:
 
 .. code-block:: console
 
-    mkdir -p build-x86 && cd build-x86
-    cmake -GNinja -DBOARD=qemu_x86 ..
+    west build -p auto -b qemu_x86 samples/rust-app/
 
 ARM Cortex-M:
 
 .. code-block:: console
 
-    mkdir -p build-arm && cd build-arm
-    cmake -GNinja -DBOARD=qemu_cortex_m3 ..
+    west build -p auto -b qemu_cortex_m3 samples/rust-app/
 
-Build and run:
+These errors are normal. Needs investigation, but the binary is still created
+successfully.
 
 .. code-block:: console
 
+    x86_64-zephyr-elf-objdump: DWARF error: mangled line number section (bad file number)
+
+Run (QEMU targets):
+
+.. code-block:: console
+
+    cd build
     ninja run
 
 Sample Output
@@ -147,26 +130,35 @@ Sample Output
 
 .. code-block:: console
 
-    SeaBIOS (version rel-1.12.0-0-ga698c8995f-prebuilt.qemu.org)
-    Booting from ROM..***** Booting Zephyr OS zephyr-v1.14.0-752-gfd97e44011f6 *****
+    *** Booting Zephyr OS build zephyr-v2.2.0  ***
+    Hello Rust println
     Hello from Rust kernel with direct kernel call
     Hello from Rust kernel with runtime-detect syscall
-    Entering user mode
+    Hello from second thread
+    second thread: f = 1
+    second thread: now f = 55
+    Time InstantMs(20)
+    Time Instant(InstantMs(20))
+    Locking
+    Unlocking
+    No device
+    Boxed value 1
+    main thread: f = 1
+    main thread: now f = 2
+    Hello from Rust userspace with forced user-mode syscall
+    Locking
+    Unlocking
+    INFO app: TEST: info!()
+    WARN app: TEST: warn!()
+    ERROR app: TEST: error!()
+    main thread: f = 2
+    main thread: now f = 3
     Hello from Rust userspace with forced user-mode syscall
     Hello from Rust userspace with runtime-detect syscall
     Next call will crash if userspace is working.
-    ***** CPU Page Fault (error code 0x00000004)
-    User thread read address 0x00408000
-    PDE: 0x027 Present, Writable, User, Execute Enabled
-    PTE: 0x800000002 Non-present, Writable, Supervisor, Execute Disable
-    Current thread ID = 0x00400060
-    eax: 0x00000048, ebx: 0x000086aa, ecx: 0x0000002b, edx: 0x00000064
-    esi: 0x000086da, edi: 0x004043e8, ebp: 0x004043ac, esp: 0x004043a0
-    eflags: 0x00000207 cs: 0x002b
-    call trace:
-    eip: 0x0000140b
-         0x0000035d (0x86a9)
-         Fatal fault in thread 0x00400060! Aborting.
+    FAILED: zephyr/CMakeFiles/run
+
+Failure is from an intentional crash at the end of the sample.
 
 Testing
 *******
@@ -181,9 +173,8 @@ Or you can build and run the test manually:
 
 .. code-block:: console
 
-    cd tests/rust
-    mkdir -p build-posix && cd build-posix
-    cmake -GNinja -DBOARD=native_posix ..
+    west build -p auto -b native_posix tests/rust
+    cd build
     ninja run
 
 Supported Architectures
@@ -204,6 +195,8 @@ TODO
 * Support #[test]
 * CI
 * Ability to build multiple independent apps
+* Investigate DWARF errors in final link
+* More safe bindings (e.g. GPIO)
 
 Features Not Planned to Support
 ===============================
@@ -214,9 +207,10 @@ Features Not Planned to Support
   architecture-specific C macros that would not be wise to try to duplicate
   exactly in Rust. Possibly could generate C code like in the "cpp" crate, but
   for now just define threads in C and point them at a Rust FFI entry point.
-* std::sync::{Mutex, RwLock}. Might be possible but would at least require
-  dynamic kernel object allocation. The small number of uses in libstd are
-  patched out.
+* std::sync::{Mutex, RwLock}. Mutex should work when built without userspace
+  support. Userspace would require (at least) CONFIG_DYNAMIC_OBJECTS. While
+  this is possible, I don't want to require it to use libstd. May revisit.
+  The small number of uses in libstd are patched out.
 
 License
 *******
