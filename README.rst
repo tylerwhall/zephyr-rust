@@ -4,9 +4,9 @@ Rust on Zephyr RTOS
 Overview
 ********
 Zephyr_ module for building a Cargo project and linking it into a Zephyr image.
-Add this directory to ZEPHYR_MODULES to build a Cargo library project (located
-in the Zephyr app's source directory by default) and link it into the Zephyr
-app.
+Add this directory to ZEPHYR_EXTRA_MODULES to build a Cargo library project
+(located in the Zephyr app's source directory by default) and link it into the
+Zephyr app.
 
 Features
 ========
