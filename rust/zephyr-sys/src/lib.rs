@@ -6,6 +6,11 @@
 
 pub mod raw {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+
+    unsafe impl Send for k_mutex {}
+    unsafe impl Sync for k_mutex {}
+    unsafe impl Send for k_sem {}
+    unsafe impl Sync for k_sem {}
 }
 
 pub mod syscalls {
