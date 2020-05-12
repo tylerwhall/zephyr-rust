@@ -13,6 +13,7 @@
 #include <device.h>
 #include <drivers/uart.h>
 #include <uart_buffered.h>
+#include <drivers/eeprom.h>
 
 // Create a constant we can use from Rust in all cases
 #ifdef CONFIG_USERSPACE
