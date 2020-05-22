@@ -1,0 +1,8 @@
+tests:
+  rust.eeprom:
+    platform_whitelist: native_posix native_posix_64 qemu_x86
+    tags: drivers userspace
+  rust.eeprom.generic:
+    build_on_all: true
+    depends_on: eeprom
+    tags: rust
