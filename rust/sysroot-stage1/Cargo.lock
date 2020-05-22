@@ -284,6 +284,7 @@ dependencies = [
  "unwind",
  "wasi",
  "zephyr-core",
+ "zephyr-sys",
 ]
 
 [[package]]
