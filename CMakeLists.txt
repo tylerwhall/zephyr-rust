@@ -107,9 +107,13 @@ if (CONFIG_RUST)
 
     # A regular Zephyr C library for our C code
     zephyr_library_named(rust_c)
-    target_sources(rust_c PRIVATE syscall-thunk-any.c rust-smem.c)
+    set(thunk_sources syscall-thunk-any.c)
     if(CONFIG_USERSPACE)
-        target_sources(rust_c PRIVATE syscall-thunk-kernel.c syscall-thunk-user.c)
+        set(thunk_sources ${thunk_sources} syscall-thunk-kernel.c syscall-thunk-user.c)
+    endif()
+    target_sources(rust_c PRIVATE ${thunk_sources} rust-smem.c)
+    if(DEFINED syscall_thunk_cflags)
+        set_source_files_properties(${thunk_sources} PROPERTIES COMPILE_FLAGS "${syscall_thunk_cflags}")
     endif()
     add_dependencies(rust_c syscall_thunks_target)
 
