@@ -11,6 +11,8 @@ pub mod raw {
     unsafe impl Sync for k_mutex {}
     unsafe impl Send for k_sem {}
     unsafe impl Sync for k_sem {}
+    unsafe impl Send for device {}
+    unsafe impl Sync for device {}
 }
 
 pub mod syscalls {
