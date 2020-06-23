@@ -64,7 +64,9 @@ static inline bool fifo_empty(struct fifo_handle *fifo)
 static inline void fifo_push(struct fifo_handle *fifo, u8_t val)
 {
 	__ASSERT(!fifo_full(fifo), "push to full fifo");
-	fifo->fifo->buf[fifo->fifo->write++ & fifo->capacity_mask] = val;
+	fifo->fifo->buf[fifo->fifo->write & fifo->capacity_mask] = val;
+	compiler_barrier(); /* Should be a CPU barrier on SMP, but no Zephyr API */
+	fifo->fifo->write++;
 }
 
 static inline u8_t fifo_peek(struct fifo_handle *fifo)
@@ -76,7 +78,10 @@ static inline u8_t fifo_peek(struct fifo_handle *fifo)
 static inline u8_t fifo_pop(struct fifo_handle *fifo)
 {
 	__ASSERT(!fifo_empty(fifo), "pop from empty fifo");
-	return fifo->fifo->buf[fifo->fifo->read++ & fifo->capacity_mask];
+	u8_t ret = fifo->fifo->buf[fifo->fifo->read & fifo->capacity_mask];
+	compiler_barrier(); /* Should be a CPU barrier on SMP, but no Zephyr API */
+	fifo->fifo->read++;
+	return ret;
 }
 
 /* Kernel memory storage for kobjects and the kernel's fifo handle */
