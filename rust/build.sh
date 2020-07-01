@@ -1,4 +1,4 @@
-#!/bin/sh -ex
+#!/bin/sh -e
 
 HOST=$(rustc -vV | grep host: | cut -d ' ' -f 2)
 CARGO_ARGS="-v build --target=${RUST_TARGET_SPEC} --release"
