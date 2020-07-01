@@ -3,7 +3,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll, Waker};
 use std::time::{Duration, Instant};
 
-use zephyr_core::{DurationMs, InstantMs};
+use zephyr_core::{Ticks, Timeout};
 
 #[derive(Debug)]
 pub struct Delay(Instant);
@@ -73,7 +73,7 @@ impl TimerReactor {
     }
 
     /// Wake and remove expired timers. Return whether tasks or woken, or else how long to wait.
-    pub fn poll(&mut self) -> TimerPoll<DurationMs> {
+    pub fn poll(&mut self) -> TimerPoll<Timeout> {
         if self.tasks.is_empty() {
             return TimerPoll::Idle;
         }
@@ -96,7 +96,7 @@ impl TimerReactor {
                 true
             }
         });
-        ret.map(|deadline| InstantMs::from(deadline).sub_timeout(InstantMs::from(now)))
+        ret.map(|deadline| Ticks::from(deadline).sub_timeout(Ticks::from(now)))
     }
 }
 

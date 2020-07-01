@@ -1,8 +1,8 @@
-use zephyr_sys::raw::k_sem;
+use zephyr_sys::raw::{k_sem, k_timeout_t};
 
 use super::NegErr;
 use crate::kobj::*;
-use crate::time::DurationMs;
+use crate::time::Timeout;
 
 // Declare the Zephyr struct to be a kernel object
 unsafe impl KObj for k_sem {}
@@ -14,7 +14,7 @@ crate::make_static_wrapper!(k_sem, zephyr_sys::raw::k_sem);
 /// Raw syscall API
 pub trait SemaphoreSyscalls {
     unsafe fn k_sem_init(sem: &k_sem, initial_count: libc::c_uint, limit: libc::c_uint);
-    fn k_sem_take(sem: &k_sem, timeout: DurationMs) -> libc::c_int;
+    fn k_sem_take(sem: &k_sem, timeout: k_timeout_t) -> libc::c_int;
     fn k_sem_give(sem: &k_sem);
     fn k_sem_reset(sem: &k_sem);
     fn k_sem_count_get(sem: &k_sem) -> libc::c_uint;
@@ -31,12 +31,9 @@ macro_rules! trait_impl {
                 ); // TODO: return the error from here. Ignoring now for Zephyr 2.1 compat
             }
 
-            fn k_sem_take(sem: &k_sem, timeout: DurationMs) -> libc::c_int {
+            fn k_sem_take(sem: &k_sem, timeout: k_timeout_t) -> libc::c_int {
                 unsafe {
-                    zephyr_sys::syscalls::$context::k_sem_take(
-                        sem as *const _ as *mut _,
-                        timeout.into(),
-                    )
+                    zephyr_sys::syscalls::$context::k_sem_take(sem as *const _ as *mut _, timeout)
                 }
             }
 
@@ -67,7 +64,7 @@ pub trait Semaphore {
     /// Take with infinite timeout
     fn take<C: SemaphoreSyscalls>(&self);
     /// Take with timeout. Returns true if successful. False if timeout.
-    fn take_timeout<C: SemaphoreSyscalls>(&self, timeout: DurationMs) -> bool;
+    fn take_timeout<C: SemaphoreSyscalls>(&self, timeout: Timeout) -> bool;
     /// Take with no timeout. Returns true if successful.
     fn try_take<C: SemaphoreSyscalls>(&self) -> bool;
     fn give<C: SemaphoreSyscalls>(&self);
@@ -86,8 +83,8 @@ impl Semaphore for k_sem {
             .expect("sem take");
     }
 
-    fn take_timeout<C: SemaphoreSyscalls>(&self, timeout: DurationMs) -> bool {
-        match C::k_sem_take(self, timeout).neg_err() {
+    fn take_timeout<C: SemaphoreSyscalls>(&self, timeout: Timeout) -> bool {
+        match C::k_sem_take(self, timeout.0).neg_err() {
             Ok(_) => Ok(true),
             Err(zephyr_sys::raw::EBUSY) => Ok(false),
             Err(zephyr_sys::raw::EAGAIN) => Ok(false),
@@ -97,7 +94,7 @@ impl Semaphore for k_sem {
     }
 
     fn try_take<C: SemaphoreSyscalls>(&self) -> bool {
-        match C::k_sem_take(self, (zephyr_sys::raw::K_NO_WAIT as i32).into()).neg_err() {
+        match C::k_sem_take(self, (zephyr_sys::raw::K_NO_WAIT).into()).neg_err() {
             Ok(_) => Ok(true),
             Err(zephyr_sys::raw::EBUSY) => Ok(false),
             Err(e) => Err(e),

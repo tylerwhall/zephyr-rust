@@ -65,13 +65,13 @@ macro_rules! zephyr_bindings {
         }
 
         #[inline(always)]
-        pub fn k_uptime_get_ms() -> crate::InstantMs {
-            unsafe { crate::InstantMs::from(zephyr_sys::syscalls::$context::k_uptime_get()) }
+        pub fn k_uptime_ticks() -> crate::Ticks {
+            unsafe { crate::Ticks(zephyr_sys::syscalls::$context::k_uptime_ticks()) }
         }
 
         #[inline(always)]
-        pub fn k_sleep(ms: crate::DurationMs) -> crate::DurationMs {
-            unsafe { crate::DurationMs::from(zephyr_sys::syscalls::$context::k_sleep(ms.into())) }
+        pub fn k_sleep(timeout: crate::Timeout) -> crate::DurationMs {
+            unsafe { crate::DurationMs::from(zephyr_sys::syscalls::$context::k_sleep(timeout.0)) }
         }
 
         #[inline(always)]
@@ -91,7 +91,7 @@ macro_rules! zephyr_bindings {
 
             unsafe fn k_mutex_lock(
                 mutex: *mut zephyr_sys::raw::k_mutex,
-                timeout: zephyr_sys::raw::s32_t,
+                timeout: zephyr_sys::raw::k_timeout_t,
             ) -> libc::c_int {
                 zephyr_sys::syscalls::$context::k_mutex_lock(mutex, timeout)
             }

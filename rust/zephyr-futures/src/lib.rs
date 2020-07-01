@@ -16,7 +16,7 @@ use log::trace;
 use zephyr_core::mutex::*;
 use zephyr_core::poll::*;
 use zephyr_core::semaphore::*;
-use zephyr_core::DurationMs;
+use zephyr_core::Timeout;
 
 pub mod delay;
 
@@ -54,7 +54,7 @@ impl Reactor {
 
     /// Returns true if events was non empty and something is ready. False if
     /// there is nothing to wait on. Fired events are removed.
-    fn poll<C: PollSyscalls>(&mut self, timeout: Option<DurationMs>) -> bool {
+    fn poll<C: PollSyscalls>(&mut self, timeout: Option<Timeout>) -> bool {
         if self.events.is_empty() && timeout.is_none() {
             return false;
         }

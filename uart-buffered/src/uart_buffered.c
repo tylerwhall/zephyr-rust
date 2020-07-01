@@ -77,7 +77,7 @@ static void uart_buffered_rx(struct uart_buffered_rx *uart)
 	} else if (!fifo_empty(fifo)) {
 		/* Make sure reader is woken eventually if any data is available */
 		LOG_DBG("rx timer start");
-		k_timer_start(uart->timer, K_MSEC(1), 0);
+		k_timer_start(uart->timer, K_MSEC(1), Z_TIMEOUT_NO_WAIT);
 	}
 }
 

@@ -306,6 +306,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "time-convert"
+version = "0.1.0"
+dependencies = [
+ "compiler_builtins",
+ "rustc-std-workspace-core",
+]
+
+[[package]]
 name = "unicode-xid"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -341,6 +349,7 @@ dependencies = [
  "derive_more",
  "libc",
  "rustc-std-workspace-core",
+ "time-convert",
  "zephyr-sys",
 ]
 

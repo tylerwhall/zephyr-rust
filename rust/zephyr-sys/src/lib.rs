@@ -13,6 +13,15 @@ pub mod raw {
     unsafe impl Sync for k_sem {}
     unsafe impl Send for device {}
     unsafe impl Sync for device {}
+
+    // Recreate what the K_FOREVER macro does
+    pub const K_FOREVER: k_timeout_t = k_timeout_t {
+        ticks: -1 as k_ticks_t,
+    };
+
+    pub const K_NO_WAIT: k_timeout_t = k_timeout_t {
+        ticks: 0,
+    };
 }
 
 pub mod syscalls {

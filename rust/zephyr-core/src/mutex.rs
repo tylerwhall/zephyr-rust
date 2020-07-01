@@ -19,7 +19,7 @@ pub trait MutexSyscalls {
     unsafe fn k_mutex_init(mutex: *mut zephyr_sys::raw::k_mutex);
     unsafe fn k_mutex_lock(
         mutex: *mut zephyr_sys::raw::k_mutex,
-        timeout: zephyr_sys::raw::s32_t,
+        timeout: zephyr_sys::raw::k_timeout_t,
     ) -> libc::c_int;
     unsafe fn k_mutex_unlock(mutex: *mut zephyr_sys::raw::k_mutex);
 }
@@ -51,12 +51,7 @@ impl<'a> RawMutex for &'a KMutex {
     }
 
     unsafe fn try_lock<C: MutexSyscalls>(self) -> bool {
-        match C::k_mutex_lock(
-            self as *const _ as *mut _,
-            zephyr_sys::raw::K_NO_WAIT as i32,
-        )
-        .neg_err()
-        {
+        match C::k_mutex_lock(self as *const _ as *mut _, zephyr_sys::raw::K_NO_WAIT).neg_err() {
             Ok(_) => Ok(true),
             Err(zephyr_sys::raw::EBUSY) => Ok(false),
             Err(e) => Err(e),

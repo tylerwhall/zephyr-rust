@@ -8,7 +8,7 @@ extern void rust_second_thread(void *, void *, void *);
 
 K_THREAD_DEFINE(my_tid, MY_STACK_SIZE,
 				rust_second_thread, NULL, NULL, NULL,
-				MY_PRIORITY, 0, K_NO_WAIT);
+				MY_PRIORITY, 0, 0);
 
 void main(void)
 {

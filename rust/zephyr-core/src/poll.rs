@@ -1,12 +1,12 @@
 use libc::{c_int, c_void};
 use zephyr_sys::raw::{
     _poll_types_bits__POLL_TYPE_SEM_AVAILABLE, _poll_types_bits__POLL_TYPE_SIGNAL, k_poll_event,
-    k_poll_modes_K_POLL_MODE_NOTIFY_ONLY, K_POLL_STATE_NOT_READY, K_POLL_TYPE_IGNORE,
+    k_poll_modes_K_POLL_MODE_NOTIFY_ONLY, k_timeout_t, K_POLL_STATE_NOT_READY, K_POLL_TYPE_IGNORE,
 };
 
 use crate::kobj::*;
 use crate::semaphore::KSem;
-use crate::time::DurationMs;
+use crate::time::Timeout;
 use crate::NegErr;
 
 pub use crate::poll_signal::*;
@@ -69,18 +69,18 @@ impl PollEventFuncs for KPollEvent {
 }
 
 pub trait PollSyscalls {
-    fn k_poll(events: &mut [KPollEvent], timeout: DurationMs) -> c_int;
+    fn k_poll(events: &mut [KPollEvent], timeout: k_timeout_t) -> c_int;
 }
 
 macro_rules! trait_impl {
     ($context:ident, $context_struct:path) => {
         impl PollSyscalls for $context_struct {
-            fn k_poll(events: &mut [KPollEvent], timeout: DurationMs) -> c_int {
+            fn k_poll(events: &mut [KPollEvent], timeout: k_timeout_t) -> c_int {
                 unsafe {
                     zephyr_sys::syscalls::$context::k_poll(
                         events.as_mut_ptr(),
                         events.len() as c_int,
-                        timeout.into(),
+                        timeout,
                     )
                 }
             }
@@ -102,13 +102,13 @@ pub trait PollEventsFuncs {
     /// Returns true if events are ready, false if timeout.
     fn poll_timeout<C: PollSyscalls>(
         &mut self,
-        timeout: Option<DurationMs>,
+        timeout: Option<Timeout>,
     ) -> Result<bool, PollError>;
 }
 
 impl PollEventsFuncs for [KPollEvent] {
     fn poll<C: PollSyscalls>(&mut self) -> Result<(), PollError> {
-        match C::k_poll(self, zephyr_sys::raw::K_FOREVER.into()).neg_err() {
+        match C::k_poll(self, zephyr_sys::raw::K_FOREVER).neg_err() {
             Ok(_) => Ok(()),
             Err(zephyr_sys::raw::EINTR) => Err(PollError::Canceled),
             Err(zephyr_sys::raw::ENOMEM) => panic!("k_poll OOM"),
@@ -118,9 +118,9 @@ impl PollEventsFuncs for [KPollEvent] {
 
     fn poll_timeout<C: PollSyscalls>(
         &mut self,
-        timeout: Option<DurationMs>,
+        timeout: Option<Timeout>,
     ) -> Result<bool, PollError> {
-        let timeout = timeout.unwrap_or(zephyr_sys::raw::K_FOREVER.into());
+        let timeout = timeout.map(|x| x.0).unwrap_or(zephyr_sys::raw::K_FOREVER);
         match C::k_poll(self, timeout).neg_err() {
             Ok(_) => Ok(true),
             Err(zephyr_sys::raw::EAGAIN) => Ok(false),

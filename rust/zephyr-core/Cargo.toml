@@ -13,7 +13,9 @@ core = { version = '1.0.0', optional = true, package = 'rustc-std-workspace-core
 compiler_builtins = { version = '0.1.2', optional = true }
 derive_more = { version = '0.14.1', default-features = false, features = ['no_std'] }
 
+time-convert = { path = "./time-convert" }
+
 [features]
 defaults = [ 'rustc-dep-of-std' ]
-rustc-dep-of-std = ['core', 'compiler_builtins/rustc-dep-of-std', 'zephyr-sys/rustc-dep-of-std', 'libc/rustc-dep-of-std']
+rustc-dep-of-std = ['core', 'compiler_builtins/rustc-dep-of-std', 'zephyr-sys/rustc-dep-of-std', 'libc/rustc-dep-of-std', 'time-convert/rustc-dep-of-std']
 have_std = []

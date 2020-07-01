@@ -73,7 +73,7 @@ pub extern "C" fn rust_main() {
     zephyr::any::k_str_out("Hello from Rust kernel with runtime-detect syscall\n");
 
     std::thread::sleep(Duration::from_millis(1));
-    println!("Time {:?}", zephyr::any::k_uptime_get_ms());
+    println!("Time {:?}", zephyr::any::k_uptime_ticks().as_millis());
     println!("Time {:?}", std::time::Instant::now());
 
     let current = Context::k_current_get();
