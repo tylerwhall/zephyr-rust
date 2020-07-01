@@ -12,8 +12,8 @@ struct fifo {
 
 #define FIFO_DEFINE(name, size)                                                \
 	u8_t name[offsetof(struct fifo, buf) + (size)];                        \
-	BUILD_ASSERT_MSG(((size) & ((size)-1)) == 0,                           \
-			 "fifo size must be a power of 2")
+	BUILD_ASSERT(((size) & ((size)-1)) == 0,                               \
+		     "fifo size must be a power of 2")
 
 #define FIFO_CAPACITY(name) (sizeof(name) - offsetof(struct fifo, buf))
 
