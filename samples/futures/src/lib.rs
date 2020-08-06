@@ -21,6 +21,7 @@ pub extern "C" fn rust_sem_thread(_a: *const c_void, _b: *const c_void, _c: *con
 }
 
 zephyr_macros::k_mutex_define!(EXECUTOR_MUTEX);
+zephyr_macros::k_poll_signal_define!(EXECUTOR_SIGNAL);
 
 #[no_mangle]
 pub extern "C" fn rust_test_main() {
@@ -33,7 +34,7 @@ pub extern "C" fn rust_test_main() {
             println!("Took {}", i);
             future::ready(())
         });
-    let mut executor = unsafe { Executor::new(&EXECUTOR_MUTEX) };
+    let mut executor = unsafe { Executor::new(&EXECUTOR_MUTEX, &EXECUTOR_SIGNAL) };
     executor.spawn_local(f).unwrap();
     executor.run::<C>();
 }

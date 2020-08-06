@@ -5,6 +5,7 @@ use alloc::sync::{Arc, Weak};
 use core::cell::{RefCell, UnsafeCell};
 use core::marker::PhantomData;
 use core::pin::Pin;
+use core::sync::atomic::{AtomicBool, Ordering};
 use core::task::{Context, Poll, Waker};
 use std::time::Instant;
 
@@ -16,6 +17,7 @@ use log::trace;
 use zephyr_core::mutex::*;
 use zephyr_core::poll::*;
 use zephyr_core::semaphore::*;
+use zephyr_core::thread::{ThreadId, ThreadSyscalls};
 use zephyr_core::Timeout;
 
 pub mod delay;
@@ -24,15 +26,18 @@ use delay::{TimerPoll, TimerReactor};
 
 struct Reactor {
     events: Vec<KPollEvent>,
-    // Wakers corresponding to each event
+    // Wakers corresponding to each event after the initial KPollSignal
     wakers: Vec<Waker>,
     timers: TimerReactor,
 }
 
 impl Reactor {
-    fn new() -> Self {
+    fn new(signal: &'static KPollSignal) -> Self {
+        // First event slot is used for the KPollSignal for cross-thread wake
+        let mut events = vec![KPollEvent::new()];
+        events[0].init(signal, PollMode::NotifyOnly);
         Reactor {
-            events: Vec::new(),
+            events,
             wakers: Vec::new(),
             timers: TimerReactor::new(),
         }
@@ -52,29 +57,23 @@ impl Reactor {
         self.timers.register(deadline, context)
     }
 
-    /// Returns true if events was non empty and something is ready. False if
-    /// there is nothing to wait on. Fired events are removed.
-    fn poll<C: PollSyscalls>(&mut self, timeout: Option<Timeout>) -> bool {
-        if self.events.is_empty() && timeout.is_none() {
-            return false;
-        }
+    fn poll<C: PollSyscalls>(&mut self, timeout: Option<Timeout>) {
         self.events[..].poll_timeout::<C>(timeout).unwrap();
 
-        assert_eq!(self.events.len(), self.wakers.len());
-        let mut i = 0;
+        assert_eq!(self.events.len(), self.wakers.len() + 1);
+        let mut i = 1;
         while i < self.events.len() {
             if self.events[i].ready() {
-                self.wakers[i].wake_by_ref();
-                trace!("Ready {}", i);
+                self.wakers[i - 1].wake_by_ref();
+                trace!("Rdy {} {}", i, self.events[i].type_());
                 // Remove current element and replace with last. Continue search
                 // at current position.
                 self.events.swap_remove(i);
-                self.wakers.swap_remove(i);
+                self.wakers.swap_remove(i - 1);
             } else {
                 i += 1;
             }
         }
-        true
     }
 }
 
@@ -104,7 +103,11 @@ pub fn current_reactor_register_timer(deadline: Instant, context: &mut Context) 
 
 struct Task {
     future: UnsafeCell<LocalFutureObj<'static, ()>>,
-    executor: ExecutorHandle,
+    runnable: AtomicBool,
+    /// Signal for the executor of this task
+    thread_signal: &'static KPollSignal,
+    /// ThreadId of the executor of this task
+    thread: ThreadId,
 }
 
 // The future is not required to be thread safe, but it is only used from the unsafe poll function.
@@ -115,10 +118,16 @@ unsafe impl Send for Task {}
 unsafe impl Sync for Task {}
 
 impl Task {
-    fn new(future: LocalFutureObj<'static, ()>, executor: ExecutorHandle) -> Self {
+    fn new(
+        future: LocalFutureObj<'static, ()>,
+        thread_signal: &'static KPollSignal,
+        thread: ThreadId,
+    ) -> Self {
         Task {
             future: UnsafeCell::new(future),
-            executor,
+            runnable: AtomicBool::new(true),
+            thread_signal,
+            thread,
         }
     }
 
@@ -134,25 +143,51 @@ impl Task {
 
 impl ArcWake for Task {
     fn wake_by_ref(arc_self: &Arc<Self>) {
-        arc_self.executor.push_runnable(arc_self.clone());
+        use zephyr::context::Any as C;
+        if !arc_self.runnable.swap(true, Ordering::SeqCst) {
+            // Wake executor if transitioning to true
+            if arc_self.thread != C::k_current_get() {
+                arc_self.thread_signal.raise::<C>(0);
+            }
+        }
     }
 }
 
-#[derive(Default)]
 struct ExecutorInner {
-    runnable: Vec<Arc<Task>>,
+    tasks: Vec<Arc<Task>>,
 }
 
 impl ExecutorInner {
-    fn push_runnable(&mut self, task: Arc<Task>) {
-        if !self.runnable.iter().any(|other| Arc::ptr_eq(other, &task)) {
-            self.runnable.push(task);
-        }
+    fn new() -> Self {
+        ExecutorInner { tasks: Vec::new() }
     }
 
-    fn pop_runnable(&mut self) -> Option<Arc<Task>> {
-        self.runnable.pop()
+    /// Err indicates the list is empty
+    fn get_runnable(&mut self) -> Result<Option<Arc<Task>>, ()> {
+        if self.tasks.is_empty() {
+            return Err(());
+        }
+        for task in self.tasks.iter_mut() {
+            if task.runnable.swap(false, Ordering::SeqCst) {
+                return Ok(Some(task.clone()));
+            }
+        }
+        Ok(None)
     }
+
+    fn add_task(&mut self, task: Arc<Task>) {
+        self.tasks.push(task);
+    }
+
+    fn remove_task(&mut self, task: Arc<Task>) {
+        self.tasks.retain(|other| !Arc::ptr_eq(other, &task));
+    }
+}
+
+struct ExecutorState {
+    inner: Mutex<'static, ExecutorInner>,
+    /// Allows explicit wake from another thread
+    thread_signal: &'static KPollSignal,
 }
 
 // Because we've marked Tasks as Send + Sync so we can use Arc references to wake them, we could
@@ -160,55 +195,54 @@ impl ExecutorInner {
 // that calls poll being not Send or Sync. Since we're not requiring spawned futures to be Send or
 // Sync and Executor is the effective owner, add a PhantomData here as if we directly own a Future
 // that is not explicitly Send or Sync.
-pub struct Executor(
-    Arc<Mutex<'static, ExecutorInner>>,
-    PhantomData<dyn Future<Output = ()>>,
-);
+pub struct Executor {
+    state: Arc<ExecutorState>,
+    _tasks: PhantomData<dyn Future<Output = ()>>,
+}
+
 #[derive(Clone)]
-pub struct ExecutorHandle(Weak<Mutex<'static, ExecutorInner>>);
+pub struct ExecutorHandle(Weak<ExecutorState>);
 
 impl Executor {
     /// Unsafe because the client guarantees the static mutex is intended for
     /// this purpose.
-    pub unsafe fn new(mutex: &'static KMutex) -> Self {
-        Executor(Arc::new(Mutex::new(mutex, Default::default())), PhantomData)
-    }
-
-    fn pop_runnable<C: MutexSyscalls>(&self) -> Option<Arc<Task>> {
-        self.0.lock::<C>().pop_runnable()
-    }
-
-    fn push_runnable<C: MutexSyscalls>(&self, task: Arc<Task>) {
-        self.0.lock::<C>().push_runnable(task);
+    pub unsafe fn new(mutex: &'static KMutex, thread_signal: &'static KPollSignal) -> Self {
+        Executor {
+            state: Arc::new(ExecutorState {
+                inner: Mutex::new(mutex, ExecutorInner::new()),
+                thread_signal,
+            }),
+            _tasks: PhantomData,
+        }
     }
 
     pub fn spawner(&self) -> ExecutorHandle {
-        ExecutorHandle(Arc::downgrade(&self.0))
+        ExecutorHandle(Arc::downgrade(&self.state))
     }
 
-    pub fn run<C: MutexSyscalls + PollSyscalls>(&mut self) {
-        let reactor = Reactor::new();
-        //let waker = task.clone().into_waker();
-        //let mut context = Context::from_waker(&waker);
+    pub fn run<C: MutexSyscalls + KPollSignalSyscalls + PollSyscalls + ThreadSyscalls>(&mut self) {
+        let reactor = Reactor::new(self.state.thread_signal);
+        let current = C::k_current_get();
 
         REACTOR.with(move |r| {
             r.replace(Some(reactor));
 
-            loop {
-                while let Some(task) = self.pop_runnable::<C>() {
-                    let waker = futures::task::waker_ref(&task);
-                    let mut context = Context::from_waker(&*waker);
-                    // Don't care about the result of poll. If the future is
-                    // not complete, it will likely either have been
-                    // registered with the reactor for I/O, or somewhere
-                    // there's a live reference to the waker. If not,
-                    // there's no way this could ever be marked runnable in
-                    // the future, so we always drop our reference we took
-                    // from the ready queue.
-                    // The future is fused, so if the task is woken after it
-                    // completes here, it will get added to the ready queue
-                    // and harmlessly polled once more.
-                    let _ = unsafe { task.poll(&mut context) };
+            'main: loop {
+                trace!("Reactor {:?} run", current);
+                // Signal indicates need to poll run queue. Reset before poll.
+                self.state.thread_signal.reset::<C>();
+                loop {
+                    match self.state.inner.lock::<C>().get_runnable() {
+                        Ok(Some(task)) => {
+                            let waker = futures::task::waker_ref(&task);
+                            let mut context = Context::from_waker(&*waker);
+                            if let Poll::Ready(()) = unsafe { task.poll(&mut context) } {
+                                self.state.inner.lock::<C>().remove_task(task);
+                            }
+                        }
+                        Ok(None) => break,
+                        Err(()) => break 'main,
+                    }
                 }
 
                 let mut reactor_borrow = r.borrow_mut();
@@ -218,12 +252,10 @@ impl Executor {
                     TimerPoll::Delay(timeout) => Some(timeout),
                     TimerPoll::Woken => continue,
                 };
-                trace!("Reactor poll wait. Timeout {:?}", timeout);
-                if !reactor.poll::<C>(timeout) {
-                    break;
-                }
-                trace!("Reactor poll finished");
+                trace!("Reactor {:?} wait. Timeout {:?}", current, timeout);
+                reactor.poll::<C>(timeout);
             }
+
             r.replace(None);
         })
     }
@@ -231,26 +263,23 @@ impl Executor {
 
 impl LocalSpawn for Executor {
     fn spawn_local_obj(&self, future: LocalFutureObj<'static, ()>) -> Result<(), SpawnError> {
-        let task = Arc::new(Task::new(future, self.spawner()));
-        self.push_runnable::<zephyr::context::Any>(task);
+        use zephyr::context::Any as C;
+        let task = Arc::new(Task::new(
+            future,
+            self.state.thread_signal,
+            C::k_current_get(),
+        ));
+        self.state.inner.lock::<C>().add_task(task);
         Ok(())
-    }
-}
-
-impl ExecutorHandle {
-    fn push_runnable(&self, task: Arc<Task>) {
-        // Do nothing if our weak reference is invalid
-        if let Some(executor) = self.0.upgrade() {
-            executor.lock::<zephyr::context::Any>().push_runnable(task);
-        }
     }
 }
 
 impl LocalSpawn for ExecutorHandle {
     fn spawn_local_obj(&self, future: LocalFutureObj<'static, ()>) -> Result<(), SpawnError> {
-        if let Some(executor) = self.0.upgrade() {
-            let task = Arc::new(Task::new(future, self.clone()));
-            executor.lock::<zephyr::context::Any>().push_runnable(task);
+        use zephyr::context::Any as C;
+        if let Some(state) = self.0.upgrade() {
+            let task = Arc::new(Task::new(future, state.thread_signal, C::k_current_get()));
+            state.inner.lock::<C>().add_task(task);
             Ok(())
         } else {
             Err(SpawnError::shutdown())

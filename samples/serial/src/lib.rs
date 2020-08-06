@@ -12,6 +12,7 @@ use zephyr_sys::raw::{uart_buffered_rx_handle, uart_buffered_tx_handle};
 use zephyr_uart_buffered::{UartBufferedRx, UartBufferedTx};
 
 zephyr_macros::k_mutex_define!(EXECUTOR_MUTEX);
+zephyr_macros::k_poll_signal_define!(EXECUTOR_SIGNAL);
 
 async fn echo<R: AsyncBufReadExt + Unpin, W: AsyncWriteExt + Unpin>(rx: R, mut tx: W) {
     let mut lines = rx.lines();
@@ -34,7 +35,7 @@ pub extern "C" fn rust_main(rx: uart_buffered_rx_handle, tx: uart_buffered_tx_ha
 
     let tx = unsafe { UartBufferedTx::new(tx) }.into_async();
 
-    let mut executor = unsafe { Executor::new(&EXECUTOR_MUTEX) };
+    let mut executor = unsafe { Executor::new(&EXECUTOR_MUTEX, &EXECUTOR_SIGNAL) };
     executor.spawn_local(echo(rx, tx)).unwrap();
     executor.run::<C>();
 }
