@@ -10,12 +10,17 @@ impl ThreadId {
         self.0.as_ptr()
     }
 
+    pub fn k_wakeup<C: ThreadSyscalls>(&self) {
+        C::k_wakeup(*self)
+    }
+
     pub fn k_object_access_grant<C: ThreadSyscalls, K: KObj>(&self, kobj: &K) {
         C::k_object_access_grant(kobj, *self)
     }
 }
 
 pub trait ThreadSyscalls {
+    fn k_wakeup(thread: ThreadId);
     fn k_current_get() -> crate::thread::ThreadId;
     fn k_object_access_grant<K: KObj>(kobj: &K, thread: ThreadId);
 }
@@ -23,6 +28,10 @@ pub trait ThreadSyscalls {
 macro_rules! trait_impl {
     ($context:ident, $context_struct:path) => {
         impl ThreadSyscalls for $context_struct {
+            fn k_wakeup(thread: ThreadId) {
+                unsafe { zephyr_sys::syscalls::$context::k_wakeup(thread.tid()) }
+            }
+
             fn k_current_get() -> crate::thread::ThreadId {
                 ThreadId(unsafe {
                     NonNull::new_unchecked(zephyr_sys::syscalls::$context::k_current_get())
