@@ -1,11 +1,13 @@
+use core::ptr::NonNull;
+
 use crate::kobj::KObj;
 
-#[derive(Clone, Copy)]
-pub struct ThreadId(zephyr_sys::raw::k_tid_t);
+#[derive(Clone, Copy, Debug)]
+pub struct ThreadId(NonNull<zephyr_sys::raw::k_thread>);
 
 impl ThreadId {
     pub fn tid(&self) -> zephyr_sys::raw::k_tid_t {
-        self.0
+        self.0.as_ptr()
     }
 
     pub fn k_object_access_grant<C: ThreadSyscalls, K: KObj>(&self, kobj: &K) {
@@ -22,7 +24,9 @@ macro_rules! trait_impl {
     ($context:ident, $context_struct:path) => {
         impl ThreadSyscalls for $context_struct {
             fn k_current_get() -> crate::thread::ThreadId {
-                ThreadId(unsafe { zephyr_sys::syscalls::$context::k_current_get() })
+                ThreadId(unsafe {
+                    NonNull::new_unchecked(zephyr_sys::syscalls::$context::k_current_get())
+                })
             }
 
             fn k_object_access_grant<K: KObj>(kobj: &K, thread: ThreadId) {
@@ -33,7 +37,7 @@ macro_rules! trait_impl {
                 unsafe {
                     zephyr_sys::syscalls::$context::k_object_access_grant(
                         kobj.as_void_ptr(),
-                        thread.0,
+                        thread.tid(),
                     );
                 }
             }
