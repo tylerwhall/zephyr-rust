@@ -2,7 +2,7 @@ use core::ptr::NonNull;
 
 use crate::kobj::KObj;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ThreadId(NonNull<zephyr_sys::raw::k_thread>);
 
 impl ThreadId {
