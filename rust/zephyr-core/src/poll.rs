@@ -41,14 +41,14 @@ pub trait PollEventFuncs {
 impl PollEventFuncs for KPollEvent {
     fn new() -> Self {
         unsafe {
-            let mut event = core::mem::uninitialized();
+            let mut event = core::mem::MaybeUninit::uninit();
             zephyr_sys::raw::k_poll_event_init(
-                &mut event,
+                event.as_mut_ptr(),
                 K_POLL_TYPE_IGNORE,
                 0,
                 1 as *const c_void as *mut c_void, // Must not be null, but won't be touched by the kernel because type is IGNORE
             );
-            event
+            event.assume_init()
         }
     }
 
