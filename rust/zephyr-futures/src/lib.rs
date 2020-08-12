@@ -162,17 +162,17 @@ impl ExecutorInner {
         ExecutorInner { tasks: Vec::new() }
     }
 
-    /// Err indicates the list is empty
-    fn get_runnable(&mut self) -> Result<Option<Arc<Task>>, ()> {
+    /// Poll<Option> has the same semantics as polling a `Stream`
+    fn get_runnable(&mut self) -> Poll<Option<Arc<Task>>> {
         if self.tasks.is_empty() {
-            return Err(());
+            return Poll::Ready(None);
         }
         for task in self.tasks.iter_mut() {
             if task.runnable.swap(false, Ordering::SeqCst) {
-                return Ok(Some(task.clone()));
+                return Poll::Ready(Some(task.clone()));
             }
         }
-        Ok(None)
+        Poll::Pending
     }
 
     fn add_task(&mut self, task: Arc<Task>) {
@@ -233,15 +233,15 @@ impl Executor {
                 self.state.thread_signal.reset::<C>();
                 loop {
                     match self.state.inner.lock::<C>().get_runnable() {
-                        Ok(Some(task)) => {
+                        Poll::Ready(Some(task)) => {
                             let waker = futures::task::waker_ref(&task);
                             let mut context = Context::from_waker(&*waker);
                             if let Poll::Ready(()) = unsafe { task.poll(&mut context) } {
                                 self.state.inner.lock::<C>().remove_task(task);
                             }
                         }
-                        Ok(None) => break,
-                        Err(()) => break 'main,
+                        Poll::Pending => break,
+                        Poll::Ready(None) => break 'main,
                     }
                 }
 
