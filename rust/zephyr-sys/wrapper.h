@@ -15,6 +15,10 @@
 #include <uart_buffered.h>
 #include <drivers/eeprom.h>
 
+#ifdef CONFIG_POSIX_CLOCK
+#include <posix/time.h>
+#endif
+
 // Create a constant we can use from Rust in all cases
 #ifdef CONFIG_USERSPACE
 const bool RUST_CONFIG_USERSPACE = true;
