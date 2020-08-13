@@ -16,6 +16,9 @@ mod time;
 
 pub use time::*;
 
+#[cfg(clock)]
+use core::mem;
+
 // Set from environment from build.rs
 pub const CONFIG_USERSPACE: bool = cfg!(usermode);
 
@@ -175,4 +178,18 @@ pub mod user {
 
 pub mod any {
     zephyr_bindings!(any, crate::context::Any);
+}
+
+#[cfg(clock)]
+pub fn clock_settime(timespec: zephyr_sys::raw::timespec) {
+    unsafe { zephyr_sys::raw::clock_settime(zephyr_sys::raw::CLOCK_REALTIME, &timespec); }
+}
+
+#[cfg(clock)]
+pub fn clock_gettime() -> zephyr_sys::raw::timespec {
+    unsafe {
+        let mut t: zephyr_sys::raw::timespec = mem::zeroed();
+        zephyr_sys::raw::clock_gettime(zephyr_sys::raw::CLOCK_REALTIME, &mut t);
+        t
+    }
 }
