@@ -2,7 +2,7 @@
 
 HOST=$(rustc -vV | grep host: | cut -d ' ' -f 2)
 CARGO_ARGS="-v build --target=${RUST_TARGET_SPEC} --release"
-VERSION="1.41"
+VERSION="1.46"
 CURRENT_RUSTC_VERSION=$(rustc -vV | grep ^release: | cut -d ' ' -f 2 | cut -d '.' -f '1,2')
 
 # Assert cargo version matches the certified version
@@ -39,7 +39,7 @@ publish_sysroot() {
 # project for now because they're often needed for low level embedded.
 export RUSTC_BOOTSTRAP=1
 # Build std
-cargo ${CARGO_ARGS} \
+RUSTFLAGS="$RUSTFLAGS -Cembed-bitcode=yes" cargo ${CARGO_ARGS} \
     --target-dir=${SYSROOT_BUILD}-stage1 \
     --manifest-path=./sysroot-stage1/Cargo.toml -p std
 publish_sysroot ${APP_BUILD} ${SYSROOT} ${SYSROOT_BUILD}-stage1
