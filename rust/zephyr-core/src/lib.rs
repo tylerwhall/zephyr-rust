@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "have_std"), no_std)]
 #![feature(never_type)]
-#![feature(no_more_cas)]
 #![feature(ptr_offset_from)]
 #![feature(const_transmute)]
 

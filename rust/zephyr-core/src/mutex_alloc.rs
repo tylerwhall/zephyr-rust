@@ -66,6 +66,8 @@ mod mutex_pool {
             let valid = core::cmp::max(NUM_MUTEX - i * 8, 8);
             if byte
                 .fetch_update(
+                    Ordering::Relaxed,
+                    Ordering::Relaxed,
                     |val| {
                         ret = None;
                         for bit in 0..valid {
@@ -79,8 +81,6 @@ mod mutex_pool {
                         }
                         None
                     },
-                    Ordering::Relaxed,
-                    Ordering::Relaxed,
                 )
                 .is_ok()
             {
