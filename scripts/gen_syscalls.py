@@ -139,8 +139,8 @@ def main():
     # Whitelist syscall groups for which to generate bindings. The syscall
     # headers are not self-sufficient, so we have to manually list the other
     # headers they need for their argument types.
-    whitelist = set(["kernel.h", "device.h", "uart.h", "mutex.h", "errno_private.h", "eeprom.h"])
-    includes = ["kernel.h", "device.h", "drivers/uart.h", "sys/mutex.h", "drivers/eeprom.h"]
+    whitelist = set(["kernel.h", "device.h", "uart.h", "mutex.h", "errno_private.h", "eeprom.h", "time.h"])
+    includes = ["kernel.h", "device.h", "drivers/uart.h", "sys/mutex.h", "drivers/eeprom.h", "posix/time.h"]
     for match_group, fn in syscalls:
         if fn not in whitelist:
             continue
