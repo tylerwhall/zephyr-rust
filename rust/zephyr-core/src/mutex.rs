@@ -71,7 +71,7 @@ pub struct Mutex<'m, T> {
 }
 
 impl<'m, T> Mutex<'m, T> {
-    pub unsafe fn new(mutex: &'m KMutex, data: T) -> Self {
+    pub const unsafe fn new(mutex: &'m KMutex, data: T) -> Self {
         Mutex {
             mutex,
             data: MutexData::new(data),
