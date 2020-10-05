@@ -1,0 +1,28 @@
+{
+  "abi-blacklist": [
+    "stdcall",
+    "fastcall",
+    "vectorcall",
+    "thiscall",
+    "win64",
+    "sysv64"
+  ],
+  "arch": "arm",
+  "data-layout": "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64",
+  "emit-debug-gdb-scripts": false,
+  "env": "gnu",
+  "executables": true,
+  "features": "+v7,+thumb-mode,+thumb2,+rclass",
+  "linker-flavor": "gcc",
+  "linker-is-gnu": true,
+  "llvm-target": "armv7r-unknown-none-gnueabihf",
+  "max-atomic-width": 32,
+  "os": "zephyr",
+  "panic-strategy": "abort",
+  "relocation-model": "static",
+  "target-c-int-width": "32",
+  "target-endian": "little",
+  "target-family": "zephyr",
+  "target-pointer-width": "32",
+  "vendor": ""
+}
