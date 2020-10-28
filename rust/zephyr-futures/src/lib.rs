@@ -44,13 +44,27 @@ impl Reactor {
     }
 
     fn register(&mut self, signal: &'static impl PollableKobj, context: &mut Context) {
+        let waker = context.waker();
+        // Don't duplicate the same event/waker combo
+        if self
+            .events
+            .iter()
+            .zip(self.wakers.iter())
+            .any(|(reg_event, reg_waker)| {
+                reg_event.obj() == signal.as_void_ptr() && reg_waker.will_wake(waker)
+            })
+        {
+            trace!("Duplicate register {:?}", signal.as_void_ptr());
+            return;
+        }
+
         let len = self.events.len();
         unsafe {
-            self.events.reserve(1);
+            self.events.reserve_exact(1);
             self.events.set_len(len + 1);
             self.events[len].init(signal, PollMode::NotifyOnly);
         }
-        self.wakers.push(context.waker().clone());
+        self.wakers.push(waker.clone());
     }
 
     fn register_timer(&mut self, deadline: Instant, context: &mut Context) {

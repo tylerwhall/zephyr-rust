@@ -36,6 +36,8 @@ pub trait PollEventFuncs {
     fn init<'e, 'o: 'e, O: PollableKobj>(&'e mut self, kobj: &'o O, mode: PollMode);
 
     fn ready(&self) -> bool;
+
+    fn obj(&self) -> *const c_void;
 }
 
 impl PollEventFuncs for KPollEvent {
@@ -65,6 +67,10 @@ impl PollEventFuncs for KPollEvent {
 
     fn ready(&self) -> bool {
         self.state() != K_POLL_STATE_NOT_READY
+    }
+
+    fn obj(&self) -> *const c_void {
+        unsafe { self.__bindgen_anon_1.obj }
     }
 }
 
