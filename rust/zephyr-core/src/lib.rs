@@ -87,7 +87,9 @@ macro_rules! zephyr_bindings {
         #[cfg(clock)]
         #[inline(always)]
         pub fn clock_settime(timespec: zephyr_sys::raw::timespec) {
-            unsafe { zephyr_sys::raw::clock_settime(zephyr_sys::raw::CLOCK_REALTIME, &timespec); }
+            unsafe {
+                zephyr_sys::raw::clock_settime(zephyr_sys::raw::CLOCK_REALTIME, &timespec);
+            }
         }
 
         #[cfg(clock)]
@@ -95,7 +97,10 @@ macro_rules! zephyr_bindings {
         pub fn clock_gettime() -> zephyr_sys::raw::timespec {
             unsafe {
                 let mut t: zephyr_sys::raw::timespec = core::mem::zeroed();
-                zephyr_sys::syscalls::$context::clock_gettime(zephyr_sys::raw::CLOCK_REALTIME, &mut t);
+                zephyr_sys::syscalls::$context::clock_gettime(
+                    zephyr_sys::raw::CLOCK_REALTIME,
+                    &mut t,
+                );
                 t
             }
         }
