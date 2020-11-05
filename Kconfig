@@ -8,16 +8,17 @@ menuconfig RUST
 if RUST
 choice RUST_GLOBAL_ALLOCATOR
 	prompt "Rust global allocator"
-	default RUST_ALLOC_POOL
+	default RUST_ALLOC_POOL if USERSPACE
 	help
 	  The global allocator can either use k_malloc or a dedicated sys mem
-	  pool for Rust allocations. A dedicated pool is required for userspace
+	  pool for Rust allocations. A dedicated pool is the default for userspace
 	  because the pool must be placed in a shared memory region accessible
-	  to all Rust userspace threads.
+	  to all Rust userspace threads. If an application wants to provide its
+	  own allocator with #[global_allocator] and avoid creating a Zephyr
+	  sys_mem_pool, select RUST_ALLOC_KMALLOC.
 
 config RUST_ALLOC_KMALLOC
 	bool "k_malloc"
-	depends on !USERSPACE
 	help
 	  Adjust the pool size with CONFIG_HEAP_MEM_POOL_SIZE. Must be non-zero.
 
