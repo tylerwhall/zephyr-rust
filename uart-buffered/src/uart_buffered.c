@@ -15,7 +15,7 @@ static void uart_buffered_tx(struct uart_buffered_tx *uart)
 	bool disable_irq = true;
 
 	while (!fifo_empty(fifo)) {
-		u8_t c = fifo_peek(fifo);
+		uint8_t c = fifo_peek(fifo);
 		if (uart_fifo_fill(fifo->device, &c, 1) == 1) {
 			fifo_pop(fifo);
 		} else {
@@ -50,7 +50,7 @@ static void uart_buffered_rx(struct uart_buffered_rx *uart)
 	bool disable_irq = true;
 
 	while (!fifo_full(fifo)) {
-		u8_t c;
+		uint8_t c;
 		if (uart_fifo_read(fifo->device, &c, 1) == 1) {
 			fifo_push(fifo, c);
 			LOG_DBG("uart byte 0x%x write = %d read = %d used = %d\n",
@@ -148,7 +148,7 @@ void uart_buffered_access_grant(struct uart_buffered *uart,
 void uart_buffered_init(struct uart_buffered *buffered, struct device *uart,
 			void (*irq_handler)(struct device *uart))
 {
-	u8_t c;
+	uint8_t c;
 
 	uart_irq_rx_disable(uart);
 	uart_irq_tx_disable(uart);

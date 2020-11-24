@@ -5,13 +5,13 @@
 #include <kernel.h>
 
 struct fifo {
-	u16_t write;
-	u16_t read;
-	u8_t buf[];
+	uint16_t write;
+	uint16_t read;
+	uint8_t buf[];
 };
 
 #define FIFO_DEFINE(name, size)                                                \
-	u8_t name[offsetof(struct fifo, buf) + (size)];                        \
+	uint8_t name[offsetof(struct fifo, buf) + (size)];                     \
 	BUILD_ASSERT(((size) & ((size)-1)) == 0,                               \
 		     "fifo size must be a power of 2")
 
@@ -61,7 +61,7 @@ static inline bool fifo_empty(struct fifo_handle *fifo)
 	return fifo_used(fifo) == 0;
 }
 
-static inline void fifo_push(struct fifo_handle *fifo, u8_t val)
+static inline void fifo_push(struct fifo_handle *fifo, uint8_t val)
 {
 	__ASSERT(!fifo_full(fifo), "push to full fifo");
 	fifo->fifo->buf[fifo->fifo->write & fifo->capacity_mask] = val;
@@ -69,16 +69,16 @@ static inline void fifo_push(struct fifo_handle *fifo, u8_t val)
 	fifo->fifo->write++;
 }
 
-static inline u8_t fifo_peek(struct fifo_handle *fifo)
+static inline uint8_t fifo_peek(struct fifo_handle *fifo)
 {
 	__ASSERT(!fifo_empty(fifo), "peek from empty fifo");
 	return fifo->fifo->buf[fifo->fifo->read & fifo->capacity_mask];
 }
 
-static inline u8_t fifo_pop(struct fifo_handle *fifo)
+static inline uint8_t fifo_pop(struct fifo_handle *fifo)
 {
 	__ASSERT(!fifo_empty(fifo), "pop from empty fifo");
-	u8_t ret = fifo->fifo->buf[fifo->fifo->read & fifo->capacity_mask];
+	uint8_t ret = fifo->fifo->buf[fifo->fifo->read & fifo->capacity_mask];
 	compiler_barrier(); /* Should be a CPU barrier on SMP, but no Zephyr API */
 	fifo->fifo->read++;
 	return ret;
@@ -164,13 +164,13 @@ void uart_buffered_init(struct uart_buffered *buffered, struct device *uart,
 			void (*irq_handler)(struct device *uart));
 
 /* API */
-int uart_buffered_write_nb(struct uart_buffered_tx_handle *tx, const u8_t *buf,
+int uart_buffered_write_nb(struct uart_buffered_tx_handle *tx, const uint8_t *buf,
 			   size_t len);
-void uart_buffered_write(struct uart_buffered_tx_handle *tx, const u8_t *buf,
+void uart_buffered_write(struct uart_buffered_tx_handle *tx, const uint8_t *buf,
 			 size_t len);
-int uart_buffered_read_nb(struct uart_buffered_rx_handle *rx, u8_t *buf,
+int uart_buffered_read_nb(struct uart_buffered_rx_handle *rx, uint8_t *buf,
 			  size_t len);
-size_t uart_buffered_read(struct uart_buffered_rx_handle *rx, u8_t *buf,
+size_t uart_buffered_read(struct uart_buffered_rx_handle *rx, uint8_t *buf,
 			  size_t len);
 void uart_buffered_access_grant(struct uart_buffered *uart,
 				struct k_thread *thread);

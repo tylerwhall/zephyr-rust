@@ -13,12 +13,12 @@ static void k_poll_signal_wait(struct k_poll_signal *signal)
 	k_poll_signal_reset(signal);
 }
 
-int uart_buffered_write_nb(struct uart_buffered_tx_handle *tx, const u8_t *buf,
+int uart_buffered_write_nb(struct uart_buffered_tx_handle *tx, const uint8_t *buf,
 			   size_t len)
 {
-	u16_t current_read;
+	uint16_t current_read;
 	struct fifo_handle *fifo = &tx->fifo;
-	u16_t last_read = fifo->fifo->read;
+	uint16_t last_read = fifo->fifo->read;
 	bool was_empty = fifo_empty(fifo);
 	int pos = 0;
 
@@ -52,7 +52,7 @@ int uart_buffered_write_nb(struct uart_buffered_tx_handle *tx, const u8_t *buf,
 	return pos;
 }
 
-void uart_buffered_write(struct uart_buffered_tx_handle *tx, const u8_t *buf,
+void uart_buffered_write(struct uart_buffered_tx_handle *tx, const uint8_t *buf,
 			 size_t len)
 {
 	struct fifo_handle *fifo = &tx->fifo;
@@ -68,12 +68,12 @@ void uart_buffered_write(struct uart_buffered_tx_handle *tx, const u8_t *buf,
 	}
 }
 
-int uart_buffered_read_nb(struct uart_buffered_rx_handle *rx, u8_t *buf,
+int uart_buffered_read_nb(struct uart_buffered_rx_handle *rx, uint8_t *buf,
 			  size_t len)
 {
-	u16_t current_write;
+	uint16_t current_write;
 	struct fifo_handle *fifo = &rx->fifo;
-	u16_t last_write = fifo->fifo->write;
+	uint16_t last_write = fifo->fifo->write;
 	bool was_full = fifo_full(fifo);
 	int pos = 0;
 
@@ -107,11 +107,11 @@ int uart_buffered_read_nb(struct uart_buffered_rx_handle *rx, u8_t *buf,
 	return pos;
 }
 
-size_t uart_buffered_read(struct uart_buffered_rx_handle *rx, u8_t *buf,
+size_t uart_buffered_read(struct uart_buffered_rx_handle *rx, uint8_t *buf,
 			  size_t len)
 {
 	struct fifo_handle *fifo = &rx->fifo;
-	u8_t *orig_buf = buf;
+	uint8_t *orig_buf = buf;
 
 	while (len) {
 		int ret = uart_buffered_read_nb(rx, buf, len);
