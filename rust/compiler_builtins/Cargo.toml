@@ -1,6 +1,6 @@
 [package]
 name = "compiler_builtins"
-version = "0.1.19"
+version = "0.1.26"
 authors = ["Tyler Hall <tylerwhall@gmail.com>"]
 edition = "2018"
 
