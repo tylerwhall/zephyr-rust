@@ -160,8 +160,6 @@ uart_buffered_tx_handle(struct uart_buffered *uart)
 void uart_buffered_rx_timeout(struct k_timer *timer);
 void uart_buffered_irq(struct device *uart, struct uart_buffered_rx *rx_fifo,
 		       struct uart_buffered_tx *tx_fifo);
-void uart_buffered_init(struct uart_buffered *buffered, struct device *uart,
-			void (*irq_handler)(struct device *uart));
 
 /* API */
 int uart_buffered_write_nb(struct uart_buffered_tx_handle *tx, const uint8_t *buf,
@@ -172,7 +170,63 @@ int uart_buffered_read_nb(struct uart_buffered_rx_handle *rx, uint8_t *buf,
 			  size_t len);
 size_t uart_buffered_read(struct uart_buffered_rx_handle *rx, uint8_t *buf,
 			  size_t len);
-void uart_buffered_access_grant(struct uart_buffered *uart,
-				struct k_thread *thread);
+
+static inline void uart_buffered_rx_access_grant(struct uart_buffered_rx *fifo,
+						 struct k_thread *thread)
+{
+	k_object_access_grant(&fifo->signal, thread);
+}
+
+static inline void uart_buffered_tx_access_grant(struct uart_buffered_tx *fifo,
+						 struct k_thread *thread)
+{
+	k_object_access_grant(&fifo->signal, thread);
+}
+
+static inline void uart_buffered_access_grant(struct uart_buffered *uart,
+					      struct k_thread *thread)
+{
+	uart_buffered_rx_access_grant(&uart->rx, thread);
+	uart_buffered_tx_access_grant(&uart->tx, thread);
+	k_object_access_grant(uart->rx.fifo.device, thread);
+}
+
+static inline void fifo_handle_init(struct fifo_handle *fifo, struct device *device)
+{
+	fifo->device = device;
+	k_poll_signal_init(fifo->signal);
+}
+
+static inline void uart_buffered_rx_init(struct uart_buffered_rx *fifo,
+					 struct device *uart)
+{
+	fifo_handle_init(&fifo->fifo, uart);
+	k_timer_user_data_set(fifo->timer, &fifo->signal);
+}
+
+static inline void uart_buffered_tx_init(struct uart_buffered_tx *fifo,
+					 struct device *uart)
+{
+	fifo_handle_init(&fifo->fifo, uart);
+}
+
+static inline void uart_buffered_init(struct uart_buffered *buffered, struct device *uart,
+				      void (*irq_handler)(struct device *uart))
+{
+	uint8_t c;
+
+	uart_irq_rx_disable(uart);
+	uart_irq_tx_disable(uart);
+
+	while (uart_fifo_read(uart, &c, 1)) {
+	};
+
+	uart_buffered_rx_init(&buffered->rx, uart);
+	uart_buffered_tx_init(&buffered->tx, uart);
+
+	uart_irq_callback_set(uart, irq_handler);
+	uart_irq_err_enable(uart);
+	uart_irq_rx_enable(uart);
+}
 
 #endif
