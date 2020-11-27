@@ -8,6 +8,12 @@ Add this directory to ZEPHYR_EXTRA_MODULES to build a Cargo library project
 (located in the Zephyr app's source directory by default) and link it into the
 Zephyr app.
 
+Version Compatibility
+=====================
+**Zephyr**: v2.3, v2.4, master up to c2a0b0f50bdb3c928e9d329cea93157e7cf0a469
+
+**Rust**: exactly 1.41.1
+
 Features
 ========
 
@@ -53,11 +59,11 @@ Refer to the Zephyr getting started guide_. This includes installing west,
 getting Zephyr source, and the Zephyr toolchain. Make sure you can build a C
 sample within Zephyr.
 
-.. _guide: https://docs.zephyrproject.org/2.2.0/getting_started/index.html
+.. _guide: https://docs.zephyrproject.org/2.4.0/getting_started/index.html
 
-Version 2.2 is the current tested version. Please try that if master doesn't
-work. Release 2.1 should also work. Due to differences in the syscall header
-generation, v1.14 LTS is no longer supported.
+See above for tested compatible Zephyr releases. Please try a release if master
+does not work. Due to differences in the syscall header generation, v1.14 LTS
+is no longer supported.
 See `issue 16 <https://github.com/tylerwhall/zephyr-rust/issues/16>`_.
 
 Rust toolchain
