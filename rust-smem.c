@@ -25,7 +25,12 @@ SYS_MEM_POOL_DEFINE(rust_std_mem_pool, NULL, CONFIG_RUST_HEAP_MEM_POOL_MIN_SIZE,
 #endif
 
 #if defined(CONFIG_USERSPACE) || defined(CONFIG_RUST_ALLOC_POOL)
+/* Harmless API difference that generates a warning */
+#if ZEPHYR_VERSION_CODE >= ZEPHYR_VERSION(2, 4, 0)
+static int rust_std_init(const struct device *arg)
+#else
 static int rust_std_init(struct device *arg)
+#endif
 {
     ARG_UNUSED(arg);
 
