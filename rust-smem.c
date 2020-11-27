@@ -8,9 +8,8 @@
 #endif
 #include <app_memory/app_memdomain.h>
 
-struct k_mem_domain rust_std_domain;
-
 #ifdef CONFIG_USERSPACE
+struct k_mem_domain rust_std_domain;
 K_APPMEM_PARTITION_DEFINE(rust_std_partition);
 #define RUST_STD_SECTION K_APP_DMEM_SECTION(rust_std_partition)
 #else
