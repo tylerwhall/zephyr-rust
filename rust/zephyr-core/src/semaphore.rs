@@ -1,11 +1,13 @@
-use zephyr_sys::raw::{k_sem, k_timeout_t};
+use zephyr_sys::raw::{k_objects, k_sem, k_timeout_t};
 
 use super::NegErr;
 use crate::kobj::*;
 use crate::time::Timeout;
 
 // Declare the Zephyr struct to be a kernel object
-unsafe impl KObj for k_sem {}
+unsafe impl KObj for k_sem {
+    const OTYPE: k_objects = zephyr_sys::raw::k_objects_K_OBJ_SEM;
+}
 
 pub use zephyr_sys::raw::k_sem as KSem;
 

@@ -2,9 +2,12 @@ use libc::{c_int, c_uint};
 
 use crate::kobj::*;
 
+use zephyr_sys::raw::k_objects;
 pub use zephyr_sys::raw::k_poll_signal as KPollSignal;
 
-unsafe impl KObj for KPollSignal {}
+unsafe impl KObj for KPollSignal {
+    const OTYPE: k_objects = zephyr_sys::raw::k_objects_K_OBJ_POLL_SIGNAL;
+}
 
 crate::make_static_wrapper!(k_poll_signal, zephyr_sys::raw::k_poll_signal);
 

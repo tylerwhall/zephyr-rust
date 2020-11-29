@@ -2,13 +2,15 @@ use core::cell::UnsafeCell;
 use core::marker::PhantomData;
 use core::ops::{Deref, DerefMut};
 
-use zephyr_sys::raw::k_mutex;
+use zephyr_sys::raw::{k_mutex, k_objects};
 
 use super::NegErr;
 use crate::kobj::*;
 
 // Declare the Zephyr struct to be a kernel object
-unsafe impl KObj for k_mutex {}
+unsafe impl KObj for k_mutex {
+    const OTYPE: k_objects = zephyr_sys::raw::k_objects_K_OBJ_MUTEX;
+}
 
 pub use zephyr_sys::raw::k_mutex as KMutex;
 

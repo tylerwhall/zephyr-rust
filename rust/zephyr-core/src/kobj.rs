@@ -2,11 +2,15 @@ use core::cell::UnsafeCell;
 use core::mem::MaybeUninit;
 use core::ops::Deref;
 
+use zephyr_sys::raw::k_objects;
+
 /// A kernel object that is usable via system calls.
 ///
 /// This implies locking is done in the kernel and this is therefore Send + Sync. e.g. mutex,
 /// semaphore, fifo. Implement this for the raw Zephyr C structs.
 pub unsafe trait KObj {
+    const OTYPE: k_objects;
+
     // This is safe, itself, but obviously unsafe to use the mut void pointer
     fn as_void_ptr(&self) -> *mut libc::c_void {
         self as *const _ as *mut _
@@ -14,7 +18,9 @@ pub unsafe trait KObj {
 }
 
 // On behalf of the 'zephyr' crate
-unsafe impl KObj for zephyr_sys::raw::device {}
+unsafe impl KObj for zephyr_sys::raw::device {
+    const OTYPE: k_objects = zephyr_sys::raw::k_objects_K_OBJ_ANY;
+}
 
 pub struct StaticKObj<T>(UnsafeCell<MaybeUninit<T>>);
 
@@ -65,7 +71,9 @@ macro_rules! make_static_wrapper {
             #[allow(non_camel_case_types)]
             pub struct $k_type(StaticKObj<$k_path>);
 
-            unsafe impl KObj for $k_type {}
+            unsafe impl KObj for $k_type {
+                const OTYPE: zephyr_sys::raw::k_objects = <$k_path as KObj>::OTYPE;
+            }
 
             impl $k_type {
                 pub const unsafe fn uninit() -> Self {
