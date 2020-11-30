@@ -343,6 +343,7 @@ dependencies = [
 name = "zephyr-core"
 version = "0.1.0"
 dependencies = [
+ "alloc",
  "compiler_builtins",
  "derive_more",
  "libc",

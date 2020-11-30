@@ -2,6 +2,7 @@
 cmake_minimum_required(VERSION 3.8.2)
 
 add_subdirectory(uart-buffered)
+add_subdirectory(mutex-pool)
 
 # Use a clang_target known to clang so headers will be processed correctly with
 # bindgen. rust_target may point to a custom json target.
@@ -93,6 +94,7 @@ if (CONFIG_RUST)
             "ZEPHYR_BINDGEN=${ZEPHYR_BINDGEN}"
             "CONFIG_USERSPACE=${CONFIG_USERSPACE}"
             "CONFIG_RUST_ALLOC_POOL=${CONFIG_RUST_ALLOC_POOL}"
+            "CONFIG_RUST_MUTEX_POOL=${CONFIG_RUST_MUTEX_POOL}"
             "CONFIG_POSIX_CLOCK=${CONFIG_POSIX_CLOCK}"
             "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
             "SYSROOT=${rust_sysroot}"

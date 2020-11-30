@@ -1,5 +1,7 @@
 #![cfg_attr(not(feature = "have_std"), no_std)]
 #![feature(never_type)]
+#![feature(no_more_cas)]
+#![feature(ptr_offset_from)]
 
 #[macro_use]
 extern crate derive_more;
@@ -8,6 +10,7 @@ pub mod kobj;
 pub mod memdomain;
 pub mod mempool;
 pub mod mutex;
+pub mod mutex_alloc;
 pub mod poll;
 mod poll_signal;
 pub mod semaphore;

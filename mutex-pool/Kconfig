@@ -1,0 +1,15 @@
+config RUST_MUTEX_POOL
+	bool "Preallocate k_mutex for std::sync::Mutex"
+	default y if USERSPACE
+	help
+	  Allocate a fixed number of static mutexes at compile time rather than
+	  using the default allocator. Required for std::sync::Mutex to
+	  function from user space.
+
+if RUST_MUTEX_POOL
+config RUST_MUTEX_POOL_SIZE
+	int "Number of preallocated k_mutex"
+	default 8
+	help
+	  Number of kernel mutexes available to back std::sync::Mutex.
+endif

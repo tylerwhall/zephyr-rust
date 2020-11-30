@@ -52,6 +52,9 @@ config RUST_HEAP_MEM_POOL_NMAX
 	  This option specifies the number of max block size blocks in the Rust
 	  heap.
 endif
+
+rsource "mutex-pool/Kconfig"
+
 endif
 
 config UART_BUFFERED
