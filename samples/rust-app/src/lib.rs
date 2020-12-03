@@ -37,6 +37,13 @@ fn mutex_test() {
     zephyr::any::k_str_out("Unlocking\n");
 }
 
+fn std_mutex_test() {
+    println!("std::sync::Mutex::new");
+    let lock = std::sync::Mutex::new(0u8);
+    println!("std::sync::Mutex::lock");
+    *lock.lock().unwrap() = 1;
+}
+
 fn thread_join_std_mem_domain(_context: zephyr::context::Kernel) {
     use zephyr::context::Kernel as C;
     zephyr::static_mem_domain!(rust_std_domain).add_thread::<C>(C::k_current_get());
@@ -80,6 +87,7 @@ pub extern "C" fn rust_main() {
     current.k_object_access_grant::<Context, _>(&MUTEX);
     current.k_object_access_grant::<Context, _>(&TLS_SEM);
     mutex_test();
+    std_mutex_test();
 
     if let Some(_device) = Context::device_get_binding(cstr!("nonexistent")) {
         println!("Got device");
@@ -122,6 +130,7 @@ pub extern "C" fn rust_main() {
         zephyr::user::k_str_out("Hello from Rust userspace with forced user-mode syscall\n");
 
         mutex_test();
+        std_mutex_test();
 
         zephyr_logger::init(LevelFilter::Info);
 
