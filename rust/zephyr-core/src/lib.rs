@@ -2,6 +2,7 @@
 #![feature(never_type)]
 #![feature(no_more_cas)]
 #![feature(ptr_offset_from)]
+#![feature(const_transmute)]
 
 #[macro_use]
 extern crate derive_more;

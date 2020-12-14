@@ -56,7 +56,7 @@ mod mutex_pool {
 
     const NUM_USED: usize = (NUM_MUTEX + 7) / 8;
     /// Bitfield tracking allocated mutexes
-    static USED: [AtomicU8; NUM_USED] = [AtomicU8::new(0); NUM_USED];
+    static USED: [AtomicU8; NUM_USED] = unsafe { core::mem::transmute([0u8; NUM_USED]) };
 
     pub fn alloc_mutex() -> Option<*mut KMutex> {
         let mut ret = None;
