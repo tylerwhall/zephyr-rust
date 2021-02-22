@@ -6,3 +6,4 @@ authors = ["Tyler Hall <tylerwhall@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+bitflags = "1.2"

@@ -4,8 +4,12 @@ extern crate zephyr_sys;
 use std::io;
 
 pub use zephyr_core::*;
+
+mod macros;
+
 pub mod device;
 pub mod eeprom;
+pub mod gpio;
 pub mod uart;
 
 trait NegErrno: NegErr {
