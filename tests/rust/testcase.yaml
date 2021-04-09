@@ -1,5 +1,4 @@
-common:
-    arch_whitelist: x86 arm posix
 tests:
-    rust.main:
-        tags: rust
+  rust.main:
+    platform_whitelist: qemu_x86 qemu_cortex_m3
+    tags: rust
