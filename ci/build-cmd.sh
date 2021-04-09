@@ -9,5 +9,6 @@ exec docker run \
     -i --rm \
     -v ${DIR}/..:/zephyr-rust:ro \
     -w /zephyr-rust \
+    ${DOCKER_ARGS[@]} \
     zephyr-rust:${ZEPHYR_VERSION}-${RUST_VERSION} \
     "$@"

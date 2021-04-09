@@ -15,6 +15,8 @@ ARG SDK_VERSION=0.11.4
 ARG SDK_URL=https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.12.2/zephyr-sdk-0.12.2-x86_64-linux-setup.run
 RUN wget ${SDK_URL} -O ./zephyr-sdk.run && chmod +x ./zephyr-sdk.run
 RUN ./zephyr-sdk.run -- -d /opt/zephyr-sdk-${SDK_VERSION} && rm ./zephyr-sdk.run
+# Required for sanitycheck
+ENV ZEPHYR_TOOLCHAIN_VARIANT=zephyr
 
 ARG ZEPHYR_VERSION=2.4.0
 ENV WEST_BASE=/zephyrproject
