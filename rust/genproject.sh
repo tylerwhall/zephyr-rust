@@ -5,6 +5,8 @@ outdir=$2
 
 rm -rf $outdir
 mkdir -p $outdir/src
+# Copy a Cargo.lock if it exists
+cp ${crate_dir}/Cargo.lock $outdir || true
 
 echo "extern crate app;" > $outdir/src/lib.rs
 
