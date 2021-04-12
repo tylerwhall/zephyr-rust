@@ -1,0 +1,4 @@
+tests:
+  rust.posix-clock:
+    platform_whitelist: qemu_x86 qemu_cortex_m3 native_posix
+    tags: rust
