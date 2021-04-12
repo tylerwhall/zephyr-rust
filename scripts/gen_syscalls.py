@@ -136,17 +136,24 @@ def main():
     declarations = []
     includes = set()
 
-    # Whitelist syscall groups for which to generate bindings. The syscall
-    # headers are not self-sufficient, so we have to manually list the other
-    # headers they need for their argument types.
+    # whitelist: syscall groups for which to generate bindings. Zephyr
+    # generates syscalls/foo.h for each foo.h in this list.
+
+    # includes: headers that app code would include to call syscalls. Those
+    # define other necessary data types and usually include the corresponding
+    # syscalls/foo.h. But there are odd cases like clock_gettime() on posix
+    # where the syscall header is not included, so we must not include the
+    # syscall header directly.
     whitelist = set(["kernel.h", "kobject.h", "device.h", "uart.h", "mutex.h", "errno_private.h", "eeprom.h", "time.h"])
-    includes = ["kernel.h", "device.h", "drivers/uart.h", "sys/mutex.h", "drivers/eeprom.h", "posix/time.h"]
+    includes = ["kernel.h", "device.h", "drivers/uart.h", "sys/mutex.h", "sys/errno_private.h", "drivers/eeprom.h", "posix/time.h"]
+
+    # Hack because z_sys_mutex_kernel_lock is not defined in sys/mutex.h for !USERSPACE
+    includes.append("syscalls/mutex.h")
+
     for match_group, fn in syscalls:
         if fn not in whitelist:
             continue
         include = "syscalls/%s" % fn
-        if include not in includes:
-            includes.append(include)
         invocation, declaration = analyze_fn(match_group)
         invocations.append(invocation)
         declarations.append(declaration)
