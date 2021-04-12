@@ -91,18 +91,25 @@ macro_rules! zephyr_bindings {
         #[cfg(clock)]
         #[inline(always)]
         pub fn clock_settime(timespec: zephyr_sys::raw::timespec) {
+            use core::convert::TryInto;
+
             unsafe {
-                zephyr_sys::raw::clock_settime(zephyr_sys::raw::CLOCK_REALTIME, &timespec);
+                zephyr_sys::raw::clock_settime(
+                    zephyr_sys::raw::CLOCK_REALTIME.try_into().unwrap(),
+                    &timespec,
+                );
             }
         }
 
         #[cfg(clock)]
         #[inline(always)]
         pub fn clock_gettime() -> zephyr_sys::raw::timespec {
+            use core::convert::TryInto;
+
             unsafe {
                 let mut t: zephyr_sys::raw::timespec = core::mem::zeroed();
                 zephyr_sys::syscalls::$context::clock_gettime(
-                    zephyr_sys::raw::CLOCK_REALTIME,
+                    zephyr_sys::raw::CLOCK_REALTIME.try_into().unwrap(),
                     &mut t,
                 );
                 t
