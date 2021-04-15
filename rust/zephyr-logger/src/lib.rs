@@ -1,4 +1,4 @@
-use log::{Record, LevelFilter, Metadata};
+use log::{LevelFilter, Metadata, Record};
 
 pub fn init(max_level: LevelFilter) {
     log::set_logger(&ZEPHYR_LOGGER).unwrap();
@@ -19,6 +19,5 @@ impl log::Log for ZephyrLogger {
         }
     }
 
-    fn flush(&self) {
-    }
+    fn flush(&self) {}
 }

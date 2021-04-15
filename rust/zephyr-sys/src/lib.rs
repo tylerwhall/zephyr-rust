@@ -19,9 +19,7 @@ pub mod raw {
         ticks: -1 as k_ticks_t,
     };
 
-    pub const K_NO_WAIT: k_timeout_t = k_timeout_t {
-        ticks: 0,
-    };
+    pub const K_NO_WAIT: k_timeout_t = k_timeout_t { ticks: 0 };
 }
 
 pub mod syscalls {

@@ -10,10 +10,7 @@ fn get_single_arg(item: TokenStream) -> Ident {
     let ident = if let Some(TokenTree::Ident(ident)) = arg {
         ident
     } else {
-        panic!(
-            "k_*_define takes one identifier argument. Got {:?}",
-            arg
-        );
+        panic!("k_*_define takes one identifier argument. Got {:?}", arg);
     };
     ident
 }
@@ -53,7 +50,10 @@ pub fn k_poll_signal_define(item: TokenStream) -> TokenStream {
     // ensure this is in kernel memory.
     let section = Literal::string(&format!("._k_mutex.static.{}", ident));
     let ctor = Ident::new(&format!("_rust_poll_signal_init_{}", ident), ident.span());
-    let ctor_ptr = Ident::new(&format!("_ctor_rust_poll_signal_init_{}", ident), ident.span());
+    let ctor_ptr = Ident::new(
+        &format!("_ctor_rust_poll_signal_init_{}", ident),
+        ident.span(),
+    );
     let expanded = quote! {
         // The static storage for the object, itself
         #[link_section = #section]
