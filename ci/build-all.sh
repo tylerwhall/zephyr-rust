@@ -5,6 +5,7 @@
 parallel \
     -j1 \
     --results log/container \
+    --resume \
     --halt now,fail=1 \
     ZEPHYR_VERSION={1} ./container-build.sh \
     ::: 2.4.0 2.3.0 2.5.0
