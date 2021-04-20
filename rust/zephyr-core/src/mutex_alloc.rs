@@ -65,23 +65,19 @@ mod mutex_pool {
             // Valid bits in this byte
             let valid = core::cmp::max(NUM_MUTEX - i * 8, 8);
             if byte
-                .fetch_update(
-                    Ordering::Relaxed,
-                    Ordering::Relaxed,
-                    |val| {
-                        ret = None;
-                        for bit in 0..valid {
-                            let mask = 1 << bit;
-                            if val & mask == 0 {
-                                unsafe {
-                                    ret = Some(&rust_mutex_pool[i * 8 + bit] as *const _ as *mut _)
-                                };
-                                return Some(val | mask);
-                            }
+                .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |val| {
+                    ret = None;
+                    for bit in 0..valid {
+                        let mask = 1 << bit;
+                        if val & mask == 0 {
+                            unsafe {
+                                ret = Some(&rust_mutex_pool[i * 8 + bit] as *const _ as *mut _)
+                            };
+                            return Some(val | mask);
                         }
-                        None
-                    },
-                )
+                    }
+                    None
+                })
                 .is_ok()
             {
                 break;
