@@ -10,33 +10,9 @@ dependencies = [
 
 [[package]]
 name = "autocfg"
-version = "0.1.7"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d49d90015b3c36167a20fe2810c5cd875ad504b39cff3d4eae7977e6b7c1cb2"
-
-[[package]]
-name = "backtrace"
-version = "0.3.50"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46254cf2fdcdf1badb5934448c1bcbe046a56537b3987d96c51a7afc5d03f293"
-dependencies = [
- "backtrace-sys",
- "cfg-if",
- "compiler_builtins",
- "libc",
- "rustc-demangle",
- "rustc-std-workspace-core",
-]
-
-[[package]]
-name = "backtrace-sys"
-version = "0.1.37"
-dependencies = [
- "cc",
- "compiler_builtins",
- "libc",
- "rustc-std-workspace-core",
-]
+checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
 name = "cc"
@@ -102,9 +78,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.6.3"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e6073d0ca812575946eb5f35ff68dbe519907b25c42530389ff946dc84c6ead"
+checksum = "e91b62f79061a0bc2e046024cb7ba44b08419ed238ecbd9adbd787434b9e8c25"
 dependencies = [
  "autocfg",
  "compiler_builtins",
@@ -134,21 +110,10 @@ dependencies = [
 name = "panic_abort"
 version = "0.0.0"
 dependencies = [
- "compiler_builtins",
- "core",
- "libc",
-]
-
-[[package]]
-name = "panic_unwind"
-version = "0.0.0"
-dependencies = [
- "alloc",
  "cfg-if",
  "compiler_builtins",
  "core",
  "libc",
- "unwind",
 ]
 
 [[package]]
@@ -222,7 +187,6 @@ name = "std"
 version = "0.0.0"
 dependencies = [
  "alloc",
- "backtrace",
  "cfg-if",
  "compiler_builtins",
  "core",
@@ -232,7 +196,7 @@ dependencies = [
  "hermit-abi",
  "libc",
  "panic_abort",
- "panic_unwind",
+ "rustc-demangle",
  "unwind",
  "wasi",
  "zephyr-core",
@@ -314,11 +278,3 @@ dependencies = [
  "libc",
  "rustc-std-workspace-core",
 ]
-
-[[patch.unused]]
-name = "backtrace"
-version = "0.3.46"
-
-[[patch.unused]]
-name = "compiler_builtins"
-version = "0.1.26"

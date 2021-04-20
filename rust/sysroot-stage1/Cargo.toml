@@ -5,16 +5,13 @@ version = "0.0.0"
 repository = "https://github.com/tylerwhall/zephyr-rust.git"
 
 [dependencies.std]
-path = "../rust/src/libstd"
+path = "../rust/library/std"
 
 [patch.crates-io]
-compiler_builtins = { path = '../compiler_builtins' }
-backtrace = { path = '../patches/backtrace-rs' }
-backtrace-sys = { path = '../patches/backtrace-rs/crates/backtrace-sys' }
 libc = { path = '../libc' }
 
-rustc-std-workspace-core = { path = '../rust/src/tools/rustc-std-workspace-core' }
-rustc-std-workspace-alloc = { path = '../rust/src/tools/rustc-std-workspace-alloc' }
+rustc-std-workspace-core = { path = '../rust/library/rustc-std-workspace-core' }
+rustc-std-workspace-alloc = { path = '../rust/library/rustc-std-workspace-alloc' }
 
 [profile.release]
 lto = true

@@ -4,6 +4,3 @@
 [submodule "rust/rust"]
 	path = rust/rust
 	url = https://github.com/tylerwhall/rust.git
-[submodule "rust/patches/backtrace-rs"]
-	path = rust/patches/backtrace-rs
-	url = https://github.com/tylerwhall/backtrace-rs.git

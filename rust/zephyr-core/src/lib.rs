@@ -1,7 +1,5 @@
 #![cfg_attr(not(feature = "have_std"), no_std)]
 #![feature(never_type)]
-#![feature(ptr_offset_from)]
-#![feature(const_transmute)]
 
 #[macro_use]
 extern crate derive_more;
