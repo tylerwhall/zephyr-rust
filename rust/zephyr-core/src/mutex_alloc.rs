@@ -51,6 +51,7 @@ mod mutex_pool {
     const NUM_MUTEX: usize = zephyr_sys::raw::CONFIG_RUST_MUTEX_POOL_SIZE as usize;
 
     extern "C" {
+        #[allow(improper_ctypes)]
         static rust_mutex_pool: [KMutex; NUM_MUTEX];
     }
 
