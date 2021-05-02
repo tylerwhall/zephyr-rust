@@ -75,7 +75,7 @@ pub extern "C" fn rust_second_thread(
 pub extern "C" fn rust_main() {
     use zephyr::context::Kernel as Context;
 
-    println!("Hello Rust println");
+    println!("Hello from Rust on Zephyr {} via println!", zephyr::KERNEL_VERSION);
     zephyr::kernel::k_str_out("Hello from Rust kernel with direct kernel call\n");
     zephyr::any::k_str_out("Hello from Rust kernel with runtime-detect syscall\n");
 
