@@ -16,9 +16,26 @@ pub mod thread;
 mod time;
 
 pub use time::*;
+use zephyr_sys::raw::KERNEL_VERSION_NUMBER;
+use core::fmt;
 
 // Set from environment from build.rs
 pub const CONFIG_USERSPACE: bool = cfg!(usermode);
+
+#[derive(Eq, PartialEq, Ord, PartialOrd)]
+pub struct KernelVersion(u32);
+
+// Zephyr kernel version number
+pub const KERNEL_VERSION: KernelVersion = KernelVersion(KERNEL_VERSION_NUMBER);
+
+impl fmt::Display for KernelVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let major = (self.0 & 0xff0000) >> 16;
+        let minor = (self.0 & 0x00ff00) >> 8;
+        let patch = self.0 & 0x0000ff;
+        write!(f, "{}.{}.{}", major, minor, patch)
+    }
+}
 
 // Use this mem pool for global allocs instead of kmalloc
 #[cfg(mempool)]
