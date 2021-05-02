@@ -11,14 +11,21 @@ unsafe impl Sync for MempoolAlloc {}
 unsafe impl GlobalAlloc for MempoolAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let kheap = self.0 as *const _ as *mut _;
-        let ret = zephyr_sys::raw::k_heap_alloc(kheap, layout.size(), K_NO_WAIT) as *mut _;
-        if ret as usize & (layout.align() - 1) != 0 {
-            zephyr_sys::raw::printk(
-                "Rust unsatisfied alloc alignment\n\0".as_ptr() as *const libc::c_char
-            );
-            core::ptr::null_mut()
-        } else {
-            ret
+        #[cfg(zephyr250)]
+        {
+            zephyr_sys::raw::k_heap_aligned_alloc(kheap, layout.align(), layout.size(), K_NO_WAIT) as *mut _
+        }
+        #[cfg(not(zephyr250))]
+        {
+            let ret = zephyr_sys::raw::k_heap_alloc(kheap, layout.size(), K_NO_WAIT) as *mut _;
+            if ret as usize & (layout.align() - 1) != 0 {
+                zephyr_sys::raw::printk(
+                    "Rust unsatisfied alloc alignment\n\0".as_ptr() as *const libc::c_char
+                );
+                core::ptr::null_mut()
+            } else {
+                ret
+            }
         }
     }
 
