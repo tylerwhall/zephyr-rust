@@ -198,7 +198,11 @@ pub mod kernel {
     unsafe impl GlobalAlloc for KMalloc {
         #[inline]
         unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+            #[cfg(not(zephyr250))]
             let ret = zephyr_sys::raw::k_malloc(layout.size()) as *mut _;
+            #[cfg(zephyr250)]
+            let ret = zephyr_sys::raw::k_aligned_alloc(layout.align(), layout.size()) as *mut _;
+
             check_align(ret, layout)
         }
 
