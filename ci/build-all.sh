@@ -17,7 +17,7 @@ parallel \
     --resume \
     --halt now,fail=1 \
     ZEPHYR_VERSION={1} ./build-cmd.sh west build -d /tmp/build -p auto -b {2} {3} \
-    ::: 2.4.0 2.3.0 \
+    ::: 2.5.0 2.4.0 2.3.0 \
     ::: qemu_x86 \
     ::: samples/rust-app
 
@@ -27,6 +27,6 @@ parallel \
     --results log/build \
     --resume \
     ZEPHYR_VERSION={1} ./build-cmd.sh west build -d /tmp/build -p auto -b {2} {3} \
-    ::: 2.4.0 2.3.0 \
+    ::: 2.5.0 2.4.0 2.3.0 \
     ::: qemu_x86 qemu_cortex_m3 \
     ::: samples/rust-app samples/serial samples/futures

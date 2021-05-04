@@ -10,7 +10,7 @@ Zephyr app.
 
 Version Compatibility
 =====================
-**Zephyr**: v2.3, v2.4, master up to c2a0b0f50bdb3c928e9d329cea93157e7cf0a469
+**Zephyr**: v2.3, v2.4, v2.5
 
 **Rust**: exactly 1.51.0
 
@@ -59,7 +59,7 @@ Refer to the Zephyr getting started guide_. This includes installing west,
 getting Zephyr source, and the Zephyr toolchain. Make sure you can build a C
 sample within Zephyr.
 
-.. _guide: https://docs.zephyrproject.org/2.4.0/getting_started/index.html
+.. _guide: https://docs.zephyrproject.org/2.5.0/getting_started/index.html
 
 See above for tested compatible Zephyr releases. Please try a release if master
 does not work. Due to differences in the syscall header generation, v1.14 LTS
