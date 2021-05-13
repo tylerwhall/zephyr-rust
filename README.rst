@@ -190,6 +190,7 @@ Supported Architectures
 * x86
 * armv7m
 * armv7r
+* thumbv7em
 
 Really anything that works with Zephyr and Rust should work. Only need to
 define a target.json and add a case for it in CMakelists.
