@@ -4,9 +4,10 @@
 #include <zephyr.h>
 #include <kernel.h>
 
+typedef fifo_index_t uint16_t;
 struct fifo {
-	uint16_t write;
-	uint16_t read;
+	fifo_index_t write;
+	fifo_index_t read;
 	uint8_t buf[];
 };
 
@@ -48,7 +49,7 @@ static inline size_t fifo_capacity(struct fifo_handle *fifo)
 
 static inline size_t fifo_used(struct fifo_handle *fifo)
 {
-	return fifo->fifo->write - fifo->fifo->read;
+	return (fifo_index_t)(fifo->fifo->write - fifo->fifo->read);
 }
 
 static inline bool fifo_full(struct fifo_handle *fifo)
