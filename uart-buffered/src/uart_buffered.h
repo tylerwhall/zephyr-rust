@@ -4,7 +4,7 @@
 #include <zephyr.h>
 #include <kernel.h>
 
-typedef fifo_index_t uint16_t;
+typedef uint16_t fifo_index_t;
 struct fifo {
 	fifo_index_t write;
 	fifo_index_t read;
