@@ -16,9 +16,9 @@ static void k_poll_signal_wait(struct k_poll_signal *signal)
 int uart_buffered_write_nb(struct uart_buffered_tx_handle *tx, const uint8_t *buf,
 			   size_t len)
 {
-	uint16_t current_read;
+	fifo_index_t current_read;
 	struct fifo_handle *fifo = &tx->fifo;
-	uint16_t last_read = fifo->fifo->read;
+	fifo_index_t last_read = fifo->fifo->read;
 	bool was_empty = fifo_empty(fifo);
 	int pos = 0;
 
@@ -71,9 +71,9 @@ void uart_buffered_write(struct uart_buffered_tx_handle *tx, const uint8_t *buf,
 int uart_buffered_read_nb(struct uart_buffered_rx_handle *rx, uint8_t *buf,
 			  size_t len)
 {
-	uint16_t current_write;
+	fifo_index_t current_write;
 	struct fifo_handle *fifo = &rx->fifo;
-	uint16_t last_write = fifo->fifo->write;
+	fifo_index_t last_write = fifo->fifo->write;
 	bool was_full = fifo_full(fifo);
 	int pos = 0;
 
