@@ -103,6 +103,7 @@ dependencies = [
 name = "panic_abort"
 version = "0.0.0"
 dependencies = [
+ "alloc",
  "cfg-if",
  "compiler_builtins",
  "core",
@@ -190,10 +191,21 @@ dependencies = [
  "libc",
  "panic_abort",
  "rustc-demangle",
+ "std_detect",
  "unwind",
  "wasi",
  "zephyr-core",
  "zephyr-sys",
+]
+
+[[package]]
+name = "std_detect"
+version = "0.1.5"
+dependencies = [
+ "cfg-if",
+ "compiler_builtins",
+ "rustc-std-workspace-alloc",
+ "rustc-std-workspace-core",
 ]
 
 [[package]]
