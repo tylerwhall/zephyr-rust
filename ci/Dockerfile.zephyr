@@ -21,7 +21,7 @@ ENV ZEPHYR_TOOLCHAIN_VARIANT=zephyr
 ARG ZEPHYR_VERSION=2.4.0
 ENV WEST_BASE=/zephyrproject
 ENV ZEPHYR_BASE=${WEST_BASE}/zephyr
-RUN west init ${WEST_BASE} --mr refs/tags/zephyr-v${ZEPHYR_VERSION}
+RUN west init ${WEST_BASE} --mr zephyr-v${ZEPHYR_VERSION}
 WORKDIR ${WEST_BASE}
 RUN west update
 
