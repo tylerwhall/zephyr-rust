@@ -24,7 +24,6 @@ app = { path = "${crate_dir}" }
 
 [profile.release]
 panic = "abort"
-lto = true
 debug = true
 opt-level = "s"
 EOF
