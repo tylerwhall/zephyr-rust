@@ -22,6 +22,16 @@ impl DynMutex {
             Some(DynMutex(NonNull::new_unchecked(m)))
         }
     }
+
+    pub fn into_raw(self) -> *mut KMutex {
+        let ptr = self.0.as_ptr();
+        core::mem::forget(self);
+        ptr
+    }
+
+    pub unsafe fn from_raw(m: *mut KMutex) -> Self {
+        DynMutex(NonNull::new_unchecked(m))
+    }
 }
 
 impl Drop for DynMutex {
