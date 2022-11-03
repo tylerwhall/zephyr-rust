@@ -6,7 +6,7 @@ repository = "https://github.com/tylerwhall/zephyr-rust.git"
 edition = "2018"
 
 [dependencies]
-cstr = "=0.2.10"
+cstr = "0.2.10"
 log = "0.4"
 zephyr = { path = "../../rust/zephyr" }
 zephyr-macros = { path = "../../rust/zephyr-macros" }
