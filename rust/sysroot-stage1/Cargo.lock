@@ -28,9 +28,9 @@ dependencies = [
 
 [[package]]
 name = "compiler_builtins"
-version = "0.1.45"
+version = "0.1.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "787187ae221adfcda34b03006f1617099e4ae26b50e5a4db282496014ab75837"
+checksum = "2467ff455350a4df7d02f1ed1449d0279605a763de5d586dcf6aa7d732508bcb"
 dependencies = [
  "rustc-std-workspace-core",
 ]
@@ -53,9 +53,9 @@ dependencies = [
 
 [[package]]
 name = "dlmalloc"
-version = "0.2.1"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "332570860c2edf2d57914987bf9e24835425f75825086b6ba7d1e6a3e4f1f254"
+checksum = "203540e710bfadb90e5e29930baf5d10270cec1f43ab34f46f78b147b2de715a"
 dependencies = [
  "compiler_builtins",
  "libc",

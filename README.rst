@@ -12,7 +12,7 @@ Version Compatibility
 =====================
 **Zephyr**: v2.3, v2.4, v2.5
 
-**Rust**: exactly 1.57.0
+**Rust**: exactly 1.58.0
 
 Features
 ========
@@ -74,13 +74,13 @@ included as a submodule of this project. In practice, using a different
 compiler version often fails to compile because of Rust internally making heavy
 use of unstable compiler features.
 
-The current base is stable-1.57.0. Rustup is the default workflow, and the
+The current base is stable-1.58.0. Rustup is the default workflow, and the
 rust-toolchain file in this repo should cause rustup to automatically install
 and use the right version. If not, manually install:
 
 .. code-block:: console
 
-    rustup toolchain install 1.57.0
+    rustup toolchain install 1.58.0
 
 If supplying your own rustc and cargo, make sure they are the version above.
 The build will fail if it detects a version mismatch.
