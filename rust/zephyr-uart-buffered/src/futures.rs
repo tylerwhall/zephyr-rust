@@ -1,7 +1,7 @@
 use core::pin::Pin;
 use core::task::{Context, Poll};
 
-use futures::io::{AsyncRead, AsyncWrite, Error, Initializer};
+use futures::io::{AsyncRead, AsyncWrite, Error};
 
 use zephyr_core::context::Any as C;
 use zephyr_core::poll::Signal;
@@ -47,10 +47,6 @@ impl AsyncRead for UartBufferedRxAsync {
         }
 
         Poll::Pending
-    }
-
-    unsafe fn initializer(&self) -> Initializer {
-        Initializer::nop()
     }
 }
 

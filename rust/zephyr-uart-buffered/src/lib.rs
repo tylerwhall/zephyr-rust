@@ -1,5 +1,3 @@
-#![feature(read_initializer)]
-
 extern crate zephyr_core;
 extern crate zephyr_sys;
 
