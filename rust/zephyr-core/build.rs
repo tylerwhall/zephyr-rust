@@ -9,6 +9,10 @@ fn main() {
         println!("cargo:rustc-cfg=zephyr250");
     }
 
+    if kernel_version >= 0x2_07_00 {
+        println!("cargo:rustc-cfg=zephyr270");
+    }
+
     if std::env::var("CONFIG_USERSPACE").expect("CONFIG_USERSPACE must be set") == "y" {
         println!("cargo:rustc-cfg=usermode");
     }
@@ -20,5 +24,10 @@ fn main() {
     }
     if std::env::var("CONFIG_POSIX_CLOCK").expect("CONFIG_POSIX_CLOCK must be set") == "y" {
         println!("cargo:rustc-cfg=clock");
+    }
+    if let Ok(tls) = std::env::var("CONFIG_THREAD_LOCAL_STORAGE") {
+        if tls == "y" {
+            println!("cargo:rustc-cfg=tls");
+        }
     }
 }

@@ -32,9 +32,28 @@ macro_rules! trait_impl {
                 unsafe { zephyr_sys::syscalls::$context::k_wakeup(thread.tid()) }
             }
 
+            #[cfg(not(zephyr270))]
             fn k_current_get() -> crate::thread::ThreadId {
                 ThreadId(unsafe {
                     NonNull::new_unchecked(zephyr_sys::syscalls::$context::k_current_get())
+                })
+            }
+
+            #[cfg(all(zephyr270, tls))]
+            fn k_current_get() -> crate::thread::ThreadId {
+                extern "C" {
+                    #[no_mangle]
+                    static z_tls_current: *mut zephyr_sys::raw::k_thread;
+                }
+                ThreadId(unsafe {
+                    NonNull::new_unchecked(z_tls_current)
+                })
+            }
+
+            #[cfg(all(zephyr270, not(tls)))]
+            fn k_current_get() -> crate::thread::ThreadId {
+                ThreadId(unsafe {
+                    NonNull::new_unchecked(zephyr_sys::syscalls::$context::z_current_get())
                 })
             }
 
