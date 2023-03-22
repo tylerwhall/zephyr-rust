@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ZEPHYR_RUST="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/.."
-RUST_VERSION=$(<$ZEPHYR_RUST/rust-toolchain)
+RUST_VERSION="$( rustup show active-toolchain | awk '{print $1}' )"
 ZEPHYR_VERSION=${ZEPHYR_VERSION:-2.4.0}
 
 case $ZEPHYR_VERSION in
