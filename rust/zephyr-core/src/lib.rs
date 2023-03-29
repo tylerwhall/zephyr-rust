@@ -177,7 +177,6 @@ pub mod kernel {
                 ptr::null_mut(),
             )
         }
-        unreachable!()
     }
 
     fn check_align(ptr: *mut u8, layout: Layout) -> *mut u8 {
