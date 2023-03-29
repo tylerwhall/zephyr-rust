@@ -43,7 +43,6 @@ unsafe impl GlobalAlloc for MempoolAlloc {
 macro_rules! global_sys_mem_pool {
     ($pool:ident) => {
         extern "C" {
-            #[no_mangle]
             static $pool: $crate::mempool::k_heap;
         }
 
