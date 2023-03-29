@@ -1,6 +1,8 @@
 [submodule "rust/libc"]
 	path = rust/libc
 	url = https://github.com/tylerwhall/libc.git
+	shallow = true
 [submodule "rust/rust"]
 	path = rust/rust
 	url = https://github.com/tylerwhall/rust.git
+	shallow = true
