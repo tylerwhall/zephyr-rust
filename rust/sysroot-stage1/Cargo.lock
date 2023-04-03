@@ -12,19 +12,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.73"
+version = "1.0.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fff2a6927b3bb87f9595d67196a70493f627687a71d87a0d692242c33f58c11"
-
-[[package]]
-name = "cfg-if"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
-dependencies = [
- "compiler_builtins",
- "rustc-std-workspace-core",
-]
+checksum = "50d30906286121d95be3d479533b458f87493b30a4b5f79a607db8f5d11aa91f"
 
 [[package]]
 name = "cfg-if"
@@ -107,7 +97,7 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.137"
+version = "0.2.138"
 dependencies = [
  "rustc-std-workspace-core",
 ]
@@ -117,7 +107,7 @@ name = "panic_abort"
 version = "0.0.0"
 dependencies = [
  "alloc",
- "cfg-if 0.1.10",
+ "cfg-if",
  "compiler_builtins",
  "core",
  "libc",
@@ -194,7 +184,7 @@ name = "std"
 version = "0.0.0"
 dependencies = [
  "alloc",
- "cfg-if 1.0.0",
+ "cfg-if",
  "compiler_builtins",
  "core",
  "dlmalloc",
@@ -215,7 +205,7 @@ dependencies = [
 name = "std_detect"
 version = "0.1.5"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if",
  "compiler_builtins",
  "rustc-std-workspace-alloc",
  "rustc-std-workspace-core",
@@ -258,7 +248,7 @@ name = "unwind"
 version = "0.0.0"
 dependencies = [
  "cc",
- "cfg-if 0.1.10",
+ "cfg-if",
  "compiler_builtins",
  "core",
  "libc",
