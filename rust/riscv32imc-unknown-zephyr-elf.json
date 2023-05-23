@@ -1,0 +1,27 @@
+{
+  "abi-blacklist": [
+    "stdcall",
+    "fastcall",
+    "vectorcall",
+    "thiscall",
+    "win64",
+    "sysv64"
+  ],
+  "arch": "riscv32",
+  "data-layout": "e-m:e-p:32:32-i64:64-n32-S128",
+  "emit-debug-gdb-scripts": false,
+  "env": "gnu",
+  "executables": true,
+  "features": "+m,+c",
+  "linker-flavor": "gcc",
+  "linker-is-gnu": true,
+  "llvm-target": "riscv32",
+  "max-atomic-width": 32,
+  "os": "zephyr",
+  "panic-strategy": "abort",
+  "relocation-model": "static",
+  "target-c-int-width": "32",
+  "target-family": "zephyr",
+  "target-pointer-width": "32",
+  "vendor": ""
+}
