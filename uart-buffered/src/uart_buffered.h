@@ -1,8 +1,13 @@
 #ifndef __UART_BUFFERED_H__
 #define __UART_BUFFERED_H__
 
+#include <version.h>
+#if KERNEL_VERSION_MAJOR < 3
 #include <zephyr.h>
 #include <kernel.h>
+#else
+#include <zephyr/kernel.h>
+#endif
 
 typedef uint16_t fifo_index_t;
 struct fifo {
