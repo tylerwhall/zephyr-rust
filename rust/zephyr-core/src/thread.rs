@@ -32,7 +32,7 @@ macro_rules! trait_impl {
                 unsafe { zephyr_sys::syscalls::$context::k_wakeup(thread.tid()) }
             }
 
-            #[cfg(not(zephyr270))]
+            #[cfg(not(any(zephyr270, zephyr300)))]
             fn k_current_get() -> crate::thread::ThreadId {
                 ThreadId(unsafe {
                     NonNull::new_unchecked(zephyr_sys::syscalls::$context::k_current_get())
@@ -50,7 +50,7 @@ macro_rules! trait_impl {
                 })
             }
 
-            #[cfg(all(zephyr270, not(tls)))]
+            #[cfg(any(zephyr300, all(zephyr270, not(tls))))]
             fn k_current_get() -> crate::thread::ThreadId {
                 ThreadId(unsafe {
                     NonNull::new_unchecked(zephyr_sys::syscalls::$context::z_current_get())

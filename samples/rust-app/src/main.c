@@ -1,4 +1,9 @@
+#include <version.h>
+#if KERNEL_VERSION_MAJOR < 3
 #include <zephyr.h>
+#else
+#include <zephyr/kernel.h>
+#endif
 
 #define MY_STACK_SIZE 1024
 #define MY_PRIORITY 5
