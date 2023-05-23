@@ -165,7 +165,18 @@ def main():
     with open(args.all_syscalls, "w") as fp:
         fp.write("#ifndef ZEPHYR_ALL_SYSCALLS_H\n")
         fp.write("#define ZEPHYR_ALL_SYSCALLS_H\n")
-        fp.write("\n".join(includes))
+        fp.write("#include <version.h>\n")
+        fp.write("#if KERNEL_VERSION_MAJOR < 3\n")
+        fp.write("\n".join(["#include <%s>" % fn for fn in includes]))
+        # Hack because z_sys_mutex_kernel_lock is not defined in sys/mutex.h for !USERSPACE
+        fp.write("\n#include <syscalls/mutex.h>")
+        fp.write("\n#else\n")
+        fp.write("\n".join(["#include <zephyr/%s>" % fn for fn in includes]))
+        fp.write("\n#endif\n")
+        fp.write("\n")
+        # Hack because z_sys_mutex_kernel_lock is not defined in sys/mutex.h for !USERSPACE
+        # This is the same on all zephyr versions as it exists in include/generated
+        fp.write("#include <syscalls/mutex.h>\n")
         fp.write("\n")
         fp.write("".join(declarations))
         fp.write("\n#endif\n")

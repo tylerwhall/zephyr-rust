@@ -33,7 +33,7 @@ pub trait MemDomainAPI {
 impl MemDomainAPI for crate::context::Kernel {
     fn k_mem_domain_add_thread(domain: &k_mem_domain, thread: ThreadId) {
         unsafe {
-            zephyr_sys::raw::k_mem_domain_add_thread(domain as *const _ as *mut _, thread.tid())
+            zephyr_sys::raw::k_mem_domain_add_thread(domain as *const _ as *mut _, thread.tid());
         }
     }
 }

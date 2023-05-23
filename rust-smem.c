@@ -1,7 +1,13 @@
+#include <version.h>
+#if KERNEL_VERSION_MAJOR < 3
 #include <zephyr.h>
 #include <init.h>
-#include <version.h>
 #include <app_memory/app_memdomain.h>
+#else
+#include <zephyr/kernel.h>
+#include <zephyr/init.h>
+#include <zephyr/app_memory/app_memdomain.h>
+#endif
 
 #ifdef CONFIG_USERSPACE
 struct k_mem_domain rust_std_domain;
