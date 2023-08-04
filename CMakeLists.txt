@@ -53,7 +53,7 @@ add_custom_command(OUTPUT ${all_syscalls} ${syscall_thunks}
           ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_syscalls.py
   )
 add_custom_target(syscall_thunks_target DEPENDS
-                  ${all_syscalls} ${syscall_thunks} ${SYSCALL_LIST_H_TARGET})
+        ${all_syscalls} ${syscall_thunks} ${SYSCALL_LIST_H_TARGET} kernel)
 
 if(NOT ZEPHYR_BINDGEN)
     set(zephyr_bindgen_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/zephyr-bindgen)
