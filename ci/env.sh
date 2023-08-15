@@ -5,6 +5,10 @@ RUST_VERSION="$( rustup show active-toolchain | awk '{print $1}' )"
 ZEPHYR_VERSION=${ZEPHYR_VERSION:-2.4.0}
 
 case $ZEPHYR_VERSION in
+    2.6.0)
+        SDK_VERSION=0.12.2
+        SDK_URL=https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.12.2/zephyr-sdk-0.12.2-x86_64-linux-setup.run
+        ;;
     2.5.0)
         SDK_VERSION=0.12.2
         SDK_URL=https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.12.2/zephyr-sdk-0.12.2-x86_64-linux-setup.run
