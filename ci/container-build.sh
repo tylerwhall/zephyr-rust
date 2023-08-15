@@ -7,8 +7,6 @@ set -ex
 
 docker build -f Dockerfile.zephyr \
     --build-arg ZEPHYR_VERSION=${ZEPHYR_VERSION} \
-    --build-arg SDK_VERSION=${SDK_VERSION} \
-    --build-arg SDK_URL=${SDK_URL} \
     -t zephyr:${ZEPHYR_VERSION} \
     .
 
