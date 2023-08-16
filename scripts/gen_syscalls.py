@@ -147,9 +147,6 @@ def main():
     whitelist = set(["kernel.h", "kobject.h", "device.h", "uart.h", "mutex.h", "errno_private.h", "eeprom.h", "time.h"])
     includes = ["kernel.h", "device.h", "drivers/uart.h", "sys/mutex.h", "sys/errno_private.h", "drivers/eeprom.h", "posix/time.h"]
 
-    # Hack because z_sys_mutex_kernel_lock is not defined in sys/mutex.h for !USERSPACE
-    includes.append("syscalls/mutex.h")
-
     for match_group, fn in syscalls:
         if fn not in whitelist:
             continue
@@ -161,15 +158,12 @@ def main():
     os.makedirs(os.path.dirname(args.thunks), exist_ok=True)
     os.makedirs(os.path.dirname(args.all_syscalls), exist_ok=True)
 
-    includes = ["#include <%s>" % fn for fn in includes]
     with open(args.all_syscalls, "w") as fp:
         fp.write("#ifndef ZEPHYR_ALL_SYSCALLS_H\n")
         fp.write("#define ZEPHYR_ALL_SYSCALLS_H\n")
         fp.write("#include <version.h>\n")
         fp.write("#if KERNEL_VERSION_MAJOR < 3\n")
         fp.write("\n".join(["#include <%s>" % fn for fn in includes]))
-        # Hack because z_sys_mutex_kernel_lock is not defined in sys/mutex.h for !USERSPACE
-        fp.write("\n#include <syscalls/mutex.h>")
         fp.write("\n#else\n")
         fp.write("\n".join(["#include <zephyr/%s>" % fn for fn in includes]))
         fp.write("\n#endif\n")

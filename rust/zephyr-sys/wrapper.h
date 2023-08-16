@@ -10,7 +10,6 @@
 #include <drivers/uart.h>
 #include <uart_buffered.h>
 #include <drivers/eeprom.h>
-#include <drivers/pinctrl.h>
 #else
 #include <zephyr/kernel.h>
 #include <all_syscalls.h>
