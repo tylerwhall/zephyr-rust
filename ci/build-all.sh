@@ -2,7 +2,7 @@
 
 #rm -rf log
 
-ZEPHYR_VERSIONS="2.7.3 2.6.0 2.5.0 2.4.0 2.3.0"
+ZEPHYR_VERSIONS="3.4.0 2.7.3 2.6.0 2.5.0 2.4.0 2.3.0"
 
 parallel \
     -j8 \

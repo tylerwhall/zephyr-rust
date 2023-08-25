@@ -10,7 +10,7 @@ Zephyr app.
 
 Version Compatibility
 =====================
-**Zephyr**: v2.3, v2.4, v2.5, v2.6, v2.7
+**Zephyr**: v2.3, v2.4, v2.5, v2.6, v2.7, v3.4
 
 **Rust**: exactly 1.68.0
 
