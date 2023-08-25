@@ -17,7 +17,7 @@ sys.stdout.write(f'''
 #if KERNEL_VERSION_MAJOR < 3
 Z_STRUCT_SECTION_ITERABLE(k_mutex, rust_mutex_pool[{count}]) = {{
 #else
-STRUCT_SECTION_ITERABLE(k_mutex, rust_mutex_pool[{count}]) = {{
+STRUCT_SECTION_ITERABLE_ARRAY(k_mutex, rust_mutex_pool, {count}) = {{
 #endif
 {initializer}
 }};
