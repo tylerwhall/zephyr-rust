@@ -41,6 +41,7 @@ esac
 if [ -n "$TAR_FILE" ]; then
     wget ${SDK_URL}
     tar xvf $TAR_FILE -C /opt
+    rm $TAR_FILE
     cd /opt/$TAR_DIR
     ./setup.sh -h -c
 else
