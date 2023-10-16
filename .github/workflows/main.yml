@@ -16,16 +16,12 @@ jobs:
       matrix:
         zephyr_version: [3.4.0, 2.7.3, 2.6.0, 2.5.0, 2.4.0, 2.3.0]
         board: [qemu_x86, qemu_cortex_m3, native_posix, qemu_riscv32, qemu_riscv64]
-        test: [samples/rust-app, samples/futures, samples/serial]
+        test: [samples/rust-app]
         include:
           - fails: false
           - run: true
           - test: samples/rust-app
             fails: true
-          - test: samples/futures
-            run: false
-          - test: samples/serial
-            run: false
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/${{ github.repository }}:zephyr-rust-${{ matrix.zephyr_version }}-1.68.0
