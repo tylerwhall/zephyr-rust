@@ -1,5 +1,6 @@
-FROM ubuntu:22.04
+FROM ubuntu:22.04 as zephyr
 
+ARG ZEPHYR_VERSION=2.4.0
 # Prevent prompts configuring tzdata
 ENV DEBIAN_FRONTEND=noninteractive
 RUN ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime
@@ -10,8 +11,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     make gcc gcc-multilib g++-multilib libsdl2-dev
 
 RUN pip3 install -U west
-
-ARG ZEPHYR_VERSION=2.4.0
 
 ENV WEST_BASE=/zephyrproject
 ENV ZEPHYR_BASE=${WEST_BASE}/zephyr
@@ -25,3 +24,25 @@ ADD setup-sdk.sh /setup-sdk.sh
 RUN /setup-sdk.sh
 # Required for sanitycheck
 ENV ZEPHYR_TOOLCHAIN_VARIANT=zephyr
+
+# Rust toolchain stage
+FROM zephyr
+
+ARG RUST_VERSION=1.68.0
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH \
+    RUST_VERSION=${RUST_VERSION}
+
+RUN apt-get install -y clang
+RUN set -eux; \
+    wget https://sh.rustup.rs -O rustup.sh; \
+    sh rustup.sh -y --no-modify-path --profile minimal --default-toolchain ${RUST_VERSION}; \
+    rm rustup.sh; \
+    rustup --version; \
+    cargo --version; \
+    rustc --version;
+RUN set -eux; \
+    ln -sf ${CARGO_HOME}/bin/cargo /usr/bin/cargo; \
+    ln -sf ${CARGO_HOME}/bin/rustup /usr/bin/rustup; \
+    ln -sf ${CARGO_HOME}/bin/rustc /usr/bin/rustc;

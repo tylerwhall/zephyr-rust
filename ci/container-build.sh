@@ -7,11 +7,6 @@ set -ex
 
 docker build -f Dockerfile.zephyr \
     --build-arg ZEPHYR_VERSION=${ZEPHYR_VERSION} \
-    -t zephyr:${ZEPHYR_VERSION} \
-    .
-
-docker build -f Dockerfile.rust \
-    --build-arg ZEPHYR_VERSION=${ZEPHYR_VERSION} \
     --build-arg RUST_VERSION=${RUST_VERSION} \
     -t zephyr-rust:${ZEPHYR_VERSION}-${RUST_VERSION} \
     .
