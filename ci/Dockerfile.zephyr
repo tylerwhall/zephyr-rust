@@ -14,9 +14,10 @@ RUN pip3 install -U west
 
 ENV WEST_BASE=/zephyrproject
 ENV ZEPHYR_BASE=${WEST_BASE}/zephyr
-RUN west init ${WEST_BASE} --mr zephyr-v${ZEPHYR_VERSION}
 WORKDIR ${WEST_BASE}
-RUN west update
+RUN git clone https://github.com/zephyrproject-rtos/zephyr.git -b v3.4.0 --filter=tree:0 ${ZEPHYR_BASE}
+RUN west init -l ${ZEPHYR_BASE}
+RUN west update --narrow --fetch-opt=--filter=tree:0
 
 RUN pip3 install -r ${ZEPHYR_BASE}/scripts/requirements.txt
 
