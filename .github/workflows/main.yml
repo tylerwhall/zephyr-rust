@@ -1,0 +1,49 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        zephyr_version: [3.4.0, 2.7.3, 2.6.0, 2.5.0, 2.4.0, 2.3.0]
+        board: [qemu_x86, qemu_cortex_m3, native_posix, qemu_riscv32, qemu_riscv64]
+        test: [samples/rust-app, samples/futures, samples/serial]
+        include:
+          - fails: false
+          - run: true
+          - test: samples/rust-app
+            fails: true
+          - test: samples/futures
+            run: false
+          - test: samples/serial
+            run: false
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository }}:zephyr-rust-${{ matrix.zephyr_version }}-1.68.0
+      credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build
+        run: |
+          west build -d /tmp/build -p auto -b ${{ matrix.board }} ${{ matrix.test }}
+
+      - name: Run
+        if: ${{ matrix.run }}
+        run: |
+          cd /tmp/build
+          ninja run || ${{ matrix.fails }}
