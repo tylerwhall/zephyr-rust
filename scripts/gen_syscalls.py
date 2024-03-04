@@ -147,7 +147,7 @@ def main():
     whitelist = set(["kernel.h", "kobject.h", "device.h", "uart.h", "mutex.h", "errno_private.h", "eeprom.h", "time.h"])
     includes = ["kernel.h", "device.h", "drivers/uart.h", "sys/mutex.h", "sys/errno_private.h", "drivers/eeprom.h", "posix/time.h"]
 
-    for match_group, fn in syscalls:
+    for match_group, fn in [i[:2] for i in syscalls]:
         if fn not in whitelist:
             continue
         include = "syscalls/%s" % fn
