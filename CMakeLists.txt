@@ -26,6 +26,15 @@ elseif(${ARCH} STREQUAL "arm")
             set(rust_target thumbv7em-zephyr-eabi)
             set(clang_target thumbv7em-unknown-none-eabi)
         endif()
+    elseif(CONFIG_CPU_CORTEX_M33)
+        if(CONFIG_FPU)
+            set(rust_target thumbv8m.main-zephyr-eabihf)
+            set(clang_target thumbv8m.main-unknown-none-eabihf)
+            set(clang_cflags "-mcpu=cortex-m33 -mthumb -mabi=aapcs -mfpu=fpv5-sp-d16 -mfloat-abi=hard")
+        else()
+            set(rust_target thumbv8m.main-zephyr-eabi)
+            set(clang_target thumbv8m.main-unknown-none-eabi)
+        endif()
     else()
         set(rust_target thumbv7m-zephyr-eabi)
         set(clang_target thumbv7m-none-eabi)
@@ -142,7 +151,7 @@ if (CONFIG_RUST)
             "CONFIG_RUST_ALLOC_POOL=${CONFIG_RUST_ALLOC_POOL}"
             "CONFIG_RUST_MUTEX_POOL=${CONFIG_RUST_MUTEX_POOL}"
             "CONFIG_POSIX_CLOCK=${CONFIG_POSIX_CLOCK}"
-            "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
+            "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target} ${clang_cflags}"
             "SYSROOT=${rust_sysroot}"
             "SYSROOT_BUILD=${rust_sysroot_build}"
             "APP_BUILD=${rust_app_build}"
