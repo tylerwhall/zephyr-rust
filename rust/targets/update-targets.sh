@@ -11,6 +11,8 @@ thumbv7em-zephyr-eabi
 thumbv7m-zephyr-eabi
 thumbv7r-zephyr-eabihf
 thumbv7r-zephyr-eabi
+thumbv8m.main-zephyr-eabi
+thumbv8m.main-zephyr-eabihf
 )
 
 for target in "${targets[@]}"; do

@@ -1,0 +1,20 @@
+{
+  "abi": "eabi",
+  "arch": "arm",
+  "c-enum-min-bits": 8,
+  "data-layout": "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64",
+  "emit-debug-gdb-scripts": false,
+  "frame-pointer": "always",
+  "linker": "rust-lld",
+  "linker-flavor": "ld.lld",
+  "llvm-target": "thumbv8m.main-none-eabi",
+  "max-atomic-width": 32,
+  "panic-strategy": "abort",
+  "relocation-model": "static",
+  "target-pointer-width": "32",
+  "target-family": "zephyr",
+  "os": "zephyr",
+  "position-independent-executables": "false",
+  "dynamic-linking": "false",
+  "has-thread-local": "false"
+}
