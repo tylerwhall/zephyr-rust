@@ -10,7 +10,7 @@ exec docker run \
     -v /etc/shadow:/etc/shadow:ro \
     -v ${DIR}/..:/zephyr-rust \
     -w /zephyr-rust \
-    zephyr-rust:${ZEPHYR_VERSION}-${RUST_VERSION} \
+    ${CONTAINER_REGISTRY}${ZEPHYR_VERSION}-${RUST_VERSION} \
     sh -c "chown -R $USER:$GROUP /zephyrproject && \
            chown -R $USER:$GROUP \$CARGO_HOME && \
            mkdir -p $HOME && \

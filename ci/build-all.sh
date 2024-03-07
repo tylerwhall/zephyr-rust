@@ -4,13 +4,13 @@
 
 ZEPHYR_VERSIONS="3.4.0 2.7.3 2.6.0 2.5.0 2.4.0 2.3.0"
 
-parallel \
-    -j8 \
-    --results log/container \
-    --resume \
-    --halt now,fail=1 \
-    ZEPHYR_VERSION={1} ./container-build.sh \
-    ::: $ZEPHYR_VERSIONS
+#parallel \
+#    -j8 \
+#    --results log/container \
+#    --resume \
+#    --halt now,fail=1 \
+#    ZEPHYR_VERSION={1} ./container-build.sh \
+#    ::: $ZEPHYR_VERSIONS
 
 # First build the main sample for zephyr versions
 parallel \
