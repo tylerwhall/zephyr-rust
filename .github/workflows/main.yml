@@ -22,6 +22,7 @@ jobs:
           - run: true
           - test: samples/rust-app
             fails: true
+            run: false
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/${{ github.repository }}:zephyr-rust-${{ matrix.zephyr_version }}-1.68.0
