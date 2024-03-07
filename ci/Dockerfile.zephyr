@@ -33,7 +33,8 @@ ARG RUST_VERSION=1.68.0
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=${RUST_VERSION}
+    RUST_VERSION=${RUST_VERSION} \
+    CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 
 RUN apt-get install -y clang
 RUN set -eux; \
