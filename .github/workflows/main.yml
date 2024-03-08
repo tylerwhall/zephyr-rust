@@ -16,7 +16,7 @@ jobs:
       matrix:
         zephyr_version: [3.4.0, 2.7.3, 2.6.0, 2.5.0, 2.4.0, 2.3.0]
         board: [qemu_x86, qemu_cortex_m3, native_posix, qemu_riscv32, qemu_riscv64]
-        test: [samples/rust-app]
+        test: [samples/rust-app, samples/serial]
         exclude:
           - board: qemu_riscv32
             zephyr_version: 2.3.0
@@ -38,12 +38,11 @@ jobs:
             zephyr_version: 2.7.3
           - board: qemu_riscv64
             zephyr_version: 2.7.3
+          - board: native_posix
+            test: samples/serial
         include:
           - fails: false
-          - run: true
-          - test: samples/rust-app
-            fails: true
-            run: false
+          - run: false
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/${{ github.repository }}:zephyr-rust-${{ matrix.zephyr_version }}-1.68.0
