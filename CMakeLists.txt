@@ -115,11 +115,16 @@ add_custom_command(OUTPUT ${rust_generated_project}/Cargo.toml
 )
 add_custom_target(rust_generated_project DEPENDS ${rust_generated_project}/Cargo.toml)
 
+# external_project_cflags comes from the example: zephyr/samples/application_development/external_lib/CMakeLists.txt
 zephyr_get_include_directories_for_lang_as_string(       C includes)
+zephyr_get_system_include_directories_for_lang_as_string(C system_includes)
 zephyr_get_compile_definitions_for_lang_as_string(       C definitions)
+# `options` is not included because many of the flags are not supported by clang
+# `-imacros ${AUTOCONF_H}` is needed and would have been in `options`
+#zephyr_get_compile_options_for_lang_as_string(           C options)
 
 set(external_project_cflags
-    "${includes} ${definitions} -imacros ${AUTOCONF_H}"
+    "${includes} ${definitions} ${system_includes} -imacros ${AUTOCONF_H}"
 )
 
 # Add the Cargo project only if CONFIG_RUST because this will alawys invoke Cargo.
