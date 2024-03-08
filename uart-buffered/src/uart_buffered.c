@@ -1,8 +1,12 @@
 #define __ZEPHYR_SUPERVISOR__
 
-#include <kernel.h>
-#include <drivers/uart.h>
+#include <version.h>
+
+#if KERNEL_VERSION_MAJOR < 3
 #include <logging/log.h>
+#else
+#include <zephyr/logging/log.h>
+#endif
 
 #include "uart_buffered.h"
 

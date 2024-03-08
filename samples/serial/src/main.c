@@ -1,5 +1,3 @@
-#include <zephyr.h>
-#include <drivers/uart.h>
 #include <uart_buffered.h>
 
 extern void rust_main(struct uart_buffered_rx_handle rx,
