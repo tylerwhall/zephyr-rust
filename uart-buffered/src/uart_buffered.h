@@ -232,7 +232,11 @@ static inline void uart_buffered_init(struct uart_buffered *buffered, struct dev
 	uart_buffered_rx_init(&buffered->rx, uart);
 	uart_buffered_tx_init(&buffered->tx, uart);
 
+#if ZEPHYR_VERSION_CODE >= ZEPHYR_VERSION(2, 4, 0)
+	uart_irq_callback_set(uart, (uart_irq_callback_user_data_t)irq_handler);
+#else
 	uart_irq_callback_set(uart, irq_handler);
+#endif
 	uart_irq_err_enable(uart);
 	uart_irq_rx_enable(uart);
 }
