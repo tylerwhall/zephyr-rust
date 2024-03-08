@@ -5,8 +5,10 @@
 #if KERNEL_VERSION_MAJOR < 3
 #include <zephyr.h>
 #include <kernel.h>
+#include <drivers/uart.h>
 #else
 #include <zephyr/kernel.h>
+#include <zephyr/drivers/uart.h>
 #endif
 
 typedef uint16_t fifo_index_t;

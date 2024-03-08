@@ -8,15 +8,17 @@
 #include <all_syscalls.h>
 #include <device.h>
 #include <drivers/uart.h>
-#include <uart_buffered.h>
 #include <drivers/eeprom.h>
 #else
 #include <zephyr/kernel.h>
 #include <all_syscalls.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/uart.h>
-#include <uart_buffered.h>
 #include <zephyr/drivers/eeprom.h>
+#endif
+
+#ifdef CONFIG_UART_BUFFERED
+#include <uart_buffered.h>
 #endif
 
 #ifdef CONFIG_POSIX_CLOCK
