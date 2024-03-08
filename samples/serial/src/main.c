@@ -12,7 +12,7 @@ void main(void)
 	struct uart_buffered_rx_handle rx;
 	struct uart_buffered_tx_handle tx;
 
-	struct device *uart = device_get_binding("UART_1");
+	const struct device *uart = device_get_binding("UART_1");
 
 	if (!uart) {
 		printk("Failed to get uart\n");
