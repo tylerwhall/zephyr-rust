@@ -1,6 +1,3 @@
-#include <kernel.h>
-#include <drivers/uart.h>
-
 #include "uart_buffered.h"
 
 static void k_poll_signal_wait(struct k_poll_signal *signal)
