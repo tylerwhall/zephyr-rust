@@ -202,7 +202,6 @@ TODO
 * Support #[test]
 * CI
 * Ability to build multiple independent apps
-* Investigate DWARF errors in final link
 * More safe bindings (e.g. GPIO)
 
 Features Not Planned to Support
