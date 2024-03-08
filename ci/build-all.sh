@@ -28,7 +28,19 @@ parallel \
     -j8 \
     --results log/build \
     --resume \
+    --halt now,fail=1 \
     ZEPHYR_VERSION={1} ./build-cmd.sh west build -d /tmp/build -p auto -b {2} {3} \
     ::: $ZEPHYR_VERSIONS \
     ::: qemu_x86 qemu_cortex_m3 \
     ::: samples/rust-app samples/serial samples/futures
+
+# native_posix does not support UART_INTERRUPT_DRIVEN
+parallel \
+    -j8 \
+    --results log/build \
+    --resume \
+    --halt now,fail=1 \
+    ZEPHYR_VERSION={1} ./build-cmd.sh west build -d /tmp/build -p auto -b {2} {3} \
+    ::: $ZEPHYR_VERSIONS \
+    ::: native_posix \
+    ::: samples/rust-app samples/futures
