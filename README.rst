@@ -200,7 +200,6 @@ TODO
 
 * Figure out how to fail tests through assertions in code
 * Support #[test]
-* CI
 * Ability to build multiple independent apps
 * More safe bindings (e.g. GPIO)
 
