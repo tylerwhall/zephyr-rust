@@ -12,7 +12,7 @@ pub extern "C" fn test_main() {
 
     let eeprom = unsafe {
         let device = C::device_get_binding(CStr::from_bytes_with_nul_unchecked(
-            zephyr_sys::raw::DT_N_S_eeprom_P_label,
+            zephyr_sys::raw::DT_N_S_eeprom0_P_label,
         ))
         .expect("get eeprom");
         Eeprom::new(device)
