@@ -1,4 +1,4 @@
 tests:
   rust.eeprom:
-    platform_whitelist: qemu_x86
+    platform_allow: qemu_x86
     tags: drivers userspace

@@ -1,5 +1,5 @@
 common:
-    arch_whitelist: x86 arm posix
+    arch_allow: x86 arm posix
 tests:
     rust.futures:
         tags: rust
