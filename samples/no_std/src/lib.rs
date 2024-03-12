@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "have_std"), no_std)]
 
-#[cfg(feature = "have_std")]
 #[macro_use]
 extern crate cstr;
 #[macro_use]
@@ -12,11 +11,6 @@ extern crate zephyr;
 extern crate zephyr_core;
 extern crate zephyr_logger;
 
-#[cfg(feature = "have_std")]
-use std::cell::RefCell;
-#[cfg(feature = "have_std")]
-use std::time::Duration;
-
 use core::ffi::c_void;
 use log::LevelFilter;
 
@@ -24,12 +18,13 @@ extern crate alloc;
 use alloc::format;
 use alloc::boxed::Box;
 
-#[cfg(feature = "have_std")]
 use zephyr::device::DeviceSyscalls;
 use zephyr_core::mutex::*;
 use zephyr_core::semaphore::*;
 use zephyr_core::thread::ThreadSyscalls;
 
+#[cfg(feature = "have_std")]
+use std::cell::RefCell;
 #[cfg(feature = "have_std")]
 thread_local!(static TLS: std::cell::RefCell<u8> = RefCell::new(1));
 
@@ -96,7 +91,7 @@ pub extern "C" fn rust_main() {
     zephyr_core::any::k_str_out("Hello from Rust kernel with runtime-detect syscall\n");
 
     #[cfg(feature = "have_std")]
-    std::thread::sleep(Duration::from_millis(1));
+    std::thread::sleep(std::time::Duration::from_millis(1));
     zephyr_core::any::k_str_out(format!("Time {:?}\n", zephyr_core::any::k_uptime_ticks().as_millis()).as_str());
     #[cfg(feature = "have_std")]    
     println!("Time {:?}", std::time::Instant::now());
@@ -108,11 +103,10 @@ pub extern "C" fn rust_main() {
     #[cfg(feature = "have_std")]
     std_mutex_test();
 
-    #[cfg(feature = "have_std")]
     if let Some(_device) = Context::device_get_binding(cstr!("nonexistent")) {
-        println!("Got device");
+        zephyr_core::any::k_str_out("Got device\n")
     } else {
-        println!("No device");
+        zephyr_core::any::k_str_out("No device\n")
     }
 
     {
@@ -136,10 +130,10 @@ pub extern "C" fn rust_main() {
     assert!(!TLS_SEM.try_take::<Context>());
     #[cfg(feature = "have_std")]
     TLS.with(|f| {
-        println!("main thread: f = {}", *f.borrow());
+        println!("main thread: f = {}\n", *f.borrow());
         assert!(*f.borrow() == 1);
         *f.borrow_mut() = 2;
-        println!("main thread: now f = {}", *f.borrow());
+        println!("main thread: now f = {}\n", *f.borrow());
         assert!(*f.borrow() == 2);
     });
     TLS_SEM.give::<Context>();
