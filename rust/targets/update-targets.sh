@@ -1,8 +1,6 @@
 #!/bin/bash
 
 targets=(
-armv7r-zephyr-eabihf
-armv7r-zephyr-eabi
 i686-unknown-zephyr
 riscv32imac-unknown-zephyr-elf
 # riscv32ima-unknown-zephyr-elf # need to update script to generically handle RISCV extensions. Manually update from above for now.
@@ -11,6 +9,8 @@ riscv64imac-unknown-zephyr-elf
 thumbv7em-zephyr-eabihf
 thumbv7em-zephyr-eabi
 thumbv7m-zephyr-eabi
+thumbv7r-zephyr-eabihf
+thumbv7r-zephyr-eabi
 )
 
 for target in "${targets[@]}"; do
@@ -23,7 +23,9 @@ for target in "${targets[@]}"; do
         rust_target=i686-unknown-linux-gnu
         extra_filter='| .["features"] = "-mmx,-sse,+soft-float"'
         ;;
-    armv7r-*)
+    thumbv7r-*)
+        # Rust does not have a thumbv7 target. Use armv7 and add thumb features
+        rust_target=${rust_target/thumbv7/armv7}
         extra_filter='| .["features"] += ",+v7,+thumb-mode,+thumb2,+rclass"'
         ;;
     *)
