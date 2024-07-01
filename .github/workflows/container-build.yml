@@ -11,7 +11,7 @@ jobs:
   containers:
     strategy:
       matrix:
-        zephyr_version: [3.4.0, 2.7.3, 2.6.0, 2.5.0, 2.4.0, 2.3.0]
+        zephyr_version: [3.6.0, 3.5.0, 3.4.0, 2.7.3, 2.6.0, 2.5.0, 2.4.0, 2.3.0]
     runs-on: ubuntu-latest
     env:
       ZEPHYR_VERSION: ${{ matrix.zephyr_version }}
