@@ -2,6 +2,7 @@ menuconfig RUST
 	bool "Rust"
 	select THREAD_CUSTOM_DATA
 	select CPLUSPLUS
+	select PICOLIBC_USE_MODULE if PICOLIBC
 	help
 	  Rust language support.
 

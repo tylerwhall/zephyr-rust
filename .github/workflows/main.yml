@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        zephyr_version: [3.4.0, 2.7.3, 2.6.0, 2.5.0, 2.4.0, 2.3.0]
+        zephyr_version: [3.6.0, 3.5.0, 3.4.0, 2.7.3, 2.3.0]
         board: [qemu_x86, qemu_cortex_m3, qemu_cortex_r5, nucleo_l552ze_q, native_posix, qemu_riscv32, qemu_riscv64]
         test: [samples/rust-app, samples/no_std, samples/serial]
         exclude:
