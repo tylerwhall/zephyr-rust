@@ -5,15 +5,17 @@ fn main() {
     let kernel_version = u32::from_str_radix(&kernel_version_str_trimmed, 16)
         .expect("ZEPHYR_KERNEL_VERSION_NUM must be an integer");
 
-    if kernel_version >= 0x3_00_00 {
-        println!("cargo:rustc-cfg=zephyr300");
-    }
     if kernel_version >= 0x2_05_00 {
         println!("cargo:rustc-cfg=zephyr250");
     }
-
     if kernel_version >= 0x2_07_00 {
         println!("cargo:rustc-cfg=zephyr270");
+    }
+    if kernel_version >= 0x3_00_00 {
+        println!("cargo:rustc-cfg=zephyr300");
+    }
+    if kernel_version >= 0x3_05_00 {
+        println!("cargo:rustc-cfg=zephyr350");
     }
 
     if std::env::var("CONFIG_USERSPACE").expect("CONFIG_USERSPACE must be set") == "y" {
