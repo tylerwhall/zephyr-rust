@@ -32,13 +32,15 @@ macro_rules! trait_impl {
                 unsafe { zephyr_sys::syscalls::$context::k_wakeup(thread.tid()) }
             }
 
-            #[cfg(not(any(zephyr270, zephyr300)))]
+            /* If less than 2.7, always use the k_current_get syscall */
+            #[cfg(not(zephyr270))]
             fn k_current_get() -> crate::thread::ThreadId {
                 ThreadId(unsafe {
                     NonNull::new_unchecked(zephyr_sys::syscalls::$context::k_current_get())
                 })
             }
 
+            /* 2.7 and above with TLS allows pulling from TLS */
             #[cfg(all(zephyr270, tls))]
             fn k_current_get() -> crate::thread::ThreadId {
                 extern "C" {
@@ -50,10 +52,19 @@ macro_rules! trait_impl {
                 })
             }
 
-            #[cfg(any(zephyr300, all(zephyr270, not(tls))))]
+            /* 2.7 without TLS renames the syscall to z_current_get */
+            #[cfg(all(zephyr270, not(zephyr350), not(tls)))]
             fn k_current_get() -> crate::thread::ThreadId {
                 ThreadId(unsafe {
                     NonNull::new_unchecked(zephyr_sys::syscalls::$context::z_current_get())
+                })
+            }
+
+            /* 3.5 renames the syscall again to k_sched_current_thread_query */
+            #[cfg(all(zephyr350, not(tls)))]
+            fn k_current_get() -> crate::thread::ThreadId {
+                ThreadId(unsafe {
+                    NonNull::new_unchecked(zephyr_sys::syscalls::$context::k_sched_current_thread_query())
                 })
             }
 
