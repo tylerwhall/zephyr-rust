@@ -10,9 +10,14 @@ Zephyr app.
 
 Version Compatibility
 =====================
-**Zephyr**: v2.3, v2.4, v2.5, v2.6, v2.7, v3.4
+**Zephyr**: v2.3, v2.7.3, v3.4, v3.5, v3.6
 
 **Rust**: exactly 1.68.0
+
+Please use one of the above Zephyr releases before reporting issues! At the
+time you are reading this, Zephyr's main branch will likely not work, though it
+is usually one 1-2 minor changes to support a new release. The project aims to
+support everything from 2.3 to the present.
 
 Features
 ========
