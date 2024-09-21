@@ -37,13 +37,18 @@ struct k_heap Z_GENERIC_SECTION(RUST_STD_SECTION) rust_std_mem_pool;
 #if defined(CONFIG_USERSPACE) || defined(CONFIG_RUST_ALLOC_POOL)
 
 /* Harmless API difference that generates a warning */
-#if ZEPHYR_VERSION_CODE >= ZEPHYR_VERSION(2, 4, 0)
+#if ZEPHYR_VERSION_CODE >= ZEPHYR_VERSION(3, 4, 0)
+static int rust_std_init(void)
+{
+#elif ZEPHYR_VERSION_CODE >= ZEPHYR_VERSION(2, 4, 0)
 static int rust_std_init(const struct device *arg)
-#else
-static int rust_std_init(struct device *arg)
-#endif /* ZEPHYR_VERSION_CODE >= ZEPHYR_VERSION(2, 4, 0) */
 {
 	ARG_UNUSED(arg);
+#else
+static int rust_std_init(struct device *arg)
+{
+	ARG_UNUSED(arg);
+#endif /* ZEPHYR_VERSION_CODE >= ZEPHYR_VERSION(2, 4, 0) */
 
 #ifdef CONFIG_USERSPACE
 	struct k_mem_partition *rust_std_parts[] = { &rust_std_partition };
