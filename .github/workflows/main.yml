@@ -38,6 +38,10 @@ jobs:
             zephyr_version: 2.7.3
           - board: native_posix
             test: samples/serial
+          - board: native_posix
+            zephyr_version: 3.5.0
+          - board: native_posix
+            zephyr_version: 3.6.0
         include:
           - fails: false
           - run: false
