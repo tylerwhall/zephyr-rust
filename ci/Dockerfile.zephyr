@@ -29,7 +29,7 @@ ENV ZEPHYR_TOOLCHAIN_VARIANT=zephyr
 # Rust toolchain stage
 FROM zephyr
 
-ARG RUST_VERSION=1.68.0
+ARG RUST_VERSION=1.69.0
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
