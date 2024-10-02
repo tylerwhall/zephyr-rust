@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ZEPHYR_VERSION: ${{ matrix.zephyr_version }}
-      RUST_VERSION: 1.68.0
+      RUST_VERSION: 1.69.0
 
     permissions:
       contents: read
