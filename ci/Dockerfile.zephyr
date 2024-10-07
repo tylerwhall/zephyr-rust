@@ -16,6 +16,11 @@ ENV WEST_BASE=/zephyrproject
 ENV ZEPHYR_BASE=${WEST_BASE}/zephyr
 WORKDIR ${WEST_BASE}
 RUN git clone https://github.com/zephyrproject-rtos/zephyr.git -b v${ZEPHYR_VERSION} --filter=tree:0 ${ZEPHYR_BASE}
+# Needed for building as root
+RUN if [ "${ZEPHYR_VERSION}" = "2.3.0" ]; then \
+        cd ${ZEPHYR_BASE}; \
+        git cherry-pick -n 66d1b3ce10635dd9988898479ce8b8f6516a98df; \
+    fi
 RUN west init -l ${ZEPHYR_BASE}
 RUN west update --narrow --fetch-opt=--filter=tree:0
 
