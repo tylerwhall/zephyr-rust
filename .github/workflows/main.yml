@@ -35,7 +35,7 @@ jobs:
           - run: false
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository }}:zephyr-rust-${{ matrix.zephyr_version }}-1.70.0
+      image: ghcr.io/${{ github.repository }}:zephyr-rust-${{ matrix.zephyr_version }}-1.71.0
       credentials:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
