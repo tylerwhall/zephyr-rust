@@ -17,12 +17,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c6cb57a04249c6480766f7f7cef5467412af1490f8d1e243141daddada3264f"
 
 [[package]]
-name = "cc"
-version = "1.0.79"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50d30906286121d95be3d479533b458f87493b30a4b5f79a607db8f5d11aa91f"
-
-[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -34,9 +28,9 @@ dependencies = [
 
 [[package]]
 name = "compiler_builtins"
-version = "0.1.100"
+version = "0.1.103"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6c0f24437059853f0fa64afc51f338f93647a3de4cf3358ba1bb4171a199775"
+checksum = "a3b73c3443a5fd2438d7ba4853c64e4c8efc2404a9e28a9234cc2d5eebc6c242"
 dependencies = [
  "rustc-std-workspace-core",
 ]
@@ -103,7 +97,7 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.148"
+version = "0.2.150"
 dependencies = [
  "rustc-std-workspace-core",
 ]
@@ -276,7 +270,6 @@ checksum = "fc72304796d0818e357ead4e000d19c9c174ab23dc11093ac919054d20a6a7fc"
 name = "unwind"
 version = "0.0.0"
 dependencies = [
- "cc",
  "cfg-if",
  "compiler_builtins",
  "core",
