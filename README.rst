@@ -200,6 +200,26 @@ Supported Architectures
 Really anything that works with Zephyr and Rust should work. Only need to
 define a target.json and add a case for it in CMakelists.
 
+Structure: Submodules pointing to forks
+************************************
+This repository points two top-level submodules at Tyler Hall forks:
+
+* ``rust/rust`` -> https://github.com/tylerwhall/rust.git
+* ``rust/libc`` -> https://github.com/tylerwhall/libc.git
+
+Net change relative to upstream Rust:
+
+* ``rust/rust`` is the Zephyr standard library port (sys integration,
+  stdout/stderr, allocator, mutex, instant/time, sleep, thread parking,
+  interruption, plus build/submodule adjustments).
+* ``rust/libc`` is the Zephyr-specific libc additions for Zephyr OS support
+  and API/type glue used by the standard library port.
+
+Nested Rust submodules that remain upstream:
+
+* ``rust/rust/library/backtrace`` -> https://github.com/rust-lang/backtrace-rs.git
+* ``rust/rust/library/stdarch`` -> https://github.com/rust-lang/stdarch.git
+
 TODO
 ****
 
