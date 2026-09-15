@@ -1,4 +1,4 @@
-FROM ubuntu:24.04 AS zephyr
+FROM ubuntu:26.04 AS zephyr
 
 ARG ZEPHYR_VERSION=2.4.0
 # Prevent prompts configuring tzdata
@@ -42,7 +42,7 @@ ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
 # keyed only on RUST_VERSION. When building multiple ZEPHYR_VERSIONs with the
 # same Rust version, this stage is a cache hit after the first build instead
 # of re-downloading/reinstalling the toolchain for every Zephyr version.
-FROM ubuntu:24.04 AS rust
+FROM ubuntu:26.04 AS rust
 
 ARG RUST_VERSION=1.69.0
 ENV RUSTUP_HOME=/usr/local/rustup \
