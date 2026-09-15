@@ -44,7 +44,6 @@ ARG RUST_VERSION=1.69.0
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=${RUST_VERSION} \
     CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -61,11 +60,9 @@ RUN set -eux; \
 # are local copies, so rebuilding them when either input stage changes is cheap.
 FROM zephyr
 
-ARG RUST_VERSION=1.69.0
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=${RUST_VERSION} \
     CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 
 COPY --from=rust ${RUSTUP_HOME} ${RUSTUP_HOME}
