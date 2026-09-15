@@ -35,13 +35,18 @@ on qemu_x86.
 
 ### Build natively
 - General form: `west build -p auto -b <board> <sample-or-test-path>`
-- ./samples/rust-app is the catch-all example/integration test
+- ./samples/rust-app is the catch-all example/integration test. When run, it exits non-zero by design: it intentionally triggers a page fault at the end ("Next call will crash if userspace is working") to prove user-mode isolation. Success is the full "Hello from Rust userspace..." console output before the fatal error.
 - Example for different machines:
   - `west build -p auto -b qemu_x86 samples/rust-app/`
   - `west build -p auto -b native_posix samples/rust-app/`
 
 ### Run a built QEMU/native image
-- From build dir: `ninja run`
+- Native, from build dir: `ninja run`
+- CI container, single step (build + run in one ephemeral container; `-d /tmp/build` is required because the repo is mounted read-only):
+  - `cd ci && ./build-cmd.sh bash -c "west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app -t run"`
+- CI container, multiple steps (persist the build dir across invocations with a host volume via `DOCKER_ARGS`):
+  - `cd ci && DOCKER_ARGS="-v /tmp/zr-build:/tmp/build" ./build-cmd.sh west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app`
+  - `cd ci && DOCKER_ARGS="-v /tmp/zr-build:/tmp/build" ./build-cmd.sh ninja -C /tmp/build run`
 
 ### Run tests
 - Full repository tests via Zephyr sanitycheck (from `README.rst`):
