@@ -10,5 +10,5 @@ exec docker run \
     -v ${DIR}/..:/zephyr-rust:ro \
     -w /zephyr-rust \
     ${DOCKER_ARGS[@]} \
-    ${CONTAINER_REGISTRY}${ZEPHYR_VERSION}-${RUST_VERSION} \
+    ${CONTAINER_IMAGE} \
     "$@"
