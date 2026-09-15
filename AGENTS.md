@@ -59,12 +59,13 @@ on qemu_x86.
   - `.github/workflows/container-build.yml` builds/pushes per-Zephyr-version container images.
   - `.github/workflows/main.yml` runs repo builds inside those containers (currently Zephyr matrix with Rust 1.75.0 image tag).
 - Local reproduction of CI container workflow:
+  - `ci/env.sh` defaults `RUST_VERSION` to the pinned `rustc` version and has a default for `ZEPHYR_VERSION`; override either env var only if a specific version is needed.
   - Build a container for a Zephyr/Rust combo:
-    - `cd ci && ZEPHYR_VERSION=3.7.0 RUST_VERSION=1.75.0 ./container-build.sh`
+    - `cd ci && ./container-build.sh`
   - Run a build command inside that image:
-    - `cd ci && ZEPHYR_VERSION=3.7.0 RUST_VERSION=1.75.0 ./build-cmd.sh west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app`
+    - `cd ci && ./build-cmd.sh west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app`
   - Open an interactive shell in the same image:
-    - `cd ci && ZEPHYR_VERSION=3.7.0 RUST_VERSION=1.75.0 ./devshell.sh`
+    - `cd ci && ./devshell.sh`
   - Validate additional Rust versions by changing only `RUST_VERSION` while keeping the same Zephyr version and rerunning `container-build.sh` + `build-cmd.sh`.
 
 ## Key repository conventions
