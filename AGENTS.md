@@ -88,6 +88,12 @@ When changing `zephyr-rust` (feature work, Rust or Zephyr version ports), valida
    - `cd ci && ./sanitycheck.sh` — Zephyr sanitycheck over `tests/`; or individual tests via `west build -p auto -b native_posix tests/<name>` + `ninja run`.
    - Optionally mirror the GitHub Actions matrix (`.github/workflows/main.yml`) to confirm CI parity.
 
+## Commit message style
+
+- Short imperative subject line, no trailing period (e.g. `Update to Rust 1.75`, `ci: add M33 target`).
+- No Conventional Commits types (`feat:`, `fix:`, etc.). Instead, optionally prefix with a lowercase component or area followed by a colon: `ci:`, `zephyr-core:`, `zephyr-bindgen:`, `rust-smem:`. A second-level file prefix is sometimes used, e.g. `ci: env.sh: default to Zephyr 3.7`.
+- Optional body for non-trivial changes: blank line after the subject, then a longer explanation of what/why, wrapped near 72 columns.
+
 ## Key repository conventions
 
 - Rust app/test crates are named `app` and expose C ABI symbols expected by C shims (`rust_main`, `rust_test_main`, etc.).
