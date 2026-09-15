@@ -8,7 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git cmake ninja-build gperf bzip2 \
     ccache dfu-util device-tree-compiler wget \
     python3-dev python3-pip python3-setuptools python3-tk python3-wheel xz-utils file \
-    make gcc gcc-multilib g++-multilib libsdl2-dev
+    make gcc gcc-multilib g++-multilib libsdl2-dev \
+    clang
 
 RUN pip3 install --break-system-packages -U west
 
@@ -31,7 +32,33 @@ RUN /setup-sdk.sh
 # Required for sanitycheck
 ENV ZEPHYR_TOOLCHAIN_VARIANT=zephyr
 
-# Rust toolchain stage
+# Rust toolchain stage.
+#
+# Built from the bare base image (rather than FROM zephyr) so its layers are
+# keyed only on RUST_VERSION. When building multiple ZEPHYR_VERSIONs with the
+# same Rust version, this stage is a cache hit after the first build instead
+# of re-downloading/reinstalling the toolchain for every Zephyr version.
+FROM ubuntu:24.04 AS rust
+
+ARG RUST_VERSION=1.69.0
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH \
+    RUST_VERSION=${RUST_VERSION} \
+    CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates wget
+RUN set -eux; \
+    wget https://sh.rustup.rs -O rustup.sh; \
+    sh rustup.sh -y --no-modify-path --profile minimal --default-toolchain ${RUST_VERSION}; \
+    rm rustup.sh; \
+    rustup --version; \
+    cargo --version; \
+    rustc --version;
+
+# Final stage: zephyr base with the rust toolchain copied in. The COPY layers
+# are local copies, so rebuilding them when either input stage changes is cheap.
 FROM zephyr
 
 ARG RUST_VERSION=1.69.0
@@ -41,14 +68,8 @@ ENV RUSTUP_HOME=/usr/local/rustup \
     RUST_VERSION=${RUST_VERSION} \
     CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 
-RUN apt-get install -y clang
-RUN set -eux; \
-    wget https://sh.rustup.rs -O rustup.sh; \
-    sh rustup.sh -y --no-modify-path --profile minimal --default-toolchain ${RUST_VERSION}; \
-    rm rustup.sh; \
-    rustup --version; \
-    cargo --version; \
-    rustc --version;
+COPY --from=rust ${RUSTUP_HOME} ${RUSTUP_HOME}
+COPY --from=rust ${CARGO_HOME} ${CARGO_HOME}
 RUN set -eux; \
     ln -sf ${CARGO_HOME}/bin/cargo /usr/bin/cargo; \
     ln -sf ${CARGO_HOME}/bin/rustup /usr/bin/rustup; \
