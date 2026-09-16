@@ -48,6 +48,27 @@ on qemu_x86.
   - `cd ci && DOCKER_ARGS="-v /tmp/zr-build:/tmp/build" ./build-cmd.sh west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app`
   - `cd ci && DOCKER_ARGS="-v /tmp/zr-build:/tmp/build" ./build-cmd.sh ninja -C /tmp/build run`
 
+### Clippy
+- `ci/clippy.sh` runs `cargo clippy` on all Rust crates: the host crates
+  (`zephyr-bindgen`, `zephyr-macros`), the sysroot-layer crates
+  (`zephyr-sys`, `zephyr-core`, `time-convert`), and every sample/test app
+  crate plus the app-layer library crates. Each app is `west build`-ed in its
+  own build dir first, because the cross-compiled sysroot (and the
+  `zephyr-sys` bindings generated from the app's headers/devicetree/Kconfig)
+  is app-specific; clippy then reuses that build's sysroot and environment.
+- CI container: `cd ci && ./build-cmd.sh ci/clippy.sh`
+- Natively (west, Zephyr, Zephyr SDK, and the clippy component must be
+  available): `./ci/clippy.sh`
+- Apps that cannot be *built* on the selected board are reported as skipped
+  (some tests only build on certain Zephyr versions); set `CLIPPY_STRICT=1`
+  to treat that as a failure. Warnings are not fatal by default; set
+  `CLIPPY_ARGS="-D warnings"` to make them so. Other knobs: `CLIPPY_BOARD`
+  (default `qemu_x86`), `CLIPPY_BUILD_DIR`, `CLIPPY_JOBS`.
+- A `clippy` job in `.github/workflows/main.yml` runs this on Zephyr 3.7.0.
+- Every crate used as a clippy root has a committed `Cargo.lock` (the script
+  never writes to the source tree, so it works with the read-only repo mount
+  used by `ci/build-cmd.sh`).
+
 ### Run tests
 - Full repository tests via Zephyr sanitycheck (from `README.rst`):
   - `$ZEPHYR_BASE/scripts/sanitycheck --testcase-root tests -p native_posix -N`

@@ -1,3 +1,6 @@
 [toolchain]
 channel = "1.75.0"
 profile = "minimal"
+# clippy is used by ci/clippy.sh; rustup installs it automatically for
+# native builds
+components = ["clippy"]

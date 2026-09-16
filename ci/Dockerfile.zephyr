@@ -58,7 +58,9 @@ RUN set -eux; \
     rm rustup.sh; \
     rustup --version; \
     cargo --version; \
-    rustc --version;
+    rustc --version; \
+    # clippy is not in the minimal profile; needed by ci/clippy.sh
+    rustup component add clippy;
 
 # Final stage: zephyr base with the rust toolchain copied in. The COPY layers
 # are local copies, so rebuilding them when either input stage changes is cheap.
