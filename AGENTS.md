@@ -59,6 +59,10 @@ on qemu_x86.
 - CI container: `cd ci && ./build-cmd.sh ci/clippy.sh`
 - Natively (west, Zephyr, Zephyr SDK, and the clippy component must be
   available): `./ci/clippy.sh`
+- Select what to lint with positional arguments: `ci/clippy.sh` (everything,
+  the CI default), `ci/clippy.sh lib` (only the common library crates),
+  `ci/clippy.sh serial` (one app, by `samples/`/`tests/` dir name or path),
+  or any combination like `ci/clippy.sh lib serial`.
 - Apps that cannot be *built* on the selected board are reported as skipped
   (some tests only build on certain Zephyr versions); set `CLIPPY_STRICT=1`
   to treat that as a failure. Warnings are not fatal by default; set
