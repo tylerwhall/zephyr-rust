@@ -39,34 +39,29 @@ elseif(${ARCH} STREQUAL "arm")
         set(clang_target thumbv7m-none-eabi)
     endif()
 elseif(${ARCH} STREQUAL "riscv")
-    set(rust_target "riscv")
-
     if(CONFIG_64BIT)
-        string(CONCAT rust_target  ${rust_target} "64")
+        set(rust_target riscv64)
     else()
-        string(CONCAT rust_target  ${rust_target} "32")
+        set(rust_target riscv32)
     endif()
-
+    # Clang does not know the zephyr target or the ISA suffixes; the base
+    # triple is enough for bindgen to process the headers.
     set(clang_target ${rust_target})
-
-    if (CONFIG_RISCV_ISA_RV32E)
-        string(CONCAT rust_target ${rust_target} "e")
+    if(CONFIG_RISCV_ISA_RV32E)
+        string(APPEND rust_target "e")
     else()
-        string(CONCAT rust_target ${rust_target} "i")
+        string(APPEND rust_target "i")
     endif()
-
-    if (CONFIG_RISCV_ISA_EXT_M)
-        string(CONCAT rust_target ${rust_target} "m")
+    if(CONFIG_RISCV_ISA_EXT_M)
+        string(APPEND rust_target "m")
     endif()
-    if (CONFIG_RISCV_ISA_EXT_A)
-        string(CONCAT rust_target ${rust_target} "a")
+    if(CONFIG_RISCV_ISA_EXT_A)
+        string(APPEND rust_target "a")
     endif()
-
     if(CONFIG_RISCV_ISA_EXT_C)
-        string(CONCAT rust_target ${rust_target} "c")
+        string(APPEND rust_target "c")
     endif()
-
-    string(CONCAT rust_target ${rust_target} "-unknown-zephyr-elf")
+    string(APPEND rust_target "-unknown-zephyr-elf")
 else()
     message(FATAL_ERROR "Arch ${ARCH} not supported")
 endif()
@@ -97,7 +92,6 @@ if(NOT ZEPHYR_BINDGEN)
     set(zephyr_bindgen_build_dir ${CMAKE_CURRENT_BINARY_DIR}/zephyr-bindgen)
     set(ZEPHYR_BINDGEN ${zephyr_bindgen_build_dir}/release/zephyr-bindgen)
     add_custom_target(zephyr_bindgen_target DEPENDS ${ZEPHYR_BINDGEN})
-    set(zephyr_bindgen_target zephyr_bindgen_target)
 
     add_custom_command(OUTPUT ${ZEPHYR_BINDGEN}
         WORKING_DIRECTORY ${zephyr_bindgen_src_dir}
@@ -132,7 +126,7 @@ zephyr_get_compile_definitions_for_lang_as_string(       C definitions)
 #zephyr_get_compile_options_for_lang_as_string(           C options)
 
 set(external_project_cflags
-    "${includes} ${definitions} ${system_includes} -imacros ${AUTOCONF_H}"
+    "${includes} ${definitions} ${system_includes} -imacros ${AUTOCONF_H} --target=${clang_target}"
 )
 
 # Add the Cargo project only if CONFIG_RUST because this will alawys invoke Cargo.
@@ -155,7 +149,7 @@ if (CONFIG_RUST)
             "CONFIG_RUST_ALLOC_POOL=${CONFIG_RUST_ALLOC_POOL}"
             "CONFIG_RUST_MUTEX_POOL=${CONFIG_RUST_MUTEX_POOL}"
             "CONFIG_POSIX_CLOCK=${CONFIG_POSIX_CLOCK}"
-            "TARGET_CFLAGS=${external_project_cflags} --target=${clang_target}"
+            "TARGET_CFLAGS=${external_project_cflags}"
             "SYSROOT=${rust_sysroot}"
             "SYSROOT_BUILD=${rust_sysroot_build}"
             "APP_BUILD=${rust_app_build}"
