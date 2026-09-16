@@ -31,9 +31,10 @@
 #     1. runs a regular `west build` in its own build dir, which produces
 #        the cross-compiled sysroot (std + zephyr-sys + zephyr-core) and the
 #        zephyr-bindgen binary,
-#     2. re-derives from the build tree the environment CMake passes to
-#        rust/build.sh (sysroot, target, bindgen flags, Kconfig values), so
-#        clippy sees exactly the same configuration as a real build,
+#     2. sources rust-env.sh, the environment file CMake generates into the
+#        build dir (sysroot, target, bindgen flags, Kconfig values; see
+#        CMakeLists.txt), so clippy sees exactly the same configuration as a
+#        real build,
 #     3. runs `cargo clippy` on the app crate (clippy also lints its local
 #        path dependencies, e.g. the zephyr, zephyr-logger,
 #        zephyr-futures, and zephyr-uart-buffered crates).
@@ -59,7 +60,6 @@
 #   CLIPPY_BOARD         board for all builds (default: qemu_x86)
 #   CLIPPY_BUILD_DIR     base build dir (default: /tmp/zephyr-rust-clippy)
 #   CLIPPY_JOBS          parallel app builds (default: number of CPUs)
-#   CLIPPY_CLANG_TARGET  override the clang target used in TARGET_CFLAGS
 #   CLIPPY_ARGS          extra args appended after `--` on every clippy
 #                        invocation (e.g. CLIPPY_ARGS="-D warnings")
 #   CLIPPY_STRICT=1      also fail if an app cannot be *built* on
@@ -89,9 +89,6 @@ fi
 # read-only) source tree clean and lets passes share compiled registry
 # dependencies.
 export CARGO_TARGET_DIR="${BUILD_DIR}/cargo-target"
-# Needed for the rustc-dep-of-std crates and #![feature] usage in the app
-# crates; mirrors rust/build.sh.
-export RUSTC_BOOTSTRAP=1
 
 # ---------------------------------------------------------------------------
 # Arguments: [lib] [APP...]
@@ -138,89 +135,27 @@ fi
 STATUS_DIR="${BUILD_DIR}/clippy-status"
 mkdir -p "${STATUS_DIR}"
 
-# Derive the Rust build environment CMake would use, from a completed west
-# build dir. Sets/exports: SYSROOT, RUST_TARGET, RUST_TARGET_SPEC,
-# ZEPHYR_BINDGEN, TARGET_CFLAGS, ZEPHYR_KERNEL_VERSION_NUM, CONFIG_*.
+# Load the Rust build environment CMake generated into the build dir
+# (rust-env.sh; see CMakeLists.txt). Exports: RUST_TARGET, RUST_TARGET_SPEC,
+# CLANG_TARGET, TARGET_CFLAGS, SYSROOT, ZEPHYR_BINDGEN,
+# ZEPHYR_KERNEL_VERSION_NUM, RUSTC_BOOTSTRAP, CONFIG_*.
 derive_env() {
     local bdir=$1
-
-    local bindgen
-    bindgen="$(find "${bdir}" -maxdepth 5 -type f -name zephyr-bindgen -path '*/release/*' | head -n1)"
-    if [ -z "${bindgen}" ]; then
-        echo "error: zephyr-bindgen not found under ${bdir}; did the build enable CONFIG_RUST?" >&2
+    local env_file="${bdir}/rust-env.sh"
+    if [ ! -f "${env_file}" ]; then
+        echo "error: ${env_file} not found; did the west build configure successfully?" >&2
         exit 1
     fi
-    export ZEPHYR_BINDGEN="${bindgen}"
-    local module_dir
-    module_dir="$(cd "$(dirname "${bindgen}")/../.." && pwd)"
-    export SYSROOT="${module_dir}/sysroot"
-
-    # Rust target triple: the non-host entry in the sysroot.
-    local host_triple
-    host_triple="$(rustc -vV | awk '/^host:/{print $2}')"
-    export RUST_TARGET="$(ls "${SYSROOT}/lib/rustlib" | grep -v "^${host_triple}$" | head -n1)"
-    export RUST_TARGET_SPEC="${ZEPHYR_RUST}/rust/targets/${RUST_TARGET}.json"
-
-    # Clang target for bindgen (mirrors the mapping in CMakeLists.txt).
-    local clang_target
-    if [ -n "${CLIPPY_CLANG_TARGET:-}" ]; then
-        clang_target="${CLIPPY_CLANG_TARGET}"
-    elif [ "${RUST_TARGET}" = "i686-unknown-zephyr" ]; then
-        clang_target="i686-unknown-linux-gnu"
-    elif [ "${RUST_TARGET}" = "thumbv7m-zephyr-eabi" ]; then
-        clang_target="thumbv7m-none-eabi"
-    elif [ "${RUST_TARGET}" = riscv* ]; then
-        clang_target="${RUST_TARGET}"
-    else
-        clang_target="${RUST_TARGET/-zephyr-/-unknown-none-}"
-    fi
-
-    # Kconfig values consumed by build scripts (zephyr-core/build.rs,
-    # zephyr-bindgen); read from the generated autoconf.h.
-    local autoconf_h="${bdir}/zephyr/include/generated/zephyr/autoconf.h"
-    kconfig_val() {
-        local v
-        v="$(sed -n "s/^#define ${1} //p" "${autoconf_h}" | head -n1)"
-        if [ "${v}" = "1" ]; then echo y; else echo n; fi
-    }
-    export CONFIG_USERSPACE="$(kconfig_val CONFIG_USERSPACE)"
-    export CONFIG_RUST_ALLOC_POOL="$(kconfig_val CONFIG_RUST_ALLOC_POOL)"
-    export CONFIG_RUST_MUTEX_POOL="$(kconfig_val CONFIG_RUST_MUTEX_POOL)"
-    export CONFIG_POSIX_CLOCK="$(kconfig_val CONFIG_POSIX_CLOCK)"
-    export CONFIG_THREAD_LOCAL_STORAGE="$(kconfig_val CONFIG_THREAD_LOCAL_STORAGE)"
-    export ZEPHYR_KERNEL_VERSION_NUM="$(
-        awk '/^#define KERNEL_VERSION_NUMBER/{print $3}' \
-            "${bdir}/zephyr/include/generated/zephyr/version.h")"
-
-    # TARGET_CFLAGS for zephyr-bindgen: the include/define/target flags from
-    # compile_commands.json (the same set CMake puts in
-    # external_project_cflags).
-    local cflags
-    cflags="$(python3 - "${bdir}/compile_commands.json" <<'EOF'
-import json, re, sys
-cc = json.load(open(sys.argv[1]))
-e = next(x for x in cc if re.search(r"/zephyrproject/.*\.c$", x["file"]))
-args = e["arguments"] if "arguments" in e else e["command"].split()
-keep, i = [], 0
-while i < len(args):
-    a = args[i]
-    if a.startswith(("-I", "-D")) or a.startswith("--target="):
-        keep.append(a)
-    elif a in ("-isystem", "-iquote", "-imacros"):
-        keep.append(a)
-        i += 1
-        keep.append(args[i])
-    i += 1
-print(" ".join(keep))
-EOF
-)"
-    # CMake appends --target=<clang target> explicitly; the compile command
-    # may not include it (e.g. on x86), so add it if missing.
-    case " ${cflags} " in
-        *" --target="*) ;;
-        *) cflags="${cflags} --target=${clang_target}" ;;
-    esac
-    export TARGET_CFLAGS="${cflags}"
+    # shellcheck disable=SC1090
+    . "${env_file}"
+    local k
+    for k in RUST_TARGET RUST_TARGET_SPEC TARGET_CFLAGS SYSROOT ZEPHYR_BINDGEN ZEPHYR_KERNEL_VERSION_NUM; do
+        if [ -z "${!k:-}" ]; then
+            echo "error: ${k} is missing or empty in ${env_file};" >&2
+            echo "       the CMake-generated environment may have changed" >&2
+            exit 1
+        fi
+    done
 }
 
 # RUSTFLAGS for cross-compiled clippy invocations against a given sysroot.
@@ -256,7 +191,7 @@ run_common_pass() {
     echo
     echo "=== west build -b ${BOARD} samples/rust-app"
     west build -d "${BUILD_DIR}/rust-app" -p auto -b "${BOARD}" samples/rust-app \
-        -DEXPORT_COMPILE_COMMANDS=ON > "${STATUS_DIR}/rust-app.build.log" 2>&1 || true
+        > "${STATUS_DIR}/rust-app.build.log" 2>&1 || true
     if [ -f "${BUILD_DIR}/rust-app/zephyr/zephyr.elf" ]; then
         derive_env "${BUILD_DIR}/rust-app"
         # Inline (not exported): cross_rustflags appends to RUSTFLAGS, so an
@@ -294,8 +229,7 @@ app_worker() {
     (
         set -e
         echo "=== west build -b ${BOARD} ${app}"
-        west build -d "${bdir}" -p auto -b "${BOARD}" "${app}" \
-            -DEXPORT_COMPILE_COMMANDS=ON
+        west build -d "${bdir}" -p auto -b "${BOARD}" "${app}"
         derive_env "${bdir}"
         echo "Rust target: ${RUST_TARGET}"
         echo "=== cargo clippy ${app}"
