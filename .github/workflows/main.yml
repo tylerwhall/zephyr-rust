@@ -55,3 +55,22 @@ jobs:
         run: |
           cd /tmp/build
           ninja run || ${{ matrix.fails }}
+
+  # Lint all Rust crates. One Zephyr version/board is enough: clippy results
+  # do not meaningfully vary across the matrix. Apps that do not build on the
+  # chosen board are reported as skipped (see ci/clippy.sh).
+  clippy:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository }}:zephyr-rust-3.7.0-1.75.0
+      credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Clippy
+        run: ./ci/clippy.sh
