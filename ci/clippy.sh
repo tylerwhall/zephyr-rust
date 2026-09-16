@@ -29,12 +29,16 @@
 #     3. runs `cargo clippy` on the app crate (clippy also lints its local
 #        path dependencies, e.g. the zephyr, zephyr-logger,
 #        zephyr-futures, and zephyr-uart-buffered crates).
-#   App builds/clippy runs are parallelized. In addition:
-#     - host crates (zephyr-bindgen, zephyr-macros) are linted without a
-#       target, and
-#     - the sysroot-layer crates (zephyr-sys, zephyr-core, time-convert) and
-#       the app-layer library crates are linted explicitly against the
-#       samples/rust-app environment.
+#   The passes, in order:
+#     1. host crates (zephyr-bindgen, zephyr-macros), linted without a
+#        target,
+#     2. common code: a west build of samples/rust-app (whose build tree
+#        provides the cross-compiled sysroot and environment), then the
+#        sysroot-layer crates (zephyr-sys, zephyr-core, time-convert) and
+#        the app-layer library crates, linted against that environment.
+#        Linting the common code first fails fast, before the per-app pass,
+#     3. per-app west builds + clippy, parallelized; the samples/rust-app
+#        build from step 2 is reused (its west build is a no-op).
 #
 # No files are written to the source tree (every crate that is used as a
 # clippy root has a committed Cargo.lock); all build/clippy artifacts go
@@ -186,9 +190,7 @@ run_clippy() {
 run_clippy --manifest-path zephyr-bindgen/Cargo.toml --all-targets || true
 run_clippy --manifest-path rust/zephyr-macros/Cargo.toml --all-targets || true
 
-# ---------------------------------------------------------------------------
-# 2. Per-app: west build + clippy on the app crate
-# ---------------------------------------------------------------------------
+# Apps to lint in the per-app pass, and where their logs/status go.
 APPS=()
 for d in samples/*/ tests/*/; do
     if [ -f "${d}Cargo.toml" ]; then
@@ -198,6 +200,39 @@ done
 
 STATUS_DIR="${BUILD_DIR}/clippy-status"
 mkdir -p "${STATUS_DIR}"
+
+# ---------------------------------------------------------------------------
+# 2. Common code: build samples/rust-app to get the sysroot and environment,
+#    then lint the sysroot-layer and app-layer library crates. (Also covered
+#    as path dependencies in the per-app passes below; this makes the
+#    coverage explicit and fails fast. zephyr-uart-buffered is not linted
+#    here: it only compiles in builds with CONFIG_UART_BUFFERED, covered by
+#    the samples/serial pass.)
+# ---------------------------------------------------------------------------
+echo
+echo "=== west build -b ${BOARD} samples/rust-app"
+west build -d "${BUILD_DIR}/rust-app" -p auto -b "${BOARD}" samples/rust-app \
+    -DEXPORT_COMPILE_COMMANDS=ON > "${STATUS_DIR}/rust-app.build.log" 2>&1 || true
+if [ -f "${BUILD_DIR}/rust-app/zephyr/zephyr.elf" ]; then
+    derive_env "${BUILD_DIR}/rust-app"
+    # Inline (not exported): cross_rustflags appends to RUSTFLAGS, so an
+    # exported value would be doubled up by later invocations.
+    rf="$(cross_rustflags "${SYSROOT}")"
+
+    RUSTFLAGS="${rf}" run_clippy --manifest-path rust/sysroot-stage1/Cargo.toml \
+        -p zephyr-sys -p zephyr-core -p time-convert \
+        --target "${RUST_TARGET_SPEC}" --lib || true
+
+    for m in rust/zephyr rust/zephyr-logger rust/zephyr-futures; do
+        RUSTFLAGS="${rf}" run_clippy --manifest-path "${m}/Cargo.toml" \
+            --target "${RUST_TARGET_SPEC}" --lib || true
+    done
+else
+    echo "note: samples/rust-app did not build on ${BOARD}; last lines of"
+echo "      ${STATUS_DIR}/rust-app.build.log:"
+    tail -n 15 "${STATUS_DIR}/rust-app.build.log"
+    echo "note: skipping the sysroot-layer and app-layer library crate passes"
+fi
 
 app_worker() {
     local app=$1
@@ -227,6 +262,11 @@ app_worker() {
     echo "${build_rc} ${clippy_rc}" > "${STATUS_DIR}/${name}.exit"
 }
 
+# ---------------------------------------------------------------------------
+# 3. Per-app: west build + clippy on the app crate (clippy also lints the
+#    app's local path dependencies). The samples/rust-app build from step 2
+#    is reused.
+# ---------------------------------------------------------------------------
 echo
 echo "=== per-app builds + clippy: ${APPS[*]} (jobs: ${JOBS})"
 for app in "${APPS[@]}"; do
@@ -259,32 +299,6 @@ for app in "${APPS[@]}"; do
         echo "${app}: OK"
     fi
 done
-
-# ---------------------------------------------------------------------------
-# 3. Sysroot-layer and app-layer library crates, against the
-#    samples/rust-app environment (also covered as path dependencies in the
-#    per-app passes above; these make the coverage explicit).
-#    zephyr-uart-buffered is not linted here: it only compiles in builds
-#    with CONFIG_UART_BUFFERED (covered by the samples/serial pass).
-# ---------------------------------------------------------------------------
-if [ -f "${BUILD_DIR}/rust-app/zephyr/zephyr.elf" ]; then
-    derive_env "${BUILD_DIR}/rust-app"
-    RUSTFLAGS="$(cross_rustflags "${SYSROOT}")"
-    export RUSTFLAGS
-
-    run_clippy --manifest-path rust/sysroot-stage1/Cargo.toml \
-        -p zephyr-sys -p zephyr-core -p time-convert \
-        --target "${RUST_TARGET_SPEC}" --lib || true
-
-    for m in rust/zephyr rust/zephyr-logger rust/zephyr-futures; do
-        run_clippy --manifest-path "${m}/Cargo.toml" \
-            --target "${RUST_TARGET_SPEC}" --lib || true
-    done
-else
-    echo
-    echo "note: samples/rust-app did not build on ${BOARD}; skipping the"
-    echo "      sysroot-layer and app-layer library crate passes"
-fi
 
 echo
 if [ "${skipped}" != 0 ]; then
