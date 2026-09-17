@@ -42,6 +42,9 @@ unsafe impl GlobalAlloc for MempoolAlloc {
 #[macro_export]
 macro_rules! global_sys_mem_pool {
     ($pool:ident) => {
+        // k_heap ends in the zero-sized k_spinlock, which makes it not
+        // FFI-safe (its Rust size differs from its C size).
+        #[allow(improper_ctypes)]
         extern "C" {
             static $pool: $crate::mempool::k_heap;
         }
