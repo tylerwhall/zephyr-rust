@@ -20,8 +20,8 @@ impl ParseCallbacks for Callbacks {
     fn item_name(&self, name: &str) -> Option<String> {
         const PREFIX: &str = "z_anyctx_";
         let mut inner = self.0.lock().unwrap();
-        if name.starts_with(PREFIX) {
-            inner.syscalls.push(name[PREFIX.len()..].into());
+        if let Some(stripped) = name.strip_prefix(PREFIX) {
+            inner.syscalls.push(stripped.into());
         }
         None
     }
