@@ -73,4 +73,10 @@ jobs:
           submodules: recursive
 
       - name: Clippy
+        # Warnings are fatal so a Rust version bump that introduces new
+        # warnings fails this job with a pointer to each one, driving the
+        # fixup pass. CLIPPY_STRICT is not enabled: the native_posix-only
+        # tests cannot build on qemu_x86 and are reported as skipped.
+        env:
+          CLIPPY_ARGS: "-D warnings"
         run: ./ci/clippy.sh

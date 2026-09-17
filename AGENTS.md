@@ -68,7 +68,8 @@ on qemu_x86.
   to treat that as a failure. Warnings are not fatal by default; set
   `CLIPPY_ARGS="-D warnings"` to make them so. Other knobs: `CLIPPY_BOARD`
   (default `qemu_x86`), `CLIPPY_BUILD_DIR`, `CLIPPY_JOBS`.
-- A `clippy` job in `.github/workflows/main.yml` runs this on Zephyr 3.7.0.
+- A `clippy` job in `.github/workflows/main.yml` runs this on Zephyr 3.7.0
+  with `CLIPPY_ARGS="-D warnings"`, so new warnings fail CI.
 - Every crate used as a clippy root has a committed `Cargo.lock` (the script
   never writes to the source tree, so it works with the read-only repo mount
   used by `ci/build-cmd.sh`).
