@@ -7,8 +7,21 @@ use crate::device::Device;
 
 /// Raw syscall API
 pub trait EepromSyscalls {
+    /// # Safety
+    ///
+    /// `device` must point to a valid EEPROM device, and `data` must be a
+    /// valid buffer of at least `data.len()` bytes for the duration of the
+    /// call.
     unsafe fn eeprom_read(device: *mut Device, offset: off_t, data: &mut [u8]) -> io::Result<()>;
+    /// # Safety
+    ///
+    /// `device` must point to a valid EEPROM device, and `data` must be a
+    /// valid buffer of at least `data.len()` bytes for the duration of the
+    /// call.
     unsafe fn eeprom_write(device: *mut Device, offset: off_t, data: &[u8]) -> io::Result<()>;
+    /// # Safety
+    ///
+    /// `device` must point to a valid EEPROM device.
     unsafe fn eeprom_get_size(device: *mut Device) -> usize;
 }
 
