@@ -221,6 +221,11 @@ impl Executor {
     /// # Safety
     ///
     /// The caller guarantees the static mutex is intended for this purpose.
+    //
+    // ExecutorState contains kernel objects (Mutex, KPollSignal) that are not
+    // Send/Sync in the Rust sense; the Arc only shares it between the tasks
+    // of one executor, which is not concurrently accessed across threads.
+    #[allow(clippy::arc_with_non_send_sync)]
     pub unsafe fn new(mutex: &'static KMutex, thread_signal: &'static KPollSignal) -> Self {
         Executor {
             state: Arc::new(ExecutorState {
