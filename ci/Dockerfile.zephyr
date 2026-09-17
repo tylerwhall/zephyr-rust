@@ -31,6 +31,10 @@ ADD setup-sdk.sh /setup-sdk.sh
 RUN /setup-sdk.sh
 # Required for sanitycheck
 ENV ZEPHYR_TOOLCHAIN_VARIANT=zephyr
+# CMake >= 3.31 (as in ubuntu 26.04) removed compatibility with
+# cmake_policy(VERSION < 3.5), which Zephyr 2.x modules (e.g. civetweb) still
+# declare. No effect on Zephyr 3.x.
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
 
 # Rust toolchain stage.
 #
