@@ -25,6 +25,34 @@ RUN if [ "${ZEPHYR_VERSION}" = "2.3.0" ]; then \
 RUN west init -l ${ZEPHYR_BASE}
 RUN west update --narrow --fetch-opt=--filter=tree:0
 
+# Workaround for a bug in Zephyr's gen_kobject_list.py (present in 2.3.0 -
+# 3.7.0): die_get_type_offset() adds the CU offset to every DW_AT_type
+# reference, but DW_FORM_ref_addr references (emitted by rustc for cross-CU
+# type references) are already file-absolute. The mangled offset can land on
+# an unrelated kobject type and fail the build (e.g. 2.7.3 x
+# nucleo_l552ze_q x samples/serial). Remove once a fixed Zephyr release is
+# pinned.
+RUN <<'EOF'
+python3 -c '
+import os
+p = None
+for cand in ("/zephyrproject/zephyr/scripts/gen_kobject_list.py",
+            "/zephyrproject/zephyr/scripts/build/gen_kobject_list.py"):
+    if os.path.exists(cand):
+        p = cand
+        break
+assert p, "gen_kobject_list.py not found"
+s = open(p).read()
+old = "    return die.attributes[\"DW_AT_type\"].value + die.cu.cu_offset"
+new = ("    attr = die.attributes[\"DW_AT_type\"]\n"
+       "    # DW_FORM_ref_addr is already file-absolute (e.g. rustc cross-CU refs)\n"
+       "    if attr.form == \"DW_FORM_ref_addr\":\n"
+       "        return attr.value\n"
+       "    return attr.value + die.cu.cu_offset")
+assert s.count(old) == 1, "unexpected gen_kobject_list.py"
+open(p, "w").write(s.replace(old, new))
+'
+EOF
 RUN pip3 install --break-system-packages -r ${ZEPHYR_BASE}/scripts/requirements.txt
 
 ADD setup-sdk.sh /setup-sdk.sh
