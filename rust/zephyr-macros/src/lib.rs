@@ -7,12 +7,11 @@ use quote::quote;
 fn get_single_arg(item: TokenStream) -> Ident {
     let item = proc_macro2::TokenStream::from(item);
     let arg = item.into_iter().next();
-    let ident = if let Some(TokenTree::Ident(ident)) = arg {
+    if let Some(TokenTree::Ident(ident)) = arg {
         ident
     } else {
         panic!("k_*_define takes one identifier argument. Got {:?}", arg);
-    };
-    ident
+    }
 }
 
 #[proc_macro]
