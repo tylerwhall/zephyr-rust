@@ -73,6 +73,34 @@ on qemu_x86.
   never writes to the source tree, so it works with the read-only repo mount
   used by `ci/build-cmd.sh`).
 
+#### Fixing clippy warnings
+
+Work through native crates, then libraries (`ci/clippy.sh lib`), then
+apps/tests, keeping each stage clean before moving on. One commit per
+warning type, quoting a sample of the clippy output in the body. For each
+type: reproduce with clippy, fix on the host, verify, commit. Details:
+
+- Persist the build dir across runs so re-runs are incremental:
+  `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy:/tmp/zephyr-rust-clippy" ./build-cmd.sh ci/clippy.sh lib`
+- The repo is mounted read-only in the container, so `cargo clippy --fix`
+  cannot write there: edit on the host (the mount is the live repo, no copy
+  needed). `--fix` only applies machine-applicable fixes and may leave
+  cleanup (e.g. a blank line with trailing whitespace) — check `git diff`.
+- `exported_private_dependencies` fires because the *crate* is a private
+  dependency; item re-exports cannot silence it. zephyr-core/zephyr-sys were
+  private deps of the custom sysroot std and are now `public = true` in
+  `rust/rust/library/std/Cargo.toml`. Changing that requires a sysroot
+  rebuild, automatic on the next `west build`.
+- Allow lints (with a comment) where the design is intentional, e.g.
+  `improper_ctypes` for the zero-sized `k_spinlock` in `k_heap`, and
+  `arc_with_non_send_sync` for kernel-object wrappers that are not
+  Send/Sync by design.
+- The native_posix-only tests (eeprom, posix-clock, semaphore) cannot be
+  clippy'd in the container: native_posix builds fail while compiling the
+  picolibc module (`gcc: fatal error: cannot specify '-o' with '-c' ... with
+  multiple files`, a bare `posix_cheats.h` input). They are reported as
+  skipped; lint their crates by other means if changed.
+
 ### Run tests
 - Full repository tests via Zephyr sanitycheck (from `README.rst`):
   - `$ZEPHYR_BASE/scripts/sanitycheck --testcase-root tests -p native_posix -N`
