@@ -70,23 +70,32 @@ on qemu_x86.
   (default `qemu_x86`), `CLIPPY_BUILD_DIR`, `CLIPPY_JOBS`.
 - A `clippy` job in `.github/workflows/main.yml` runs this on Zephyr 3.7.0
   with `CLIPPY_ARGS="-D warnings"`, so new warnings fail CI.
-- Every crate used as a clippy root has a committed `Cargo.lock` (the script
-  never writes to the source tree, so it works with the read-only repo mount
-  used by `ci/build-cmd.sh`).
+- Every crate used as a clippy root has a committed `Cargo.lock`, enforced
+  by running every clippy with `--locked`; a stale lock fails loudly with
+  cargo's "needs to be updated" error instead of being silently rewritten
+  (or failing with EIO on the read-only mount). The repo is mounted
+  read-only by default; use `WRITABLE=1` with `ci/build-cmd.sh` for runs
+  that need write access (e.g. `cargo clippy --fix`, regenerating a
+  `Cargo.lock`).
 
 #### Fixing clippy warnings
 
 Work through native crates, then libraries (`ci/clippy.sh lib`), then
 apps/tests, keeping each stage clean before moving on. One commit per
 warning type, quoting a sample of the clippy output in the body. For each
-type: reproduce with clippy, fix on the host, verify, commit. Details:
+type: reproduce with clippy, fix, verify, commit. Details:
 
 - Persist the build dir across runs so re-runs are incremental:
   `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy:/tmp/zephyr-rust-clippy" ./build-cmd.sh ci/clippy.sh lib`
-- The repo is mounted read-only in the container, so `cargo clippy --fix`
-  cannot write there: edit on the host (the mount is the live repo, no copy
-  needed). `--fix` only applies machine-applicable fixes and may leave
-  cleanup (e.g. a blank line with trailing whitespace) — check `git diff`.
+- The repo is mounted read-only by default, so `cargo clippy --fix` needs
+  write access: run it with `WRITABLE=1` (export it for the `ci/build-cmd.sh`
+  invocation, or set it directly when running the container). `--fix` only
+  applies machine-applicable fixes and may leave cleanup (e.g. a blank line
+  with trailing whitespace) — check `git diff`.
+- If `--locked` reports a stale `Cargo.lock`, regenerate it and commit it
+  with the change: on the host, or in a `WRITABLE=1` container, run
+  `cargo generate-lockfile --manifest-path <crate>/Cargo.toml` (or
+  `cargo update` for dependency bumps).
 - `exported_private_dependencies` fires because the *crate* is a private
   dependency; item re-exports cannot silence it. zephyr-core/zephyr-sys were
   private deps of the custom sysroot std and are now `public = true` in
