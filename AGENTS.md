@@ -71,11 +71,10 @@ on qemu_x86.
 - A `clippy` job in `.github/workflows/main.yml` runs this on Zephyr 3.7.0
   with `CLIPPY_ARGS="-D warnings"`, so new warnings fail CI.
 - Every crate used as a clippy root has a committed `Cargo.lock`, enforced
-  by running every clippy with `--locked`; a stale lock fails loudly with
-  cargo's "needs to be updated" error instead of being silently rewritten
-  (or failing with EIO on the read-only mount). The repo is mounted
-  read-only by default; use `WRITABLE=1` with `ci/build-cmd.sh` for runs
-  that need write access (e.g. `cargo clippy --fix`, regenerating a
+  by running every clippy with `--locked`; a stale lock fails with cargo's
+  "needs to be updated" error instead of being rewritten. The repo is
+  mounted read-only by default; use `WRITABLE=1` with `ci/build-cmd.sh` for
+  runs that need write access (e.g. `cargo clippy --fix`, regenerating a
   `Cargo.lock`).
 
 #### Fixing clippy warnings
@@ -87,29 +86,23 @@ type: reproduce with clippy, fix, verify, commit. Details:
 
 - Persist the build dir across runs so re-runs are incremental:
   `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy:/tmp/zephyr-rust-clippy" ./build-cmd.sh ci/clippy.sh lib`
-- The repo is mounted read-only by default, so `cargo clippy --fix` needs
-  write access: run it with `WRITABLE=1` (export it for the `ci/build-cmd.sh`
-  invocation, or set it directly when running the container). `--fix` only
-  applies machine-applicable fixes and may leave cleanup (e.g. a blank line
+- Re-lint one crate without a full pass (also for `cargo clippy --fix`):
+  source the build dir's rust-env.sh and lint a single manifest, e.g.
+  `WRITABLE=1 ./build-cmd.sh sh -c '. /tmp/zephyr-rust-clippy/rust-app/rust-env.sh; CARGO_TARGET_DIR=/tmp/zephyr-rust-clippy/cargo-target RUSTFLAGS="--sysroot $SYSROOT" cargo clippy --manifest-path rust/zephyr/Cargo.toml --target "$RUST_TARGET_SPEC" --lib'`
+  `--fix` needs `WRITABLE=1` (the mount is read-only by default), applies
+  only machine-applicable fixes, and may leave cleanup (e.g. a blank line
   with trailing whitespace) — check `git diff`.
-- If `--locked` reports a stale `Cargo.lock`, regenerate it and commit it
-  with the change: on the host, or in a `WRITABLE=1` container, run
+- `--fix` fixes several warnings at once: split the result into the
+  per-warning-type commits with `git add -p`.
+- A stale `Cargo.lock` reported by `--locked` is regenerated with
   `cargo generate-lockfile --manifest-path <crate>/Cargo.toml` (or
-  `cargo update` for dependency bumps).
-- `exported_private_dependencies` fires because the *crate* is a private
-  dependency; item re-exports cannot silence it. zephyr-core/zephyr-sys were
-  private deps of the custom sysroot std and are now `public = true` in
-  `rust/rust/library/std/Cargo.toml`. Changing that requires a sysroot
-  rebuild, automatic on the next `west build`.
-- Allow lints (with a comment) where the design is intentional, e.g.
-  `improper_ctypes` for the zero-sized `k_spinlock` in `k_heap`, and
-  `arc_with_non_send_sync` for kernel-object wrappers that are not
-  Send/Sync by design.
+  `cargo update` for dependency bumps) and committed with the change.
+- Add `#[allow(...)]` (with a justifying comment) only when a clean fix is
+  impossible; ALWAYS stop and ask the user first when allowing a warning/lint.
 - The native_posix-only tests (eeprom, posix-clock, semaphore) cannot be
-  clippy'd in the container: native_posix builds fail while compiling the
-  picolibc module (`gcc: fatal error: cannot specify '-o' with '-c' ... with
-  multiple files`, a bare `posix_cheats.h` input). They are reported as
-  skipped; lint their crates by other means if changed.
+  clippy'd in the container: native_posix builds fail in the picolibc module
+  build (a bare `posix_cheats.h` input). They are reported as skipped; lint
+  their crates by other means if changed.
 
 ### Run tests
 - Full repository tests via Zephyr sanitycheck (from `README.rst`):
