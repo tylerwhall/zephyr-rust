@@ -218,8 +218,9 @@ pub struct Executor {
 pub struct ExecutorHandle(Weak<ExecutorState>);
 
 impl Executor {
-    /// Unsafe because the client guarantees the static mutex is intended for
-    /// this purpose.
+    /// # Safety
+    ///
+    /// The caller guarantees the static mutex is intended for this purpose.
     pub unsafe fn new(mutex: &'static KMutex, thread_signal: &'static KPollSignal) -> Self {
         Executor {
             state: Arc::new(ExecutorState {
