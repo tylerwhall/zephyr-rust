@@ -50,10 +50,14 @@ on qemu_x86.
 
 ### Clippy
 - `ci/clippy.sh` runs `cargo clippy` on all Rust crates: the host crates
-  (`zephyr-bindgen`, `zephyr-macros`), the sysroot-layer crates
-  (`zephyr-sys`, `zephyr-core`, `time-convert`), and every sample/test app
-  crate plus the app-layer library crates. Each app is `west build`-ed in its
-  own build dir first, because the cross-compiled sysroot (and the
+  (`zephyr-bindgen`, `zephyr-macros`), every sample/test app crate, and the
+  app-layer library crates. The sysroot-layer crates (`zephyr-sys`,
+  `zephyr-core`, `time-convert`) are linted via `-p` from the sysroot-stage1
+  workspace, where they are non-member path deps, so only rustc lints
+  surface there (`RUSTC_WORKSPACE_WRAPPER` applies to members only); their
+  known clippy debt is tracked in `CLIPPY_SYSROOT_DEBT.md`. Each app is
+  `west build`-ed in its own build dir first, because the cross-compiled
+  sysroot (and the
   `zephyr-sys` bindings generated from the app's headers/devicetree/Kconfig)
   is app-specific; clippy then reuses that build's sysroot and environment.
 - CI container: `cd ci && ./build-cmd.sh ci/clippy.sh`
@@ -74,7 +78,7 @@ on qemu_x86.
   by running every clippy with `--locked`; a stale lock fails with cargo's
   "needs to be updated" error instead of being rewritten. The repo is
   mounted read-only by default; use `WRITABLE=1` with `ci/build-cmd.sh` for
-  runs that need write access (e.g. `cargo clippy --fix`, regenerating a
+  runs that need write access (e.g. regenerating a
   `Cargo.lock`).
 
 #### Fixing clippy warnings
@@ -82,18 +86,15 @@ on qemu_x86.
 Work through native crates, then libraries (`ci/clippy.sh lib`), then
 apps/tests, keeping each stage clean before moving on. One commit per
 warning type, quoting a sample of the clippy output in the body. For each
-type: reproduce with clippy, fix, verify, commit. Details:
+type: reproduce with clippy, fix, verify, commit. Use
+`ci/clippy-fix.sh` (in the CI container) to run the pass and get the
+remaining warnings grouped by lint. Details:
 
 - Persist the build dir across runs so re-runs are incremental:
   `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy:/tmp/zephyr-rust-clippy" ./build-cmd.sh ci/clippy.sh lib`
-- Re-lint one crate without a full pass (also for `cargo clippy --fix`):
-  source the build dir's rust-env.sh and lint a single manifest, e.g.
-  `WRITABLE=1 ./build-cmd.sh sh -c '. /tmp/zephyr-rust-clippy/rust-app/rust-env.sh; CARGO_TARGET_DIR=/tmp/zephyr-rust-clippy/cargo-target RUSTFLAGS="--sysroot $SYSROOT" cargo clippy --manifest-path rust/zephyr/Cargo.toml --target "$RUST_TARGET_SPEC" --lib'`
-  `--fix` needs `WRITABLE=1` (the mount is read-only by default), applies
-  only machine-applicable fixes, and may leave cleanup (e.g. a blank line
-  with trailing whitespace) — check `git diff`.
-- `--fix` fixes several warnings at once: split the result into the
-  per-warning-type commits with `git add -p`.
+- Re-lint one crate without a full pass: source the build dir's rust-env.sh
+  and lint a single manifest, e.g.
+  `./build-cmd.sh sh -c '. /tmp/zephyr-rust-clippy/rust-app/rust-env.sh; CARGO_TARGET_DIR=/tmp/zephyr-rust-clippy/cargo-target RUSTFLAGS="--sysroot $SYSROOT" cargo clippy --manifest-path rust/zephyr/Cargo.toml --target "$RUST_TARGET_SPEC" --lib'`
 - A stale `Cargo.lock` reported by `--locked` is regenerated with
   `cargo generate-lockfile --manifest-path <crate>/Cargo.toml` (or
   `cargo update` for dependency bumps) and committed with the change.
