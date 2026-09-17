@@ -53,8 +53,11 @@
 #   given as arguments, or for all of them with no arguments.
 #
 # No files are written to the source tree (every crate that is used as a
-# clippy root has a committed Cargo.lock); all build/clippy artifacts go
-# under CLIPPY_BUILD_DIR.
+# clippy root has a committed Cargo.lock, which is enforced by running every
+# clippy with --locked); all build/clippy artifacts go under
+# CLIPPY_BUILD_DIR. Runs that need to write to the source tree (e.g. cargo
+# clippy --fix, regenerating a Cargo.lock) can opt in with WRITABLE=1, which
+# ci/build-cmd.sh honors by mounting the repo writable.
 #
 # Environment variables:
 #   CLIPPY_BOARD         board for all builds (default: qemu_x86)
@@ -168,7 +171,7 @@ run_clippy() {
     echo
     echo "=== cargo clippy $*"
     # shellcheck disable=SC2086
-    if ! cargo clippy "$@" -- ${CLIPPY_ARGS}; then
+    if ! cargo clippy "$@" --locked -- ${CLIPPY_ARGS}; then
         fail=1
         return 1
     fi
@@ -235,7 +238,7 @@ app_worker() {
         echo "=== cargo clippy ${app}"
         RUSTFLAGS="$(cross_rustflags "${SYSROOT}")" \
             cargo clippy --manifest-path "${app}/Cargo.toml" \
-            --target "${RUST_TARGET_SPEC}" --lib \
+            --target "${RUST_TARGET_SPEC}" --locked --lib \
             -- ${CLIPPY_ARGS}
     ) > "${STATUS_DIR}/${name}.log" 2>&1 || clippy_rc=$?
     # Distinguish "cannot build on this board" from clippy failures: a
