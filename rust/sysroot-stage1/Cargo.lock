@@ -73,6 +73,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "gimli"
+version = "0.34.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1033caf0b349c518623b5396bfb2cf0bddf44f0306d543a250e5743297aafd10"
+dependencies = [
+ "rustc-std-workspace-alloc",
+ "rustc-std-workspace-core",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -274,6 +284,17 @@ dependencies = [
  "compiler_builtins",
  "core",
  "libc",
+ "unwinding",
+]
+
+[[package]]
+name = "unwinding"
+version = "0.2.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4b134ada16dda9e435abe2a6d76a01d497bc60707357845a15f9b0ed42dc88ce"
+dependencies = [
+ "gimli",
+ "rustc-std-workspace-core",
 ]
 
 [[package]]
