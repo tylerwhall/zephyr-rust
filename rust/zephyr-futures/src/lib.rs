@@ -250,7 +250,7 @@ impl Executor {
                     match self.state.inner.lock::<C>().get_runnable() {
                         Poll::Ready(Some(task)) => {
                             let waker = futures::task::waker_ref(&task);
-                            let mut context = Context::from_waker(&*waker);
+                            let mut context = Context::from_waker(&waker);
                             if let Poll::Ready(()) = unsafe { task.poll(&mut context) } {
                                 self.state.inner.lock::<C>().remove_task(task);
                             }
