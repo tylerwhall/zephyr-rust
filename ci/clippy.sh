@@ -45,7 +45,11 @@
 #        provides the cross-compiled sysroot and environment), then the
 #        sysroot-layer crates (zephyr-sys, zephyr-core, time-convert) and
 #        the app-layer library crates, linted against that environment.
-#        Linting the common code first fails fast, before the per-app pass,
+#        Linting the common code first fails fast, before the per-app pass.
+#        Note: the sysroot-layer crates are linted via -p from the
+#        sysroot-stage1 workspace, where they are non-member path deps, so
+#        only rustc lints surface there (RUSTC_WORKSPACE_WRAPPER applies to
+#        workspace members only); see CLIPPY_SYSROOT_DEBT.md.
 #     3. per-app west builds + clippy, parallelized; when pass 2 ran, the
 #        samples/rust-app build from it is reused (its west build is a
 #        no-op).
