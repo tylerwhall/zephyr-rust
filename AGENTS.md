@@ -54,7 +54,7 @@ on qemu_x86.
   app-layer library crates. The sysroot-layer crates (`zephyr-sys`,
   `zephyr-core`, `time-convert`) are linted via `-p` from the sysroot-stage1
   workspace, so only rustc lints surface there, never clippy (mechanism and
-  tracked debt in `CLIPPY_SYSROOT_DEBT.md`). Each app is
+  tracked debt in `docs/CLIPPY_SYSROOT_DEBT.md`). Each app is
   `west build`-ed in its own build dir first, because the cross-compiled
   sysroot (and the
   `zephyr-sys` bindings generated from the app's headers/devicetree/Kconfig)
