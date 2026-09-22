@@ -47,9 +47,6 @@ drift).
    output missing, or a different fault, is a failure — stop and fix the
    baseline before starting the port.
 
-Status: **PASS** (verified 2026-09-17 on `3.7.0` / Rust `1.75.0`,
-`qemu_x86`).
-
 ## Step 1: Rebase the `rust/rust` port onto the new release tag
 
 The `rust/rust` submodule carries the zephyr std port as a series of
@@ -63,16 +60,21 @@ rather than papering over the conflict.
 
    ```sh
    git log --oneline <old-tag>..HEAD        # the port commits
-   git tag | grep -E '^1\.7[56]'            # the new tag exists locally
+   git tag | grep -E '^1\.7[56]\.0'         # the new tag exists locally
    ```
 
-2. Rebase onto the new tag. Using an explicit base branch makes the
-   conflict resolution easier to reason about:
+2. Rebase onto the new tag. The branch name is of the form
+   zephyr-<rust_version>, e.g. "zephyr-1.75.0"
 
    ```sh
-   git branch -f port-1.<new> HEAD          # preserve the old port tip
-   git checkout -b rebase-1.<new> <new-tag>
-   git rebase --onto rebase-1.<new> <old-tag> port-1.<new>
+   git checkout -b zephyr-<new> # start from the current submodule rev
+   git rebase --onto <new-tag> <old-tag>
+   ```
+
+   e.g.
+   ```sh
+   git checkout -b zephyr-1.76.0 # start from the current submodule rev
+   git rebase --onto 1.76.0 1.75.0
    ```
 
 3. Resolve conflicts commit by commit with `git rebase --continue`.
@@ -102,29 +104,27 @@ rather than papering over the conflict.
    only zephyr-port changes:
 
    ```sh
-   git diff <new-tag> port-1.<new> --stat
+   git diff <new-tag> --stat
    grep -rn '<<<<<<<' library/std/src/sys/mod.rs library/std/src/sys_common/mod.rs
    ```
 
-5. Delete the temporary base branch: `git branch -d rebase-1.<new>`.
-
-6. Check `rust/libc`: the libc version required by the new std is in
+5. Check `rust/libc`: the libc version required by the new std is in
    `library/std/Cargo.toml` (`libc = { version = ... }`). Compare with
    `git describe --tags` in `rust/libc`. For 1.76.0 std requires
    `0.2.150` and the existing `rust/libc` port was already based on
    `0.2.150`, so no change was needed. If the port is based on an older
-   libc, rebase it the same way (its commits are also upstream-quality,
-   e.g. `zephyr: char is unsigned on riscv64`).
+   libc, rebase it the same way (its commits are also upstream-quality)
 
-7. Update the parent repo in the same commit:
+6. Update the parent repo in the same commit:
 
-   - `rust-toolchain.toml`: `channel = "1.76.0"`
-   - `rust/build.sh`: the `VERSION="1.76"` rustc-version assertion
-   - `README.md`: the three version references ("exactly 1.76.0",
+   - `rust-toolchain.toml`: `channel ="`
+   - `rust/build.sh`: the `VERSION=` rustc-version assertion
+   - `README.md`: version references ("exactly 1.76.0",
      "stable-1.76.0", `rustup toolchain install 1.76.0`)
-   - the `rust/rust` submodule pointer to the new `port-1.<new>` tip
+   - the `rust/rust` submodule pointer to the new `zephyr-<new>` tip
+   - container versions in `.github/workflows/*.yml`
 
-8. Rebuild the CI container image for the new pair. **Gotcha**: `env.sh`
+7. Rebuild the CI container image for the new pair. **Gotcha**: `env.sh`
    resolves `RUST_VERSION` from the host's `rustc --version`, which
    triggers a rustup auto-install of the newly pinned toolchain. If the
    host can't write to `~/.rustup` (e.g. sandbox), `RUST_VERSION` comes
@@ -136,7 +136,7 @@ rather than papering over the conflict.
    cd ci && RUST_VERSION=1.76.0 ZEPHYR_VERSION=3.7.0 ./container-build.sh
    ```
 
-9. Quick validation (fail fast): build + run the default sample in the
+8. Quick validation (fail fast): build + run the default sample in the
    new image, using a *fresh* build dir (the old one caches the 1.75
    sysroot):
 
@@ -157,6 +157,3 @@ rather than papering over the conflict.
 
    Pass criteria: same as Step 0 (full hello output, then the
    intentional page fault).
-
-Status: **PASS** (1.75.0 -> 1.76.0, 2026-09-17). 15 port commits
-rebased; 2 conflicting commits (submodule removal, stub sys impl).
