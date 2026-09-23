@@ -3,6 +3,43 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.77.0 → 1.78.0 (2026-09-23)
+
+**Result**: 15 port commits rebased from `1.77.0` onto `1.78.0`, branch
+`zephyr-1.78.0`, final tip `788de1f8937`. The libc port was also rebased from
+`0.2.150` to `0.2.153`, branch `zephyr-0.2.153`, tip
+`9c4f7e0888a8fbb1e0bfaa48b1bb566f1ebcaa99`. The default sample built and ran
+on `qemu_x86` / Zephyr 3.7.0, reaching the intentional userspace page fault.
+
+### Conflicts and compile fixes
+
+1. **`rust: remove submodules not required to build zephyr-rust`**: upstream
+   moved the deleted submodule pointers again. Kept the intentional port
+   deletions and retained only the required submodules.
+2. **`build.rs: mark std for zephyr as stable`**: retained Rust 1.78's
+   target-architecture-based platform checks and added `target_os == "zephyr"`.
+3. Rust 1.78's LLVM target layout requires `i128:128` for the i686 Zephyr
+   target; added it to `rust/targets/i686-unknown-zephyr.json`.
+4. Rust 1.78 moved or removed several PAL support files. Updated the Zephyr
+   PAL paths for `cmath`, condvar, and rwlock, and removed stale memchr, once,
+   and path module declarations. These changes were autosquashed into the
+   corresponding port commits.
+5. The `ThreadId` port fix was adapted to retain the upstream generic `NonZero`
+   import used by `available_parallelism` while using Zephyr's 32-bit atomic
+   counter.
+
+### Decisions and gotchas
+
+- **`rust/libc` rebased**: Rust 1.78.0 requires libc `0.2.153`; the existing
+  six-commit Zephyr port was rebased onto that tag without conflicts.
+- **`rust/sysroot-stage1/Cargo.lock`**: updated the libc entry from `0.2.150`
+  to `0.2.153` after the required writable-container build.
+- The initial read-only new-version build failed only when Cargo attempted to
+  regenerate the lockfile; rerunning with `WRITABLE=1` produced the real
+  lockfile change.
+- The ghcr.io images pulled successfully from
+  `ghcr.io/tylerwhall/zephyr-rust` for both the 1.77.0 baseline and 1.78.0.
+
 ## 1.76.0 → 1.77.0 (2026-09-23)
 
 **Result**: 15 port commits rebased from `1.76.0` onto `1.77.0`, branch
