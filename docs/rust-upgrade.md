@@ -23,14 +23,20 @@ the CI images. Per-upgrade decisions and conflicts are recorded in
    or is pullable. `ci/env.sh` resolves `RUST_VERSION` from
    `rust-toolchain.toml`.
 3. Build + run the default sample on the default board, persisting the
-   build dir:
+   build dir. Do not stream complete build output into the agent context:
+   redirect verbose commands to a temporary log and inspect only the exit
+   status plus a concise tail or targeted error excerpts.
 
    ```sh
    cd ci
    DOCKER_ARGS="-v /tmp/zr-smoke:/tmp/build" \
-       ./build-cmd.sh west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app
+       ./build-cmd.sh west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app \
+       > /tmp/zr-baseline.log 2>&1
+   rc=$?; tail -100 /tmp/zr-baseline.log; exit $rc
    DOCKER_ARGS="-v /tmp/zr-smoke:/tmp/build" \
-       ./build-cmd.sh ninja -C /tmp/build run
+       ./build-cmd.sh ninja -C /tmp/build run \
+       > /tmp/zr-baseline-run.log 2>&1
+   rc=$?; tail -100 /tmp/zr-baseline-run.log; exit $rc
    ```
 
 4. **Pass criteria** (used for all later validation): clean build, console
@@ -61,7 +67,7 @@ to the new upstream code; no hacks.
 
    ```sh
    git log --oneline <old-tag>..HEAD        # the port commits
-   git tag | grep -E '^1\.7[56]\.0'         # the new tag exists locally
+   git tag | grep -E '^1\.[0-9]+\.0'        # confirm the required tags exist locally
    ```
 
 2. Rebase onto the new tag. Branch names are `zephyr-<rust_version>`:
@@ -71,20 +77,13 @@ to the new upstream code; no hacks.
    git rebase --onto <new-tag> <old-tag>
    ```
 
-3. Resolve conflicts with `git rebase --continue`. Known conflict classes
-   (with per-version detail in the history doc):
-
-   - **Submodule removal commit**: upstream moves the pointers of submodules
-     we deleted → modify/delete conflicts. Always keep our deletions
-     (`git rm <paths>`). Extend the deletion list if upstream added
-     submodules we don't need.
-   - **`library/std/src/sys/mod.rs`**: upstream adds target branches to the
-     `cfg_if` chain. Keep the new upstream branches; keep our `zephyr`
-     branch immediately before `unsupported`.
-   - **`library/std/src/sys_common/mod.rs`**: the net-module condition was
-     inverted in 1.76.0 to enumerate platforms *with* their own `net`.
-     Zephyr targets are `target_family = "unix"`, so exclude zephyr
-     explicitly. Audit similar inverted cfgs on every port.
+3. Resolve conflicts with `git rebase --continue`. Preserve upstream
+   changes while retaining the Zephyr port's behavior. For modify/delete or
+   file-location conflicts, keep intentional port deletions and adapt the
+   port to the new upstream layout rather than restoring obsolete structure.
+   Audit relative paths, module registration, cfg conditions, and generated
+   metadata after structural changes. Record non-obvious decisions in the
+   history document.
 
 4. Sanity-check: `git diff <new-tag> --stat` should show only zephyr-port
    changes; no leftover conflict markers.
@@ -113,6 +112,10 @@ mentions in docs).
 
 ## 4. Build and validate
 
+The default smoke test is required during the upgrade. The full matrix and
+repository tests remain required before final submission, according to the
+change type described in `AGENTS.md`.
+
 1. If Phase 1 started background pulls, confirm they finished
    (`docker image inspect ghcr.io/<registry>/zephyr-rust:zephyr-rust-<v>-<new>`)
    before building. A still-running pull is not a correctness problem —
@@ -128,45 +131,57 @@ mentions in docs).
    cd ci && RUST_VERSION=<new> ZEPHYR_VERSION=<ver> ./container-build.sh
    ```
 
-3. Build + run the default sample in the new image, **fresh build dir**
-   (an old one caches the previous sysroot). Do not capture the complete build
-   output in the agent context; redirect verbose commands to a temporary log
-   and report only the exit status and a concise tail containing the failure or
-   pass criteria. Pass criteria: as in [Baseline](#1-baseline).
+3. Build + run the default sample in the new image, using a **new build
+   directory** (an old one caches the previous sysroot). Prefer a new uniquely
+   named temporary directory rather than deleting an old Docker-created
+   directory, which may contain root-owned files. Redirect verbose commands to
+   a temporary log and report only the exit status and a concise tail or
+   targeted error excerpts. Pass criteria: as in [Baseline](#1-baseline).
 
    ```sh
    cd ci
    export RUST_VERSION=<new>
    export CONTAINER_IMAGE_PREFIX=ghcr.io/<registry>/zephyr-rust:zephyr-rust-
-   DOCKER_ARGS="-v /tmp/zr-smoke:/tmp/build" \
-       ./build-cmd.sh west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app
-   DOCKER_ARGS="-v /tmp/zr-smoke:/tmp/build" \
-       ./build-cmd.sh ninja -C /tmp/build run
+   DOCKER_ARGS="-v /tmp/zr-smoke-new:/tmp/build" \
+       ./build-cmd.sh west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app \
+       > /tmp/zr-new.log 2>&1
+   rc=$?; tail -100 /tmp/zr-new.log; exit $rc
+   DOCKER_ARGS="-v /tmp/zr-smoke-new:/tmp/build" \
+       ./build-cmd.sh ninja -C /tmp/build run \
+       > /tmp/zr-new-run.log 2>&1
+   rc=$?; tail -100 /tmp/zr-new-run.log; exit $rc
    ```
 
    `CONTAINER_IMAGE_PREFIX` forces the ghcr image names (matching the
    Phase 1 pulls) instead of letting `env.sh` prefer a stale local image.
+   Omit this override when validating against the local image produced by
+   `container-build.sh`.
 
    **Gotcha**: the first build may fail with
    `error: failed to write .../rust/sysroot-stage1/Cargo.lock` — the repo
    is mounted read-only and std's dependency graph changed. Rerun with
    `WRITABLE=1`; the lockfile diff is a real change, committed with the
-   port.
+   port. Check that updated dependencies are compatible with the pinned Cargo;
+   if resolution selects a dependency requiring a newer Cargo, resolve it to
+   a compatible version explicitly and record the decision.
 
-4. **Compile errors in the port** (upstream std/core API churn): fix each
-   error as a *separate commit on top of the series* — one commit per
-   error, upstream-quality, no history rewriting. Then **stop and wait**
-   for user instructions on how to fold the fixes back into the series.
-   The first occurrence of this is a learning exercise: record it in the
-   history doc so the instructions can be refined.
+4. **Compile errors in the port** (upstream std/core API churn): identify the
+   original port commit that introduced the affected code. Fix one error at a
+   time in a separate commit. Use `git commit --fixup=<original-rev>` when the
+   fix belongs to an earlier port commit; use a normal commit with a proper
+   message when it is independent. Continue building after each fix, but stop
+   and ask when the correct adaptation or intended behavior is unclear. Do not
+   autosquash until the build succeeds. Then autosquash the fixups, resolve
+   any autosquash conflicts in favor of the final validated state, and verify
+   the resulting port history.
 
 ## 5. Record the upgrade
 
 Add a section to `docs/rust-upgrade-history.md` (one per upgrade, e.g.
-`## 1.75.0 → 1.76.0`) recording every important decision and conflict:
-which commits conflicted and how/why they were resolved, the libc decision,
-any compile errors and their fixes, and any deviation from this process.
-Commit it separately from the port.
+`## 1.75.0 → 1.76.0`) recording every important decision and conflict,
+the libc decision, compile errors and their fixes, and deviations from this
+process. Write it after autosquashing, once the final submodule tip is known;
+commit it separately from the port.
 
 ## 6. Push
 
