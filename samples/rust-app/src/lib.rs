@@ -18,7 +18,7 @@ use zephyr::mutex::*;
 use zephyr::semaphore::*;
 use zephyr::thread::ThreadSyscalls;
 
-thread_local!(static TLS: RefCell<u8> = RefCell::new(1));
+thread_local!(static TLS: RefCell<u8> = const { RefCell::new(1) });
 
 zephyr_macros::k_mutex_define!(MUTEX);
 zephyr_macros::k_sem_define!(TLS_SEM, 0, 1);
