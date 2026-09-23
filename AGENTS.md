@@ -41,12 +41,24 @@ on qemu_x86.
   - `west build -p auto -b native_posix samples/rust-app/`
 
 ### Run a built QEMU/native image
-- Native, from build dir: `ninja run`
+- `ninja run` can leave QEMU running after output has stopped; do not use a
+  bare timeout pipeline as the cleanup mechanism. In CI, use
+  `ci/run-sample.sh`, which launches the emulator in its own process group
+  and kills the full group on timeout or exit.
+- The only samples verified to exit automatically are `samples/rust-app` and
+  `samples/no_std` on `qemu_x86`, across Zephyr 2.3.0, 2.7.3, and 3.7.0.
+  Both intentionally trigger a user-mode page fault, print
+  `Next call will crash if userspace is working.`, and make `ninja run`
+  return status 1. CI asserts that output separately from the expected
+  non-zero status. All other QEMU sample combinations failed to exit during
+  the 10-second (Zephyr 2.7.3/3.7.0) or 30-second (2.3.0) inventory window;
+  `samples/serial` waits for input. Leave those build-only. Tests
+  also remain build-only here; see the sanitycheck/twister workflow below.
 - CI container, single step (build + run in one ephemeral container; `-d /tmp/build` is required because the repo is mounted read-only):
-  - `cd ci && ./build-cmd.sh bash -c "west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app -t run"`
+  - `cd ci && RUST_VERSION=1.78.0 ZEPHYR_VERSION=3.7.0 ./build-cmd.sh bash -c 'west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app && bash ci/run-sample.sh'`
 - CI container, multiple steps (persist the build dir across invocations with a host volume via `DOCKER_ARGS`):
   - `cd ci && DOCKER_ARGS="-v /tmp/zr-build:/tmp/build" ./build-cmd.sh west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app`
-  - `cd ci && DOCKER_ARGS="-v /tmp/zr-build:/tmp/build" ./build-cmd.sh ninja -C /tmp/build run`
+  - `cd ci && DOCKER_ARGS="-v /tmp/zr-build:/tmp/build" ./build-cmd.sh bash ci/run-sample.sh`
 
 ### Clippy
 - `ci/clippy.sh` runs `cargo clippy` on all Rust crates: the host crates
