@@ -75,7 +75,44 @@ jobs:
             test: tests/eeprom
         include:
           - fails: false
-          - run: false
+          # Only qemu_x86 rust-app/no_std runs are verified to exit; their
+          # intentional user-mode page fault makes ninja return status 1.
+          - zephyr_version: 3.7.0
+            board: qemu_x86
+            test: samples/rust-app
+            run: true
+            fails: true
+            expected: Next call will crash if userspace is working.
+          - zephyr_version: 2.7.3
+            board: qemu_x86
+            test: samples/rust-app
+            run: true
+            fails: true
+            expected: Next call will crash if userspace is working.
+          - zephyr_version: 2.3.0
+            board: qemu_x86
+            test: samples/rust-app
+            run: true
+            fails: true
+            expected: Next call will crash if userspace is working.
+          - zephyr_version: 3.7.0
+            board: qemu_x86
+            test: samples/no_std
+            run: true
+            fails: true
+            expected: Next call will crash if userspace is working.
+          - zephyr_version: 2.7.3
+            board: qemu_x86
+            test: samples/no_std
+            run: true
+            fails: true
+            expected: Next call will crash if userspace is working.
+          - zephyr_version: 2.3.0
+            board: qemu_x86
+            test: samples/no_std
+            run: true
+            fails: true
+            expected: Next call will crash if userspace is working.
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/${{ github.repository }}:zephyr-rust-${{ matrix.zephyr_version }}-1.78.0
@@ -95,9 +132,23 @@ jobs:
 
       - name: Run
         if: ${{ matrix.run }}
+        timeout-minutes: 3
         run: |
-          cd /tmp/build
-          ninja run || ${{ matrix.fails }}
+          set +e
+          bash ci/run-sample.sh > /tmp/sample-run.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/sample-run.log
+          grep -F '${{ matrix.expected }}' /tmp/sample-run.log
+          if [ "${{ matrix.fails }}" = "true" ]; then
+            expected_status=1
+          else
+            expected_status=0
+          fi
+          if [ "$status" -ne "$expected_status" ]; then
+            echo "sample exited with $status, expected $expected_status" >&2
+            exit 1
+          fi
 
   # Lint all Rust crates. One Zephyr version/board is enough: clippy results
   # do not meaningfully vary across the matrix (except code gated on the
