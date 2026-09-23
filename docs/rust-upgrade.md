@@ -20,8 +20,7 @@ the CI images. Per-upgrade decisions and conflicts are recorded in
 1. Submodules in sync: `git submodule status --recursive`,
    `git diff --submodule`. The base must be the submodule rev.
 2. CI image for the current `ZEPHYR_VERSION`-`RUST_VERSION` exists locally
-   or is pullable. `ci/env.sh` resolves `RUST_VERSION` from
-   `rust-toolchain.toml`.
+   or is pullable (`RUST_VERSION` is the `rust-toolchain.toml` pin).
 3. Build + run the default sample on the default board, persisting the
    build dir. Do not stream complete build output into the agent context:
    redirect verbose commands to a temporary log and inspect only the exit
@@ -115,6 +114,14 @@ mentions in docs).
 The default smoke test is required during the upgrade. The full matrix and
 repository tests remain required before final submission, according to the
 change type described in `AGENTS.md`.
+
+Run the full matrix with `cd ci && ./build-all.sh`: it generates the same
+job list as `.github/workflows/main.yml` from `ci/matrix.py`, which defaults
+`RUST_VERSION` from the updated `rust-toolchain.toml` pin, so it targets
+the new images automatically. Phase 1 pre-pulls (or local
+`container-build.sh` builds) provide one image per Zephyr version; each
+job builds in its own container, so no build-directory care is needed.
+Individual jobs resume via `--resume` on re-runs.
 
 1. If Phase 1 started background pulls, confirm they finished
    (`docker image inspect ghcr.io/<registry>/zephyr-rust:zephyr-rust-<v>-<new>`)
