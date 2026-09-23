@@ -1,22 +1,7 @@
 fn main() {
-    let kernel_version_str_trimmed = std::env::var("ZEPHYR_KERNEL_VERSION_NUM")
-        .expect("ZEPHYR_KERNEL_VERSION_NUM must be set")
-        .trim_start_matches("0x").to_owned();
-    let kernel_version = u32::from_str_radix(&kernel_version_str_trimmed, 16)
-        .expect("ZEPHYR_KERNEL_VERSION_NUM must be an integer");
-
-    if kernel_version >= 0x2_05_00 {
-        println!("cargo:rustc-cfg=zephyr250");
-    }
-    if kernel_version >= 0x2_07_00 {
-        println!("cargo:rustc-cfg=zephyr270");
-    }
-    if kernel_version >= 0x3_00_00 {
-        println!("cargo:rustc-cfg=zephyr300");
-    }
-    if kernel_version >= 0x3_05_00 {
-        println!("cargo:rustc-cfg=zephyr350");
-    }
+    // The Zephyr version cfgs (zephyr250/zephyr270/zephyr300/zephyr350) are
+    // exported via RUSTFLAGS in rust-env.sh by CMakeLists.txt, so they apply
+    // to every crate in the sysroot and app builds.
 
     if std::env::var("CONFIG_USERSPACE").expect("CONFIG_USERSPACE must be set") == "y" {
         println!("cargo:rustc-cfg=usermode");
