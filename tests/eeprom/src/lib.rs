@@ -2,22 +2,30 @@ extern crate zephyr_sys;
 
 use std::convert::TryInto;
 use std::ffi::CStr;
-use std::os::raw::c_char;
 
 use zephyr::device::DeviceSyscalls;
 use zephyr::eeprom::Eeprom;
 
-extern "C" {
-    static rust_eeprom_name: [c_char; 0];
-}
+// The eeprom device name is version dependent: the node moved from /eeprom
+// to /eeprom0 in Zephyr 2.7, and Zephyr 3 dropped the label property from
+// the zephyr,sim-eeprom binding, so DEVICE_DT_NAME falls back to the node
+// full name. The devicetree-generated macros bind directly, so import the
+// one that exists for the target Zephyr version.
+#[cfg(not(zephyr250))]
+use zephyr_sys::raw::DT_N_S_eeprom_P_label as eeprom_name;
+#[cfg(all(zephyr250, not(zephyr300)))]
+use zephyr_sys::raw::DT_N_S_eeprom0_P_label as eeprom_name;
+#[cfg(zephyr300)]
+use zephyr_sys::raw::DT_N_S_eeprom0_FULL_NAME as eeprom_name;
 
 #[no_mangle]
 pub extern "C" fn test_main() {
     use zephyr::context::Any as C;
 
     let eeprom = unsafe {
-        let device = unsafe { CStr::from_ptr(rust_eeprom_name.as_ptr()) };
-        let device = C::device_get_binding(device).expect("get eeprom");
+        let device =
+            C::device_get_binding(CStr::from_bytes_with_nul_unchecked(eeprom_name))
+                .expect("get eeprom");
         Eeprom::new(device)
     };
 
