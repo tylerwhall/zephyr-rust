@@ -92,7 +92,7 @@ impl Reactor {
 }
 
 thread_local! {
-    static REACTOR: RefCell<Option<Reactor>> = RefCell::new(None);
+    static REACTOR: RefCell<Option<Reactor>> = const { RefCell::new(None) };
 }
 
 #[inline(never)]
