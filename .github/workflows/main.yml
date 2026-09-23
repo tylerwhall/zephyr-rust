@@ -14,7 +14,10 @@ jobs:
       matrix:
         zephyr_version: [3.7.0, 2.7.3, 2.3.0]
         board: [qemu_x86, qemu_cortex_m3, qemu_cortex_r5, nucleo_l552ze_q, native_posix, qemu_riscv32, qemu_riscv64]
-        test: [samples/rust-app, samples/no_std, samples/serial]
+        # Tests are built on the boards from their tests/*/testcase.yaml
+        # platform_whitelist (see ci/build-all.sh); the exclusions below
+        # keep the rest of the board list out of the matrix.
+        test: [samples/rust-app, samples/no_std, samples/serial, tests/rust, tests/semaphore, tests/posix-clock, tests/eeprom]
         exclude:
           - board: qemu_riscv32
             zephyr_version: 2.3.0
@@ -27,9 +30,49 @@ jobs:
           # serial/uart does not exist on posix
           - board: native_posix
             test: samples/serial
-          # posix has header issues on Zephyr 3.x
+          # the cross-compiled sysroot has no std for the native_posix
+          # target on Zephyr 3.x (rustc E0463)
           - board: native_posix
             zephyr_version: 3.7.0
+          # tests are only built on their testcase.yaml whitelist
+          - board: qemu_cortex_r5
+            test: tests/rust
+          - board: qemu_cortex_r5
+            test: tests/semaphore
+          - board: qemu_cortex_r5
+            test: tests/posix-clock
+          - board: qemu_cortex_r5
+            test: tests/eeprom
+          - board: nucleo_l552ze_q
+            test: tests/rust
+          - board: nucleo_l552ze_q
+            test: tests/semaphore
+          - board: nucleo_l552ze_q
+            test: tests/posix-clock
+          - board: nucleo_l552ze_q
+            test: tests/eeprom
+          - board: qemu_riscv32
+            test: tests/rust
+          - board: qemu_riscv32
+            test: tests/semaphore
+          - board: qemu_riscv32
+            test: tests/posix-clock
+          - board: qemu_riscv32
+            test: tests/eeprom
+          - board: qemu_riscv64
+            test: tests/eeprom
+          - board: qemu_cortex_m3
+            test: tests/eeprom
+          - board: native_posix
+            test: tests/eeprom
+          - board: qemu_riscv64
+            test: tests/rust
+          - board: qemu_riscv64
+            test: tests/semaphore
+          - board: qemu_riscv64
+            test: tests/posix-clock
+          - board: qemu_riscv64
+            test: tests/eeprom
         include:
           - fails: false
           - run: false
