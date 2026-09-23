@@ -1,4 +1,10 @@
+#include <version.h>
+
+#if KERNEL_VERSION_MAJOR < 3
 #include <zephyr.h>
+#else
+#include <zephyr/kernel.h>
+#endif
 
 extern void rust_test_main(void);
 extern void rust_sem_thread(void *, void *, void *);
