@@ -170,10 +170,11 @@ When changing `zephyr-rust` (feature work, Rust or Zephyr version ports), valida
 - When a Zephyr API's shape differs by version, prefer a single code path over
   hardcoding or per-version literals. For C, use the established
   `#include <version.h>` + `KERNEL_VERSION_MAJOR` guard (see
-  samples/*/src/main.c). In Rust, zephyr-core/build.rs emits
-  `zephyr250`/`zephyr270`/`zephyr300` cfgs - but only for zephyr-core's own
-  compilation; app/test crates cannot cfg-gate on them. Put version-dependent
-  values on the C side and export them to Rust instead.
+  samples/*/src/main.c). In Rust, CMake exports `zephyr250`/`zephyr270`/
+  `zephyr300`/`zephyr350` cfgs via RUSTFLAGS (mirroring zephyr-core/build.rs
+  thresholds), so app and sysroot crates can cfg-gate on the version directly;
+  zephyr-core's own build.rs additionally emits `usermode`/`mempool`/
+  `mutex_pool`/`clock` cfgs, which only reach zephyr-core itself.
 - Known drift (re-verify against the pinned tree, don't trust memory):
   `<zephyr.h>` exists only pre-3, `<zephyr/kernel.h>` only 3+; `<zephyr/kernel.h>`
   does not pull in `<zephyr/device.h>` on 3.x; devicetree bindings dropped the

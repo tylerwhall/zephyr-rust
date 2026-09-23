@@ -157,6 +157,26 @@ rust_env_write(RUST_TARGET_SPEC "${rust_src_dir}/targets/${rust_target}.json")
 rust_env_write(CARGO_MANIFEST "${rust_generated_project}/Cargo.toml")
 rust_env_write(ZEPHYR_BINDGEN "${ZEPHYR_BINDGEN}")
 rust_env_write(ZEPHYR_KERNEL_VERSION_NUM "${KERNEL_VERSION_NUMBER}")
+# Zephyr version cfgs, mirroring the thresholds in zephyr-core/build.rs, but
+# exported through RUSTFLAGS so they reach every crate in the sysroot and app
+# builds (build.rs rustc-cfgs only reach the crate whose build script ran).
+# Note: rustc 1.80+ warns on cfgs it doesn't know about (unexpected_cfgs); the
+# pinned toolchain predates the lint. If the toolchain is upgraded past that,
+# add matching --check-cfg values here.
+set(rust_version_cfgs "")
+if(KERNEL_VERSION_NUMBER GREATER_EQUAL 0x20500)
+    string(APPEND rust_version_cfgs "--cfg zephyr250 ")
+endif()
+if(KERNEL_VERSION_NUMBER GREATER_EQUAL 0x20700)
+    string(APPEND rust_version_cfgs "--cfg zephyr270 ")
+endif()
+if(KERNEL_VERSION_NUMBER GREATER_EQUAL 0x30000)
+    string(APPEND rust_version_cfgs "--cfg zephyr300 ")
+endif()
+if(KERNEL_VERSION_NUMBER GREATER_EQUAL 0x30500)
+    string(APPEND rust_version_cfgs "--cfg zephyr350 ")
+endif()
+rust_env_write(RUSTFLAGS "${rust_version_cfgs}")
 # Unstable features are required for building std. Also allow in the app
 # project for now because they're often needed for low level embedded.
 rust_env_write(RUSTC_BOOTSTRAP "1")
