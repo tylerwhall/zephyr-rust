@@ -66,11 +66,14 @@ on qemu_x86.
   the CI default), `ci/clippy.sh lib` (only the common library crates),
   `ci/clippy.sh serial` (one app, by `samples/`/`tests/` dir name or path),
   or any combination like `ci/clippy.sh lib serial`.
-- Apps that cannot be *built* on the selected board are reported as skipped
-  (some tests only build on certain Zephyr versions); set `CLIPPY_STRICT=1`
-  to treat that as a failure. Warnings are not fatal by default; set
+- Apps that cannot be *built* on the selected board fail the run by default
+  (some tests only build on certain Zephyr versions); set `CLIPPY_STRICT=0`
+  to report them as skipped instead. Warnings are not fatal by default; set
   `CLIPPY_ARGS="-D warnings"` to make them so. Other knobs: `CLIPPY_BOARD`
   (default `qemu_x86`), `CLIPPY_BUILD_DIR`, `CLIPPY_JOBS`.
+- cfg'd-out code is not type-checked, so clippy on one Zephyr version does
+  not check the other versions' `zephyrNNN` cfg branches of an app crate;
+  lint per version when an app gates code on the Zephyr version.
 - A `clippy` job in `.github/workflows/main.yml` runs this on Zephyr 3.7.0
   with `CLIPPY_ARGS="-D warnings"`, so new warnings fail CI.
 - Every crate used as a clippy root has a committed `Cargo.lock`, enforced
@@ -99,10 +102,10 @@ remaining warnings grouped by lint. Details:
   `cargo update` for dependency bumps) and committed with the change.
 - Add `#[allow(...)]` (with a justifying comment) only when a clean fix is
   impossible; ALWAYS stop and ask the user first when allowing a warning/lint.
-- The native_posix-only tests (eeprom, posix-clock, semaphore) cannot be
-  clippy'd in the container: native_posix builds fail in the picolibc module
-  build (a bare `posix_cheats.h` input). They are reported as skipped; lint
-  their crates by other means if changed.
+- native_posix builds fail in the container on Zephyr 3.7.0 (a bare
+  `posix_cheats.h` input in the picolibc module build), so tests cannot be
+  linted with `CLIPPY_BOARD=native_posix` in the 3.7.0 container; on the
+  default `qemu_x86` board all tests lint fine.
 
 ### Run tests
 - Full repository tests via Zephyr sanitycheck (from `README.rst`):

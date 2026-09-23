@@ -218,7 +218,9 @@ run_common_pass() {
         echo "      ${STATUS_DIR}/rust-app.build.log:"
         tail -n 15 "${STATUS_DIR}/rust-app.build.log"
         echo "note: skipping the sysroot-layer and app-layer library crate passes"
-        [ -z "${CLIPPY_STRICT:-}" ] || fail=1
+        if [ "${CLIPPY_STRICT:-1}" != "0" ]; then
+            fail=1
+        fi
     fi
 }
 
@@ -280,7 +282,7 @@ for app in "${APPS[@]}"; do
         echo "=== ${app} SKIPPED: west build failed on ${BOARD}; last lines of ${STATUS_DIR}/${name}.log:"
         tail -n 15 "${STATUS_DIR}/${name}.log"
         skipped=1
-        if [ -n "${CLIPPY_STRICT:-}" ]; then
+        if [ "${CLIPPY_STRICT:-1}" != "0" ]; then
             fail=1
         fi
     elif [ "${clippy_rc}" != 0 ]; then
@@ -294,7 +296,7 @@ for app in "${APPS[@]}"; do
 done
 
 echo
-if [ "${skipped}" != 0 ]; then
+if [ "${skipped}" != 0 ] && [ "${CLIPPY_STRICT:-1}" = "0" ]; then
     echo "note: some apps were skipped because they do not build on ${BOARD}"
     echo "      (set CLIPPY_STRICT=1 to treat that as a failure)"
 fi

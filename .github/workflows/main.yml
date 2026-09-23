@@ -57,8 +57,10 @@ jobs:
           ninja run || ${{ matrix.fails }}
 
   # Lint all Rust crates. One Zephyr version/board is enough: clippy results
-  # do not meaningfully vary across the matrix. Apps that do not build on the
-  # chosen board are reported as skipped (see ci/clippy.sh).
+  # do not meaningfully vary across the matrix (except code gated on the
+  # zephyrNNN version cfgs, which is only checked for this one version; see
+  # AGENTS.md "Validation workflow for changes"). Apps that do not build on
+  # the chosen board fail the job (see ci/clippy.sh).
   clippy:
     runs-on: ubuntu-latest
     container:
@@ -75,8 +77,8 @@ jobs:
       - name: Clippy
         # Warnings are fatal so a Rust version bump that introduces new
         # warnings fails this job with a pointer to each one, driving the
-        # fixup pass. CLIPPY_STRICT is not enabled: the native_posix-only
-        # tests cannot build on qemu_x86 and are reported as skipped.
+        # fixup pass. CLIPPY_STRICT is at its strict default: an app that
+        # stops building on the clippy board fails the job.
         env:
           CLIPPY_ARGS: "-D warnings"
         run: ./ci/clippy.sh
