@@ -109,7 +109,7 @@ macro_rules! zephyr_bindings {
 
             unsafe {
                 zephyr_sys::raw::clock_settime(
-                    zephyr_sys::raw::CLOCK_REALTIME.try_into().unwrap(),
+                    zephyr_sys::raw::RUST_CLOCK_REALTIME.try_into().unwrap(),
                     &timespec,
                 );
             }
@@ -120,14 +120,30 @@ macro_rules! zephyr_bindings {
         pub fn clock_gettime() -> zephyr_sys::raw::timespec {
             use core::convert::TryInto;
 
-            unsafe {
+            // On Zephyr 2, clock_gettime() is marked __syscall and only exists
+            // as a generated syscall thunk, so it must be routed through
+            // syscalls::$context to stay userspace-safe. Zephyr 3 dropped the
+            // __syscall marker, so the thunk is never generated and the plain
+            // function must be called directly.
+            #[cfg(zephyr300)]
+            let t = unsafe {
                 let mut t: zephyr_sys::raw::timespec = core::mem::zeroed();
-                zephyr_sys::syscalls::$context::clock_gettime(
-                    zephyr_sys::raw::CLOCK_REALTIME.try_into().unwrap(),
+                zephyr_sys::raw::clock_gettime(
+                    zephyr_sys::raw::RUST_CLOCK_REALTIME.try_into().unwrap(),
                     &mut t,
                 );
                 t
-            }
+            };
+            #[cfg(not(zephyr300))]
+            let t = unsafe {
+                let mut t: zephyr_sys::raw::timespec = core::mem::zeroed();
+                zephyr_sys::syscalls::$context::clock_gettime(
+                    zephyr_sys::raw::RUST_CLOCK_REALTIME.try_into().unwrap(),
+                    &mut t,
+                );
+                t
+            };
+            t
         }
 
         impl crate::mutex::MutexSyscalls for $context_struct {

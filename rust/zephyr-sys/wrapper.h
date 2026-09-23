@@ -22,7 +22,15 @@
 #endif
 
 #ifdef CONFIG_POSIX_CLOCK
+#if KERNEL_VERSION_MAJOR < 3
 #include <posix/time.h>
+#else
+#include <zephyr/posix/time.h>
+#endif
+#endif
+
+#ifdef CONFIG_POSIX_CLOCK
+const int RUST_CLOCK_REALTIME = CLOCK_REALTIME;
 #endif
 
 // Create a constant we can use from Rust in all cases
