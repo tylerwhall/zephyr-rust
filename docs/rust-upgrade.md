@@ -129,8 +129,10 @@ mentions in docs).
    ```
 
 3. Build + run the default sample in the new image, **fresh build dir**
-   (an old one caches the previous sysroot). Pass criteria: as in
-   [Baseline](#1-baseline).
+   (an old one caches the previous sysroot). Do not capture the complete build
+   output in the agent context; redirect verbose commands to a temporary log
+   and report only the exit status and a concise tail containing the failure or
+   pass criteria. Pass criteria: as in [Baseline](#1-baseline).
 
    ```sh
    cd ci
