@@ -281,7 +281,7 @@ confirming each one behaves exactly as written.
 **Done when**: every command quoted in AGENTS.md was executed verbatim during
 evaluation and produced the stated outcome.
 
-## Task 5 — (Optional) Single-source the matrix definition
+## Task 5 — Single-source the matrix definition — DONE (7efe6ad)
 
 **Why**: `gen_jobs` in ci/build-all.sh hand-duplicates main.yml's excludes;
 they agree today but drift silently (this review found them in agreement only
@@ -304,6 +304,31 @@ run: `ZEPHYR_VERSIONS=3.7.0 BOARDS=qemu_x86 ./build-all.sh`.
 
 **Done when**: job list is unchanged, and both files state where the matrix
 lives.
+
+**Notes from execution** (as part of 7efe6ad, combined with a Task 5
+follow-up idea: a generated matrix so testcase.yaml is the only whitelist
+source):
+- A stronger variant than either step above was chosen: the new
+  `ci/matrix.py` is the single source and both consumers read its output
+  directly, so there is nothing left to keep in sync:
+  - `.github/workflows/main.yml` has a small `matrix` job that runs
+    `python3 ci/matrix.py` and the build job expands the result with
+    `fromJSON`; the hand-written `exclude:` list (which already contained a
+    duplicated qemu_riscv64/eeprom entry) and the run-case `include:`
+    recipes are gone.
+  - `ci/build-all.sh` feeds `ci/matrix.py --tsv` to parallel and no longer
+    has `gen_jobs()`; its header comment states where the matrix lives.
+- Rules in ci/matrix.py (single copy): per-test board sets parsed from
+  `testcase.yaml`, riscv on 3.x only, native_posix on 2.x only (rustc
+  E0463), serial not on native_posix, and the Task 3 automatic-exit run
+  cases with their expected output/status. Trim knobs (ZEPHYR_VERSIONS,
+  BOARDS, APPS — SAMPLES/TESTS merged into APPS) are read there too.
+- build-all.sh defaults RUST_VERSION from rust-toolchain.toml, fixing the
+  empty-image-tag failure noted under Task 2.
+- Evaluation: `ci/matrix.py --tsv` output equals the pre-refactor `gen_jobs`
+  output exactly (73/73 jobs); trimmed RUN=0 and RUN=1 runs on
+  qemu_x86/3.7.0 passed (build-only and sample-run paths, no QEMU left
+  running).
 
 ## Task 6 — Add the existing Zephyr 2.3.0 sanitycheck to CI
 
