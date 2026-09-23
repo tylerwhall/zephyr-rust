@@ -102,10 +102,10 @@ remaining warnings grouped by lint. Details:
   `cargo update` for dependency bumps) and committed with the change.
 - Add `#[allow(...)]` (with a justifying comment) only when a clean fix is
   impossible; ALWAYS stop and ask the user first when allowing a warning/lint.
-- native_posix builds fail in the container on Zephyr 3.7.0 (a bare
-  `posix_cheats.h` input in the picolibc module build), so tests cannot be
-  linted with `CLIPPY_BOARD=native_posix` in the 3.7.0 container; on the
-  default `qemu_x86` board all tests lint fine.
+- `CLIPPY_BOARD=native_posix` fails in the Zephyr 3.7.0 container: the
+  cross-compiled sysroot has no `std` for the native_posix target (rustc
+  `E0463`), so no app can be linted there; on the default `qemu_x86` board
+  all tests lint fine.
 
 ### Run tests
 - Full repository tests via Zephyr sanitycheck (from `README.rst`):
@@ -203,7 +203,9 @@ When changing `zephyr-rust` (feature work, Rust or Zephyr version ports), valida
   `cd ci && RUST_VERSION=1.78.0 ZEPHYR_VERSION=<ver> ./build-cmd.sh bash -c
   "grep ... /zephyrproject/zephyr/include/..."`. One build-cmd.sh invocation
   runs one command; containers are ephemeral, so pass RUST_VERSION and all
-  env vars explicitly every time.
+  env vars explicitly every time. Host environment variables are NOT
+  propagated into the container; pass them via
+  `DOCKER_ARGS="... -e VAR=value"`.
 - Persist build dirs across invocations with
   `DOCKER_ARGS="-v /tmp/<name>:/tmp/build"` and `west build -d /tmp/build`;
   the repo is mounted read-only. Don't `rm` the mount point itself.
