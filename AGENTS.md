@@ -127,9 +127,10 @@ remaining warnings grouped by lint. Details:
     - `cd ci && ./build-cmd.sh west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app`
   - Open an interactive shell in the same image:
     - `cd ci && ./devshell.sh`
-  - A repo revision supports exactly one Rust version; porting steps are
-    under "Rust version port" in "Validation workflow for changes". The Rust
-    port in rust/rust needs to be rebased/updated. Documentation TBD.
+  - A repo revision supports exactly one Rust version; the Rust port in
+    rust/rust must be rebased onto the new release tag. Full upgrade
+    instructions: `docs/rust-upgrade.md` (history in
+    `docs/rust-upgrade-history.md`).
 
 ## Validation workflow for changes
 
@@ -137,7 +138,7 @@ When changing `zephyr-rust` (feature work, Rust or Zephyr version ports), valida
 
 1. **Single-target smoketest (always, first)**: build + run the default sample on the default board in one container invocation (see "Run a built QEMU/native image"). Pass = clean build and the expected console output (see "Build natively" for what success looks like).
 2. **Expand the matrix based on the change type**, build-only where possible (add `-t run` only for runnable boards, at least on the default sample):
-   - Rust version port: change `RUST_VERSION` and `rust-toolchain.toml` together and rebuild the container (only one Rust version is supported per revision, since the std port must exactly match the compiler). XXX: move this to TBD upgrade instructions.
+   - Rust version port: follow `docs/rust-upgrade.md` (rebase the rust/rust port, update the pins, rebuild the container). Only one Rust version is supported per revision, since the std port must exactly match the compiler.
    - Zephyr version port: verify all buildable/runnable samples and tests on the new `ZEPHYR_VERSION`, and confirm the other supported versions (see `README.md`) are not broken.
    - Feature/syscall/Kconfig changes: expand boards and samples (see `ci/build-all.sh` for the current matrix). Note: `native_posix` does not support `UART_INTERRUPT_DRIVEN`, so `samples/serial` is excluded there.
    - Run `tests/*` on `native_posix` when kernel-object or syscall behavior changed.
