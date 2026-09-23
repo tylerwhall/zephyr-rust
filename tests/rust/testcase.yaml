@@ -1,4 +1,6 @@
 tests:
   rust.main:
-    platform_whitelist: qemu_x86 qemu_cortex_m3 native_posix
+    # Built on every board it links on; ci/matrix.py derives the build
+    # matrix from this whitelist.
+    platform_whitelist: qemu_x86 qemu_cortex_m3 qemu_cortex_r5 nucleo_l552ze_q native_posix qemu_riscv32 qemu_riscv64
     tags: rust
