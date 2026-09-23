@@ -1,4 +1,6 @@
 tests:
   rust.eeprom:
+    # qemu_x86 only: the devicetree eeprom node this test reads only exists
+    # on that board. ci/matrix.py derives the build matrix from this whitelist.
     platform_whitelist: qemu_x86
     tags: drivers userspace
