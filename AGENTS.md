@@ -160,3 +160,56 @@ When changing `zephyr-rust` (feature work, Rust or Zephyr version ports), valida
 - Userspace builds commonly require `CONFIG_RUST_ALLOC_POOL=y`; sample/test `prj.conf` files are the source of truth for required Kconfig combinations.
 - This codebase supports multiple Zephyr versions; preserve version guards such as `#if KERNEL_VERSION_MAJOR < 3` in C shims and generated syscall includes.
 - `tests/*/testcase.yaml` defines board/platform allowlists; pick boards accordingly when running an individual test.
+
+## Zephyr version compatibility (2.3, 2.7.3, 3.7)
+
+- Changes touching C headers, devicetree, syscalls, or POSIX APIs must build
+  *and run* on all three supported versions; passing on one version is not
+  evidence it works on the others. Run them in the CI containers (see below)
+  before considering a fix complete.
+- When a Zephyr API's shape differs by version, prefer a single code path over
+  hardcoding or per-version literals. For C, use the established
+  `#include <version.h>` + `KERNEL_VERSION_MAJOR` guard (see
+  samples/*/src/main.c). In Rust, zephyr-core/build.rs emits
+  `zephyr250`/`zephyr270`/`zephyr300` cfgs - but only for zephyr-core's own
+  compilation; app/test crates cannot cfg-gate on them. Put version-dependent
+  values on the C side and export them to Rust instead.
+- Known drift (re-verify against the pinned tree, don't trust memory):
+  `<zephyr.h>` exists only pre-3, `<zephyr/kernel.h>` only 3+; `<zephyr/kernel.h>`
+  does not pull in `<zephyr/device.h>` on 3.x; devicetree bindings dropped the
+  `label` property in 3.x (device names fall back to the node full name), and
+  nodes get renamed between versions; `__syscall` markers were dropped in 3.x,
+  so a function may be a syscall thunk on 2.x but a plain function on 3.x -
+  calling the wrong shape is a link error, and calling a plain function from
+  userspace on 2.x bypasses z_vrfy checks.
+- bindgen limitations (it parses wrapper.h but does not compile it): it cannot
+  evaluate nested function-like macros (Zephyr DT macros, `DT_CAT` chains) and
+  silently drops macros it cannot evaluate, including cast expressions like
+  picolibc's `((clockid_t) 1)`; the symptom is a Rust E0425 long after the
+  macro was written. Expose values Rust needs as simple object macros
+  expanding directly to constants/string literals, file-scope `const`
+  variables in wrapper.h, or definitions in the app's own C file.
+- Never hardcode values that come from devicetree, Kconfig, or toolchain
+  headers (device names, clock ids, sizes). Route them through wrapper.h or a
+  C shim so they track the built image.
+
+## Container investigation workflow
+
+- Inspect per-version facts directly in the pinned Zephyr source:
+  `cd ci && RUST_VERSION=1.78.0 ZEPHYR_VERSION=<ver> ./build-cmd.sh bash -c
+  "grep ... /zephyrproject/zephyr/include/..."`. One build-cmd.sh invocation
+  runs one command; containers are ephemeral, so pass RUST_VERSION and all
+  env vars explicitly every time.
+- Persist build dirs across invocations with
+  `DOCKER_ARGS="-v /tmp/<name>:/tmp/build"` and `west build -d /tmp/build`;
+  the repo is mounted read-only. Don't `rm` the mount point itself.
+- QEMU test runs do not exit by design; wrap `ninja run` in `timeout` instead
+  of `-t run`.
+- To diagnose binding issues, inspect the build dir: `bindings.rs` under
+  `sysroot-build-stage1/<target>/release/build/zephyr-sys-*/out/` (one huge
+  line; use targeted `grep -o`), `zephyr/include/generated/` (all_syscalls.h,
+  syscall_thunks.c, devicetree_generated.h), and the cflags bindgen receives
+  in the build dir's `rust-env.sh` (`TARGET_CFLAGS`, which includes
+  `-imacros autoconf.h` but not the devicetree generated header).
+- Keep command output small or write results to a file under the persistent
+  volume; large/truncated output obscures the lines you need.
