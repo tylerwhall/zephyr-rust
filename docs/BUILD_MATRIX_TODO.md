@@ -17,13 +17,16 @@ committed.
 - Persist build dirs across invocations with
   `DOCKER_ARGS="-v /tmp/<name>:/tmp/build"`; never `rm` the mount point
   itself (use a fresh volume name or delete subdirectories).
-- QEMU test runs do not exit; wrap `ninja run` in `timeout` (samples exit by
-  design: samples/rust-app ends with an intentional page fault and a non-zero
-  exit).
+- Do not assume `ninja run` exits. First measure each sample/board/version
+  combination. Test applications print a success marker but normally leave
+  the emulator running; samples may or may not terminate. Any runner used
+  for an automatically exiting sample must clean up the entire emulator
+  process group, not just pipe output through `timeout`.
 - Full-matrix runs use `ci/build-all.sh` (results under `ci/log/build/`,
   `--resume` skips completed jobs; `rm -rf ci/log/build` to force a full run).
-- Native_posix builds in containers only on Zephyr 2.3.0/2.7.3; 3.7.0 fails
-  (picolibc header issue) and is excluded from the matrix.
+- Native_posix Rust builds in containers work on Zephyr 2.3.0/2.7.3;
+  3.7.0 is excluded because the cross-compiled sysroot has no `std` for the
+  native_posix target (`rustc E0463`).
 - Every commit: short imperative subject, optional lowercase component
   prefix (`ci:`, `build:`, `docs:`), no Conventional Commits.
 
@@ -72,10 +75,10 @@ script, and the strict clean pass is green.
 **Notes from execution**:
 - `ci/build-cmd.sh` does NOT propagate host environment variables into the
   container; pass them with `DOCKER_ARGS="... -e VAR=value"`.
-- The 3.7.0 × native_posix exclusion is real but the stated cause is wrong:
-  the failure is a Rust `E0463` (no `std` for the native_posix target), not
-  a picolibc `posix_cheats.h` header issue. Samples build there too.
-  Re-examine the exclusion comments (main.yml, build-all.sh) in Task 2.
+- The 3.7.0 × native_posix exclusion is real because the cross-compiled
+  sysroot has no `std` for the native_posix target (`rustc E0463`).
+  Re-examine the exclusion comments in main.yml and build-all.sh if the
+  Rust target support changes.
 
 ## Task 2 — Add tests/* to the build matrix (build-all.sh + main.yml) — DONE (eca23b5)
 
@@ -88,8 +91,8 @@ qemu_cortex_m3 or on Zephyr 2.7.3/3.7 is invisible to CI.
   - tests/eeprom: qemu_x86
   - tests/posix-clock, tests/rust, tests/semaphore: qemu_x86, qemu_cortex_m3, native_posix
 Version facts: all tests build on 2.3.0/2.7.3/3.7 for qemu boards; native_posix
-builds on 2.3/2.7 only (3.7 native_posix is excluded from the whole matrix for
-header issues). `west build` ignores whitelists, so the matrix itself must
+builds on 2.3/2.7 only (3.7 native_posix is excluded because the Rust target
+has no `std`). `west build` ignores whitelists, so the matrix itself must
 enumerate only whitelisted boards.
 
 **Steps**:
@@ -118,8 +121,8 @@ enumerate only whitelisted boards.
   generated match the intended (version × whitelisted-board) cross product
   and that `log/build/` contains per-job logs. Repeat for one 2.x container.
 - Verify job counts: the expected full matrix after this change is
-  53 existing + 27 test jobs (eeprom 1×3=3; each of rust/semaphore/posix-clock:
-  qemu_x86×3 + qemu_cortex_m3×3 + native_posix×2 = 8) = 80 jobs.
+  53 existing + 20 test jobs (eeprom 1×3=3; each of rust/semaphore/posix-clock:
+  qemu_x86×3 + qemu_cortex_m3×3 + native_posix×2 = 8) = 73 jobs.
 - Sanity: build one test on a board *outside* its whitelist is NOT part of
   this change; do not add it.
 
@@ -144,79 +147,100 @@ one exclude and one test×board×version combo), the full
   zephyr.elf. The remaining combos (2.3.0 tests, 3.7.0 rust/semaphore)
   are covered by the same code paths as the run combos.
 
-## Task 3 — Turn on execution (CI Run step + optional RUN knob)
+## Task 3 — Run only samples that exit automatically
 
-**Why**: nothing in CI executes anything (the `Run` step in main.yml is
-disabled for every combination via the `include: run: false` default), while
-the local AGENTS workflow treats build+run as the primary smoketest. The
-per-combo `run`/`fails` plumbing already exists — use it instead of deleting it.
+**Why**: the CI `Run` step is currently disabled for every matrix entry, but
+execution is valuable for samples. Tests must not be included in this task:
+Ztest prints `PROJECT EXECUTION SUCCESSFUL` and then leaves the Zephyr kernel
+and emulator running. A timeout alone can also orphan QEMU descendants, so
+test execution needs a separate runner design (or sanitycheck/twister).
 
-**Context**: `samples/rust-app` on qemu_x86 exits non-zero by design
-(intentional page fault; success = the full "Hello from Rust userspace..."
-console output before the fatal error), hence `fails: true`. QEMU boards are
-runnable; nucleo_l552ze_q is real hardware (never run). Tests hang without a
-timeout.
+**Context**: do not assume that every sample exits. `samples/rust-app` exits
+non-zero by design after printing the expected user-mode output; that is a
+candidate for execution, but every sample/board/version combination must be
+checked rather than assuming the qemu_x86 behavior generalizes. Nucleo is
+real hardware and must remain build-only. Tests are build-only in this task.
 
 **Steps**:
-1. `.github/workflows/main.yml`: replace the unconditional
-   `include: [fails: false, run: false]` defaults with explicit include
-   entries that enable running where intended, at minimum:
-   `{board: qemu_x86, test: samples/rust-app, run: true, fails: true}`.
-   Optionally add `timeout-minutes: 5` on the Run step.
-2. `ci/build-all.sh`: add an opt-in `RUN=${RUN:-0}` knob; when set, after a
-   successful build run the app inside the same job:
-   `timeout 120 ninja -C /tmp/build run` for runnable boards (qemu_*, skip
-   nucleo and non-RUN builds), treating `samples/rust-app`'s expected
-   non-zero exit as success (grep the console output instead: pass requires
-   the "Hello from Rust userspace" line, not the exit code).
-3. Default `RUN=0` so plain `build-all.sh` stays build-only/CI-identical.
+1. Before changing either matrix, inventory the current sample matrix by
+   building and running each runnable qemu sample on every supported Zephyr
+   version and qemu board. Use a fresh build directory per run and record:
+   - whether `ninja run` exits by itself;
+   - its exit status and expected output;
+   - whether QEMU has exited and no emulator/container process remains;
+   - whether behavior differs by Zephyr version or board.
+   Do not use a `grep` pipeline as the success test: capture the complete
+   output and status separately.
+2. Classify samples:
+   - **automatic-exit**: may be enabled in CI after the output/status is
+     understood;
+   - **non-exiting**: keep build-only and record the reason in this TODO and
+     the relevant AGENTS.md guidance;
+   - **board/version-specific**: add only the verified combinations.
+   Tests (`tests/*`) are explicitly not candidates here.
+3. Add an opt-in `RUN=${RUN:-0}` path to `ci/build-all.sh` for only the
+   verified automatic-exit sample combinations. The runner must launch each
+   emulator in its own process group and clean up the whole group with a
+   trap. Do not implement test execution by piping `ninja run` through
+   `timeout` and `grep`; that was observed to leave QEMU descendants alive.
+   Keep the default `RUN=0` build-only behavior.
+4. In `.github/workflows/main.yml`, replace the blanket `run: false` behavior
+   only with explicit include entries for verified automatic-exit samples.
+   Preserve `fails: true` where a sample intentionally exits non-zero, and
+   make the output assertion independent of that exit status. Add a job/step
+   timeout as a final safety net, not as the primary cleanup mechanism.
+5. Do not add tests to the CI Run step. Leave the existing build matrix for
+   tests intact until Task 6/7 provides a test runner.
 
 **Local evaluation**:
-- Single run check:
-  `cd ci && DOCKER_ARGS="-v /tmp/zr-dbg:/tmp/build" RUST_VERSION=1.78.0 \
-  ZEPHYR_VERSION=3.7.0 ./build-cmd.sh bash -c "west build -d /tmp/build -p auto \
-  -b qemu_x86 samples/rust-app && cd /tmp/build && (timeout 120 ninja run | \
-  grep 'Hello from Rust userspace')"`.
-  Note: `-t run` hangs for tests; only samples are enabled here.
-- With the RUN knob: `RUN=1 ZEPHYR_VERSIONS=3.7.0 BOARDS=qemu_x86 \
-  SAMPLES="samples/rust-app tests/posix-clock" ./build-all.sh` — rust-app run
-  accepted (expected output + non-zero exit treated as success), posix-clock
-  run completes under the timeout with `PROJECT EXECUTION SUCCESSFUL`.
+- First perform the inventory in each container with commands equivalent to:
+  `cd ci && RUST_VERSION=1.78.0 ZEPHYR_VERSION=<ver> ./build-cmd.sh \
+  west build -d /tmp/build -p auto -b <qemu-board> <sample>` followed by the
+  process-group-safe runner. Repeat for every sample/board/version candidate.
+- Run the trimmed build matrix with `RUN=0` and confirm it remains build-only.
+- Run `RUN=1` with exactly one verified sample/board/version, then expand to
+  all verified combinations. Confirm automatic cleanup after both success and
+  intentional non-zero exit, and confirm no QEMU process remains on the host.
+- For every non-exiting sample, save the command/output and document the
+  combination rather than forcing it through a timeout.
 
-**Done when**: a local build-all run with `RUN=1` validates sample and test
-runs, and the yaml change matches the intended combos exactly (grep the
-include list).
+**Done when**: the inventory covers all sample candidates across the supported
+matrix, only verified automatic-exit combinations run in CI, non-exiting
+samples are explicitly recorded as build-only, tests remain build-only, and
+process cleanup is proven locally.
 
 ## Task 4 — Rewrite the AGENTS.md matrix guidance as an evaluated ladder
 
 **Why**: the validation stages send agents from manual single builds straight
-to the full 53-job matrix, point them at native_posix/3.7 for tests, and never
-mention the build-all trim knobs or that sanitycheck is 2.3.0-only. Write the
-final state only after tasks 1–3 land so the doc matches reality.
+to the full matrix, point them at native_posix/3.7 for tests, and do not
+explain which samples actually exit. They also need to distinguish build
+coverage from test execution: sanitycheck is initially 2.3.0-only, and later
+Zephyr versions require the separate Task 7 twister work. Write the final
+state only after tasks 1–3 land so the doc matches reality.
 
 **Steps** (edit the "Validation workflow for changes" section):
-1. Stage 1 (unchanged): build + run samples/rust-app on qemu_x86 in one
-   container invocation. Note `-t run` is fine for samples.
+1. Stage 1: build + run the verified automatic-exit sample combinations from
+   Task 3; do not assume `samples/rust-app` behavior applies to every board.
+   Note that the process-group-safe runner, not a bare `-t run`, is required.
 2. Stage 2 (replace "expand the matrix"): for an app/test change, build the
    affected app across its whitelisted boards and all versions via the trim
    knobs, e.g. `ZEPHYR_VERSIONS="3.7.0 2.7.3 2.3.0" BOARDS="<testcase.yaml
-   whitelist>" SAMPLES=tests/<name> ./build-all.sh`. For runnable checks wrap
-   `ninja run` in `timeout` (never use `-t run` for tests).
+   whitelist>" TESTS=tests/<name> ./build-all.sh`. Run only samples classified
+   as automatic-exit by Task 3; keep tests build-only until sanitycheck/twister
+   coverage is available.
 3. Add a stage 2.5: when an app/test cfg-gates on the Zephyr version
    (`zephyr250`/`zephyr270`/`zephyr300`), lint it per version:
    `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy:/tmp/zephyr-rust-clippy" \
    CLIPPY_ARGS="-D warnings" RUST_VERSION=1.78.0 ZEPHYR_VERSION=<ver> \
    ./build-cmd.sh ci/clippy.sh <app>` — cfg'd-out code is not type-checked,
    so clippy on one version does not cover the others.
-4. Fix the native_posix guidance: kernel-object/syscall changes are exercised
-   by running tests on native_posix in the **2.3.0/2.7.3** containers
-   (3.7.0 native_posix cannot build in containers; the main matrix excludes
-   it). Keep the existing `west build -b native_posix tests/<name>` example
-   but state the container-version requirement.
-5. Stage 3 stays: full `build-all.sh` + `sanitycheck.sh` (add: sanitycheck
-   runs on 2.3.0 only, with the host toolchain; it is the oldest-version
-   execution pass, so do not treat it as full-version validation) + full
-   clippy.
+4. Fix the native_posix guidance: build/test changes can be built on
+   native_posix in the **2.3.0/2.7.3** containers (3.7.0 lacks Rust `std` for
+   that target). Do not describe `ninja run` as a reliable test execution
+   method; use the test runner documented by Task 6/7.
+5. Stage 3: full `build-all.sh` + the CI sanitycheck job from Task 6 (2.3.0
+   only) + full clippy. Do not claim this is full-version test execution;
+   later-version test execution belongs to Task 7.
 6. Mention the Rust-version coupling for local runs: containers are per
    (Zephyr, Rust) image; local invocations must pass `RUST_VERSION`
    explicitly when the host has no rustc, and the CI image tag in main.yml is
@@ -253,39 +277,76 @@ run: `ZEPHYR_VERSIONS=3.7.0 BOARDS=qemu_x86 ./build-all.sh`.
 **Done when**: job list is unchanged, and both files state where the matrix
 lives.
 
-## Task 6 — (Lowest priority) Parameterize sanitycheck.sh / move to twister
+## Task 6 — Add the existing Zephyr 2.3.0 sanitycheck to CI
 
-**Why last**: it only improves the oldest-version execution pass; tasks 2–3
-give newer versions build and run coverage through the main matrix, which is
-worth more. Sanitycheck is also the only CI piece that executes anything
-today, so keep it working until twister parity is proven.
+**Why**: this is the lowest-risk way to add automated test execution coverage
+without solving the later-version runner migration. `ci/sanitycheck.sh` is
+already pinned to Zephyr 2.3.0 because its testcase.yaml schema and runner
+interface are version-specific. Keep this task narrowly scoped: do not
+parameterize it and do not change it to twister yet.
 
 **Steps**:
-1. Make the version a parameter: `ZEPHYR_VERSION=${ZEPHYR_VERSION:-2.3.0}`
-   (keep 2.3.0 as the default so current behavior is unchanged).
-2. Dispatch the runner by version: 2.3.0 uses
-   `$ZEPHYR_BASE/scripts/sanitycheck`; 2.7.3 and 3.7.0 use
-   `$ZEPHYR_BASE/scripts/twister` (verify inside each container with
-   `ls $ZEPHYR_BASE/scripts/` before assuming; twister is a rewrite with
-   mostly compatible flags — `-N -O <dir> -c --all -T <root>` — but confirm
-   each flag in `twister --help` and adapt).
-3. Keep the host toolchain (`-e ZEPHYR_TOOLCHAIN_VARIANT=zephyr`) for
-   native_posix builds; note the toolchain skew vs. SDK builds in a comment.
-4. Decide whether tests that only whitelist boards unavailable on a given
-   version should be filtered per version (e.g. extend per-version excludes
-   once the main matrix carries tests from task 2).
+1. Add a GitHub Actions job in `.github/workflows/main.yml` using the
+   `zephyr-rust-2.3.0-1.78.0` container.
+2. Run `ci/sanitycheck.sh` from that job and preserve its non-zero exit status.
+   The job should use the existing 2.3.0 host-toolchain setup and should not
+   reuse the sample build matrix's `/tmp/build` directory.
+3. Give the job a clear name indicating that it is the 2.3.0 test execution
+   pass. Upload or print the sanitycheck output sufficiently for failures to
+   be diagnosed, but do not make the job parse or duplicate its results.
+4. Update AGENTS.md and this TODO to say explicitly that this job executes
+   tests only on Zephyr 2.3.0; it does not provide 2.7.3/3.7.0 coverage.
 
 **Local evaluation**:
-- Unchanged default: `cd ci && ./sanitycheck.sh` still runs the 2.3.0 pass
-  and passes exactly as before (compare the test/pass counts).
-- New version: `cd ci && ZEPHYR_VERSION=3.7.0 ./sanitycheck.sh` (after
-  implementing twister dispatch) — expect it to work for qemu boards and to
-  skip/fail native_posix per the known 3.7 native_posix issues; if
-  native_posix cannot work on 3.7, filter it and document why.
-- Confirm a real failure is caught: intentionally build a broken test
-  locally, run the parameterized script for the affected version, and confirm
-  it reports FAIL and exits non-zero (do not commit the breakage).
+- Run the exact container command locally:
+  `cd ci && RUST_VERSION=1.78.0 ZEPHYR_VERSION=2.3.0 ./build-cmd.sh \
+  ./ci/sanitycheck.sh` (adapt the working-directory prefix only if the
+  container command requires it), and confirm all currently supported test
+  platforms are built/executed.
+- Confirm a deliberate, temporary test failure makes the command and the CI
+  job exit non-zero; remove the temporary failure before committing.
+- Verify the new workflow job's image, command, and failure propagation by
+  checking the yaml matrix manually; no later-version image should be used.
 
-**Done when**: the script runs for all three versions (or documents why a
-version cannot), defaults preserve today's 2.3.0 behavior, and failures are
-reported with a non-zero exit.
+**Done when**: the 2.3.0 sanitycheck runs as a separate required CI job,
+reports test failures, and its limited version scope is documented.
+
+## Task 7 — Separately migrate later-version test execution to twister
+
+**Why last**: Zephyr 2.7.3 and 3.7.0 use the later `twister` runner rather
+than the 2.3.0 `sanitycheck` interface. This task must not be mixed with Task
+6 or with sample execution. Twister should own emulator lifecycle, completion
+recognition, timeouts, and cleanup; do not implement test execution with a
+bare `ninja run`/`timeout` pipeline.
+
+**Steps**:
+1. In each pinned container, inspect the available runner and its help:
+   `ls $ZEPHYR_BASE/scripts/` and
+   `$ZEPHYR_BASE/scripts/twister --help`. Record the actual flag differences
+   between 2.7.3 and 3.7.0 rather than assuming the 2.3.0 sanitycheck flags
+   are compatible.
+2. Design a version-aware runner interface for `ci/sanitycheck.sh` or a new
+   script. Preserve the Task 6 2.3.0 behavior unchanged; dispatch 2.7.3 and
+   3.7.0 to twister only after their commands and output formats are known.
+3. Filter boards according to each test's testcase.yaml and the known
+   native_posix/Rust-target limitation. Do not make 3.7.0 native_posix a
+   required run if the Rust target still lacks `std`.
+4. Ensure the runner returns non-zero for build failures, test failures,
+   timeouts, and emulator startup failures. Verify that it cleans up QEMU and
+   native_posix processes after pass, fail, and timeout cases.
+5. Once local execution is reliable, add separate CI jobs per later Zephyr
+   version. Keep them separate from the sample build/run matrix so a runner
+   migration failure is easy to diagnose.
+
+**Local evaluation**:
+- Run one representative test on qemu_x86 and qemu_cortex_m3 in both the
+  2.7.3 and 3.7.0 containers, then expand to every testcase.yaml platform.
+- Test pass, build failure, assertion/test failure, and timeout cases; verify
+  each has the expected exit status and leaves no emulator process behind.
+- Compare the test/pass/fail counts with Task 6's 2.3.0 sanitycheck output;
+  differences must be explained by Zephyr runner/platform behavior, not
+  silently ignored.
+
+**Done when**: 2.7.3 and 3.7.0 test execution is independently reliable,
+process cleanup is proven, CI jobs cover the supported runner/platform
+combinations, and Task 6's 2.3.0 sanitycheck remains unchanged.
