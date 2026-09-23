@@ -92,7 +92,8 @@ def whitelist(app):
             r"(?m)^\s*platform_whitelist:\s*(\S.*)$", path.read_text()
         )
         if match:
-            return match.group(1).split()
+            # Intersect with the BOARDS trim knob so trimming still works.
+            return [b for b in match.group(1).split() if b in BOARDS]
     return BOARDS
 
 
