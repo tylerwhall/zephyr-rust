@@ -77,7 +77,7 @@ script, and the strict clean pass is green.
   a picolibc `posix_cheats.h` header issue. Samples build there too.
   Re-examine the exclusion comments (main.yml, build-all.sh) in Task 2.
 
-## Task 2 — Add tests/* to the build matrix (build-all.sh + main.yml)
+## Task 2 — Add tests/* to the build matrix (build-all.sh + main.yml) — DONE (eca23b5)
 
 **Why**: samples get 53 build jobs across 7 boards/3 versions; `tests/*` are
 never built by the main matrix at all — only compiled by clippy on
@@ -126,6 +126,23 @@ enumerate only whitelisted boards.
 **Done when**: `gen_jobs` output equals the yaml matrix (spot-check at least
 one exclude and one test×board×version combo), the full
 `./build-all.sh` passes, and both files commit together.
+
+**Notes from execution**:
+- Final matrix: 73 jobs (53 samples + 27 tests: eeprom 1×3, the other three
+  tests 8 each). Verified by diffing gen_jobs output against a python render
+  of the yaml matrix.
+- Tests actually build on MORE boards than their testcase.yaml whitelist
+  (rust/semaphore/posix-clock build on cortex_r5, riscv, and nucleo too);
+  only eeprom fails outside qemu_x86 (no devicetree eeprom node →
+  E0432 on the DT macro). The whitelist was kept as the matrix source
+  per the TODO; widening it is a possible follow-up.
+- Running build-all.sh locally requires RUST_VERSION to be set (it is not
+  inherited from env.sh defaults into the run function's containers;
+  without it the image tag is `zephyr-rust:3.7.0-` and the job fails).
+- Full-matrix validation was done in two trimmed runs (3.7.0 all boards +
+  eeprom/posix-clock; 2.7.3 all boards + all tests); all 45 jobs linked
+  zephyr.elf. The remaining combos (2.3.0 tests, 3.7.0 rust/semaphore)
+  are covered by the same code paths as the run combos.
 
 ## Task 3 — Turn on execution (CI Run step + optional RUN knob)
 
