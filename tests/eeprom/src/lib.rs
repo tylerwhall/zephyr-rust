@@ -2,19 +2,22 @@ extern crate zephyr_sys;
 
 use std::convert::TryInto;
 use std::ffi::CStr;
+use std::os::raw::c_char;
 
 use zephyr::device::DeviceSyscalls;
 use zephyr::eeprom::Eeprom;
+
+extern "C" {
+    static rust_eeprom_name: [c_char; 0];
+}
 
 #[no_mangle]
 pub extern "C" fn test_main() {
     use zephyr::context::Any as C;
 
     let eeprom = unsafe {
-        let device = C::device_get_binding(CStr::from_bytes_with_nul_unchecked(
-            zephyr_sys::raw::DT_N_S_eeprom_P_label,
-        ))
-        .expect("get eeprom");
+        let device = unsafe { CStr::from_ptr(rust_eeprom_name.as_ptr()) };
+        let device = C::device_get_binding(device).expect("get eeprom");
         Eeprom::new(device)
     };
 
