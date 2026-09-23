@@ -29,7 +29,7 @@ committed.
 
 ---
 
-## Task 1 — Fix CLIPPY_STRICT semantics and stale clippy documentation
+## Task 1 — Fix CLIPPY_STRICT semantics and stale clippy documentation — DONE (b9b7425)
 
 **Goal**: make `ci/clippy.sh`'s strictness flag behave as documented and sync
 the docs that describe it.
@@ -56,18 +56,26 @@ wrong in strict mode, and `run_common_pass` treats *any* non-empty
    clippy board **fail by default** (`CLIPPY_STRICT=1` default); `CLIPPY_STRICT=0`
    restores skip behavior.
 
-**Local evaluation**:
+**Local evaluation** (as executed):
 - Clean pass: `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy:/tmp/zephyr-rust-clippy" \
-  CLIPPY_ARGS="-D warnings" RUST_VERSION=1.78.0 ZEPHYR_VERSION=3.7.0 \
-  ./build-cmd.sh ci/clippy.sh eeprom` → `tests/eeprom: OK`, `clippy: OK`.
-- Skip path: run the same command with `CLIPPY_BOARD=qemu_cortex_m3`
-  (tests/eeprom is qemu_x86-only) with `CLIPPY_STRICT=0` → build fails, app
-  reported as SKIPPED, script exits 0; then with `CLIPPY_STRICT=1` (default)
-  → `clippy: FAILED`.
+  RUST_VERSION=1.78.0 ZEPHYR_VERSION=3.7.0 ./build-cmd.sh ci/clippy.sh eeprom`
+  with `CLIPPY_ARGS="-D warnings"` → `tests/eeprom: OK`, `clippy: OK`.
+- Skip path: `CLIPPY_BOARD=nonexistent_board` (a guaranteed build failure;
+  note tests/eeprom *does* build on qemu_cortex_m3 despite its whitelist).
+  With `CLIPPY_STRICT=0` → SKIPPED + hint, exit 0; default strict → exit 1.
+  Same pair for the common pass via `ci/clippy.sh lib`.
 - Confirm nothing else regressed: `ci/clippy.sh lib eeprom`.
 
 **Done when**: both strictness modes behave as documented, docs match the
 script, and the strict clean pass is green.
+
+**Notes from execution**:
+- `ci/build-cmd.sh` does NOT propagate host environment variables into the
+  container; pass them with `DOCKER_ARGS="... -e VAR=value"`.
+- The 3.7.0 × native_posix exclusion is real but the stated cause is wrong:
+  the failure is a Rust `E0463` (no `std` for the native_posix target), not
+  a picolibc `posix_cheats.h` header issue. Samples build there too.
+  Re-examine the exclusion comments (main.yml, build-all.sh) in Task 2.
 
 ## Task 2 — Add tests/* to the build matrix (build-all.sh + main.yml)
 
