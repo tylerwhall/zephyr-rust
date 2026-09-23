@@ -147,7 +147,7 @@ one exclude and one test×board×version combo), the full
   zephyr.elf. The remaining combos (2.3.0 tests, 3.7.0 rust/semaphore)
   are covered by the same code paths as the run combos.
 
-## Task 3 — Run only samples that exit automatically
+## Task 3 — Run only samples that exit automatically — DONE
 
 **Why**: the CI `Run` step is currently disabled for every matrix entry, but
 execution is valuable for samples. Tests must not be included in this task:
@@ -156,10 +156,11 @@ and emulator running. A timeout alone can also orphan QEMU descendants, so
 test execution needs a separate runner design (or sanitycheck/twister).
 
 **Context**: do not assume that every sample exits. `samples/rust-app` exits
-non-zero by design after printing the expected user-mode output; that is a
-candidate for execution, but every sample/board/version combination must be
-checked rather than assuming the qemu_x86 behavior generalizes. Nucleo is
-real hardware and must remain build-only. Tests are build-only in this task.
+non-zero by design after printing the expected user-mode output; every
+sample/board/version combination must be checked rather than assuming the
+qemu_x86 behavior generalizes. The inventory also identified `samples/no_std`
+on qemu_x86 as an automatic-exit case. Nucleo is real hardware and must
+remain build-only. Tests are build-only in this task.
 
 **Steps**:
 1. Before changing either matrix, inventory the current sample matrix by
@@ -192,7 +193,7 @@ real hardware and must remain build-only. Tests are build-only in this task.
 5. Do not add tests to the CI Run step. Leave the existing build matrix for
    tests intact until Task 6/7 provides a test runner.
 
-**Local evaluation**:
+**Local evaluation** (completed):
 - First perform the inventory in each container with commands equivalent to:
   `cd ci && RUST_VERSION=1.78.0 ZEPHYR_VERSION=<ver> ./build-cmd.sh \
   west build -d /tmp/build -p auto -b <qemu-board> <sample>` followed by the
@@ -208,6 +209,30 @@ real hardware and must remain build-only. Tests are build-only in this task.
 matrix, only verified automatic-exit combinations run in CI, non-exiting
 samples are explicitly recorded as build-only, tests remain build-only, and
 process cleanup is proven locally.
+
+**Notes from execution**:
+- Inventoried every QEMU board/sample combination for Zephyr 2.3.0, 2.7.3,
+  and 3.7.0; each built successfully. `qemu_riscv32` and `qemu_riscv64` are
+  only in the 3.7.0 matrix. `nucleo_l552ze_q` is real hardware and was not
+  run.
+- The exact automatic-exit set is `samples/rust-app` and `samples/no_std` on
+  `qemu_x86` for all three versions. Both print
+  `Next call will crash if userspace is working.` then fail deliberately with
+  status 1 due to the user-mode page fault; QEMU exited and no QEMU process
+  remained. Other combinations did not exit in the measured interval: 30
+  seconds for Zephyr 2.3.0 and 10 seconds for 2.7.3/3.7.0. This includes
+  `qemu_cortex_r5`, where a fatal-error message did not cause QEMU to exit.
+  `samples/serial` waits indefinitely for input.
+- `RUN=1` completed the trimmed six-job run set (both samples × all three
+  versions), asserting the output marker and expected status; no host QEMU
+  process remained. The runner's timeout cleanup was also exercised by the
+  non-exiting inventory and left no QEMU process in the container or on the
+  host.
+- A trimmed `RUN=0` build completed without runtime output or a remaining
+  QEMU process. Tests stay build-only.
+
+Task 3 is complete; only the verified combinations are configured to run in
+CI, and the required process cleanup and output/status handling passed locally.
 
 ## Task 4 — Rewrite the AGENTS.md matrix guidance as an evaluated ladder
 
