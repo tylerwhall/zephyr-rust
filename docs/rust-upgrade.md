@@ -38,6 +38,18 @@ the CI images. Per-upgrade decisions and conflicts are recorded in
    *intentional* page fault (`ZEPHYR FATAL ERROR 0: CPU exception`,
    "Access violation: user thread not allowed to read"). The non-zero exit
    is by design. Anything else is a failure — stop and fix the baseline.
+5. If the new containers are already on ghcr.io, start pulling them in the
+   background now so the download overlaps with the rebase:
+
+   ```sh
+   for v in <zephyr versions>; do
+       docker pull ghcr.io/<registry>/zephyr-rust:zephyr-rust-$v-<new> &
+   done
+   ```
+
+   Pull the ghcr-prefixed names: [Phase 4](#4-build-and-validate) forces
+   `CONTAINER_IMAGE_PREFIX` to the ghcr prefix, so the images must exist under
+   those names.
 
 ## 2. Rebase the rust/rust port
 
@@ -101,7 +113,11 @@ mentions in docs).
 
 ## 4. Build and validate
 
-1. Rebuild the CI container image. **Gotcha**: `env.sh` resolves
+1. If Phase 1 started background pulls, confirm they finished
+   (`docker image inspect ghcr.io/<registry>/zephyr-rust:zephyr-rust-<v>-<new>`)
+   before building. A still-running pull is not a correctness problem —
+   docker blocks on it — but the pre-pull avoids that wait.
+2. If the image is not on ghcr.io, build it locally. **Gotcha**: `env.sh` resolves
    `RUST_VERSION` from the host's `rustc --version`, which triggers a
    rustup auto-install of the newly pinned toolchain. If the host can't
    write to `~/.rustup` (e.g. sandbox), `RUST_VERSION` comes out empty and
@@ -112,9 +128,22 @@ mentions in docs).
    cd ci && RUST_VERSION=<new> ZEPHYR_VERSION=<ver> ./container-build.sh
    ```
 
-2. Build + run the default sample in the new image, **fresh build dir**
+3. Build + run the default sample in the new image, **fresh build dir**
    (an old one caches the previous sysroot). Pass criteria: as in
    [Baseline](#1-baseline).
+
+   ```sh
+   cd ci
+   export RUST_VERSION=<new>
+   export CONTAINER_IMAGE_PREFIX=ghcr.io/<registry>/zephyr-rust:zephyr-rust-
+   DOCKER_ARGS="-v /tmp/zr-smoke:/tmp/build" \
+       ./build-cmd.sh west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app
+   DOCKER_ARGS="-v /tmp/zr-smoke:/tmp/build" \
+       ./build-cmd.sh ninja -C /tmp/build run
+   ```
+
+   `CONTAINER_IMAGE_PREFIX` forces the ghcr image names (matching the
+   Phase 1 pulls) instead of letting `env.sh` prefer a stale local image.
 
    **Gotcha**: the first build may fail with
    `error: failed to write .../rust/sysroot-stage1/Cargo.lock` — the repo
@@ -122,7 +151,7 @@ mentions in docs).
    `WRITABLE=1`; the lockfile diff is a real change, committed with the
    port.
 
-3. **Compile errors in the port** (upstream std/core API churn): fix each
+4. **Compile errors in the port** (upstream std/core API churn): fix each
    error as a *separate commit on top of the series* — one commit per
    error, upstream-quality, no history rewriting. Then **stop and wait**
    for user instructions on how to fold the fixes back into the series.
