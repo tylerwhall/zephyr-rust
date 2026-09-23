@@ -141,7 +141,8 @@ one exclude and one test×board×version combo), the full
   (rust/semaphore/posix-clock build on cortex_r5, riscv, and nucleo too);
   only eeprom fails outside qemu_x86 (no devicetree eeprom node →
   E0432 on the DT macro). The whitelist was kept as the matrix source
-  per the TODO; widening it is a possible follow-up.
+  per the TODO; widened to the full board set later (3f724a3), with all
+  24 newly whitelisted board/version builds verified.
 - Running build-all.sh locally requires RUST_VERSION to be set (it is not
   inherited from env.sh defaults into the run function's containers;
   without it the image tag is `zephyr-rust:3.7.0-` and the job fails).
