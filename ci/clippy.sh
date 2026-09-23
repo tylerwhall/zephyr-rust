@@ -69,11 +69,8 @@
 #   CLIPPY_JOBS          parallel app builds (default: number of CPUs)
 #   CLIPPY_ARGS          extra args appended after `--` on every clippy
 #                        invocation (e.g. CLIPPY_ARGS="-D warnings")
-#   CLIPPY_STRICT=1      also fail if an app cannot be *built* on
-#                        CLIPPY_BOARD. By default such apps are reported as
-#                        skipped (e.g. some tests only build on specific
-#                        Zephyr versions/boards); the script only fails on
-#                        clippy failures.
+#   CLIPPY_STRICT=0      report apps that cannot be *built* on CLIPPY_BOARD as
+#                        skipped instead of failing. The default is strict.
 
 set -euo pipefail
 
@@ -85,6 +82,9 @@ BOARD="${CLIPPY_BOARD:-qemu_x86}"
 BUILD_DIR="${CLIPPY_BUILD_DIR:-/tmp/zephyr-rust-clippy}"
 JOBS="${CLIPPY_JOBS:-$(nproc 2>/dev/null || echo 2)}"
 CLIPPY_ARGS="${CLIPPY_ARGS:-}"
+# Fail by default when an app cannot build. Set CLIPPY_STRICT=0 to retain the
+# legacy skip behavior for board-incompatible apps.
+CLIPPY_STRICT="${CLIPPY_STRICT:-1}"
 
 if ! cargo clippy --version >/dev/null 2>&1; then
     echo "error: cargo-clippy is not installed for the active toolchain." >&2
@@ -185,8 +185,8 @@ run_clippy() {
 # 1. Host crates (no --target: proc-macros and host tools build for the
 #    host, and must not use the cross-compiled sysroot).
 # ---------------------------------------------------------------------------
-run_clippy --manifest-path zephyr-bindgen/Cargo.toml --all-targets || true
-run_clippy --manifest-path rust/zephyr-macros/Cargo.toml --all-targets || true
+run_clippy --manifest-path zephyr-bindgen/Cargo.toml --all-targets
+run_clippy --manifest-path rust/zephyr-macros/Cargo.toml --all-targets
 
 # Common code pass: build samples/rust-app to get the sysroot and
 # environment, then lint the sysroot-layer and app-layer library crates.
@@ -207,11 +207,11 @@ run_common_pass() {
 
         RUSTFLAGS="${rf}" run_clippy --manifest-path rust/sysroot-stage1/Cargo.toml \
             -p zephyr-sys -p zephyr-core -p time-convert \
-            --target "${RUST_TARGET_SPEC}" --lib || true
+            --target "${RUST_TARGET_SPEC}" --lib
 
         for m in rust/zephyr rust/zephyr-logger rust/zephyr-futures; do
             RUSTFLAGS="${rf}" run_clippy --manifest-path "${m}/Cargo.toml" \
-                --target "${RUST_TARGET_SPEC}" --lib || true
+                --target "${RUST_TARGET_SPEC}" --lib
         done
     else
         echo "note: samples/rust-app did not build on ${BOARD}; last lines of"
