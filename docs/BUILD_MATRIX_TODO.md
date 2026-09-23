@@ -29,6 +29,9 @@ committed.
   native_posix target (`rustc E0463`).
 - Every commit: short imperative subject, optional lowercase component
   prefix (`ci:`, `build:`, `docs:`), no Conventional Commits.
+- Every task should be committed as one or more atomic commits with
+  description. Updates to this TODO or AGENTS.md should be committed
+  separately.
 
 ---
 
