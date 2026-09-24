@@ -238,7 +238,7 @@ process cleanup is proven locally.
 Task 3 is complete; only the verified combinations are configured to run in
 CI, and the required process cleanup and output/status handling passed locally.
 
-## Task 4 — Rewrite the AGENTS.md matrix guidance as an evaluated ladder
+## Task 4 — Rewrite the AGENTS.md matrix guidance as an evaluated ladder — DONE (afb862f)
 
 **Why**: the validation stages send agents from manual single builds straight
 to the full matrix, point them at native_posix/3.7 for tests, and do not
@@ -281,6 +281,25 @@ confirming each one behaves exactly as written.
 
 **Done when**: every command quoted in AGENTS.md was executed verbatim during
 evaluation and produced the stated outcome.
+
+**Notes from execution**:
+- Landed as five stages in AGENTS.md (the task's "stage 2.5" became stage 3,
+  and full-matrix/clippy became stage 4): smoke run via `ci/run-sample.sh`;
+  matrix expansion by app via `build-all.sh` trim knobs; per-version clippy
+  for `zephyrNNN`-gated apps; the pre-PR trio (`build-all.sh` + 2.3.0
+  sanitycheck + CI-parity clippy); and the Rust-version coupling note.
+- Every documented command was executed for evaluation: smoke run (marker +
+  intentional status 1), `APPS=tests/eeprom ./build-all.sh` (3 builds),
+  `ci/clippy.sh eeprom` on 2.3.0, full `build-all.sh` resume (113/113),
+  `./sanitycheck.sh` (7/7), and the full clippy pass on 3.7.0 with futures
+  included (all OK, `-D warnings`).
+- Two findings changed the commands from the original steps: clippy volumes
+  must be per Zephyr version (`CLIPPY_BUILD_DIR` is not version-keyed), and the
+  sanitycheck step had to be scoped (see Task 8) — the 2.3.0 runner was already
+  red on native_posix before this task.
+- Native_posix build guidance: tests build on native_posix in the 2.3.0/2.7.3
+  containers (3.7.0 lacks Rust std, rustc E0463); `ninja run` is documented
+  as print-output-only, not test execution.
 
 ## Task 5 — Single-source the matrix definition — DONE (7efe6ad)
 
@@ -404,3 +423,58 @@ bare `ninja run`/`timeout` pipeline.
 **Done when**: 2.7.3 and 3.7.0 test execution is independently reliable,
 process cleanup is proven, CI jobs cover the supported runner/platform
 combinations, and Task 6's 2.3.0 sanitycheck remains unchanged.
+
+## Task 8 — Expand the platform scope of the 2.3.0 sanitycheck
+
+**Why**: "ci: limit the 2.3.0 sanitycheck to boards that pass" limited
+`ci/sanitycheck.sh` to `qemu_x86` and `qemu_cortex_m3` because the Zephyr 2.3.0
+sanitycheck runner (pre-twister, `scripts/sanity_chk/sanitylib.py`) hardcodes
+stricter flags for test builds than a plain `west build` uses:
+
+- line 1741 injects `-DEXTRA_CFLAGS="-Werror"` and
+  `-DEXTRA_LDFLAGS="-Wl,--fatal-warnings"`, with no option to disable either;
+- the native_posix kernel then fails compiling `kernel/init.c`: the `extern
+  K_THREAD_STACK_ARRAY_DEFINE` declaration in `kernel_internal.h` conflicts
+  with the definition's `__noinit` section (section names embed `__FILE__`),
+  a warning in plain builds (`-Werror=attributes`) that became fatal —
+  verified by diffing the compile commands of a passing `west build` and the
+  failing sanitycheck build (only difference: bare `-Werror`);
+- qemu_cortex_r5 fails at link: `-Wl,--fatal-warnings` turns the
+  `relocation in read-only section`/`DT_TEXTREL` warning into an error;
+- qemu_riscv32/64 fail earlier: on Zephyr 2.3 the module CMake derives the
+  Rust target as `riscv64i-unknown-zephyr-elf`, but `rust/targets/` only has
+  `riscv64imac-unknown-zephyr-elf.json` (riscv is 3.x-only; see ci/matrix.py).
+
+A plain `west build` of every affected combination passes (verified: the
+full 48-test-instance build matrix, including native_posix and cortex_r5 on
+2.3.0), so these are sanitycheck-only failures.
+
+**Possible approaches to attempt**:
+1. CMake-side warning relaxation in the tests (or the module CMakeLists):
+   for Zephyr 2.x, append `-Wno-error=attributes` and `-Wl,--no-fatal-warnings`
+   after the runner's EXTRA flags so the inherent warnings stay warnings.
+   Costs: touches shared CMake used by every version; must be version-gated
+   (`KERNEL_VERSION_MAJOR < 3`); weakens the runner's warning discipline on
+   exactly the boards it would newly cover. Verify it does not mask genuine
+   app-code warnings.
+2. Wrapper flags without touching test CMake: `ci/sanitycheck.sh` could
+   export `EXTRA_CFLAGS`/`EXTRA_LDFLAGS`-neutralizing env or patch the runner
+   invocation (e.g. wrap sanitylib.py's build invocation), keeping the
+   change inside `ci/`.
+3. Accept the loss and instead add build-only coverage for the excluded
+   boards elsewhere (already done — the main matrix builds them), and only
+   revisit if test *execution* on native_posix/r5/riscv becomes valuable
+   (ztest execution on native_posix would be the most valuable).
+4. Long term this collapses into Task 7: twister makes the strict flags
+   configurable, so porting 2.7.3/3.7.0 execution may also re-widen 2.3.0
+   platforms if its runner behavior differs.
+
+**Local evaluation** (for whichever approach is chosen): run
+`cd ci && RUST_VERSION=1.78.0 ./sanitycheck.sh` with the expanded platform
+list; expect the newly covered boards to pass or produce explained, stable
+failures; confirm genuine test failures still fail the run (introduce a
+temporary failing ztest assertion, then revert).
+
+**Done when**: the documented, evaluated scope of `ci/sanitycheck.sh` covers
+as many of the 2.3.0 whitelisted boards as practical without weakening
+warning discipline, and AGENTS.md documents the result.
