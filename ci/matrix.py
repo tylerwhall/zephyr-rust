@@ -45,7 +45,7 @@ BOARDS = os.environ.get(
 ).split()
 APPS = os.environ.get(
     "APPS",
-    "samples/rust-app samples/no_std samples/serial"
+    "samples/rust-app samples/no_std samples/serial samples/futures"
     " tests/rust tests/semaphore tests/posix-clock tests/eeprom",
 ).split()
 

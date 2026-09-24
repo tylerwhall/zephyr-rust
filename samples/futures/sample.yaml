@@ -1,5 +1,8 @@
 common:
-    arch_whitelist: x86 arm posix
+    # Built on every board it links on (verified via ci/build-all.sh);
+    # ci/matrix.py derives the build matrix from platform_whitelist.
+    arch_whitelist: x86 arm posix riscv
+    platform_whitelist: qemu_x86 qemu_cortex_m3 qemu_cortex_r5 nucleo_l552ze_q native_posix qemu_riscv32 qemu_riscv64
 tests:
     rust.futures:
         tags: rust
