@@ -120,9 +120,16 @@ remaining warnings grouped by lint. Details:
   all tests lint fine.
 
 ### Run tests
-- Full repository tests via Zephyr sanitycheck (from `README.rst`):
-  - `$ZEPHYR_BASE/scripts/sanitycheck --testcase-root tests -p native_posix -N`
-- Single test (build + run one test directory):
+- Automated test execution: `cd ci && RUST_VERSION=1.78.0 ./sanitycheck.sh` —
+  Zephyr 2.3.0 sanitycheck over `tests/`, executing on qemu_x86 and
+  qemu_cortex_m3. Other boards/versions are build-only: the 2.3.0 runner
+  hardcodes `-Werror`/`-Wl,--fatal-warnings`, which fails on the native_posix
+  kernel's noinit attribute warning and the cortex_r5 DT_TEXTREL link
+  warning, and riscv boards are Zephyr 3.x-only. See the header comment in
+  `ci/sanitycheck.sh`; 2.7.3/3.7.0 execution is tracked as twister work in
+  `docs/BUILD_MATRIX_TODO.md`.
+- Single test (build one test directory; `ninja run` prints the output but
+  the emulator does not exit):
   - `west build -p auto -b native_posix tests/semaphore`
   - `cd build && ninja run`
 
@@ -149,25 +156,54 @@ remaining warnings grouped by lint. Details:
 
 ## Validation workflow for changes
 
-When changing `zephyr-rust` (feature work, Rust or Zephyr version ports), validate in stages. Each stage must pass before expanding to the next; stop and fix at the first failure.
+When changing `zephyr-rust` (feature work, Rust or Zephyr version ports),
+validate in stages. Each stage must pass before expanding to the next; stop
+and fix at the first failure. The build matrix — per-app board whitelists
+from `testcase.yaml`/`sample.yaml`, version exclusions, and which samples
+run — is single-sourced in `ci/matrix.py`; `ci/build-all.sh` runs exactly
+the jobs `.github/workflows/main.yml` builds.
 
-1. **Single-target smoketest (always, first)**: build + run the default sample on the default board in one container invocation (see "Run a built QEMU/native image"). Pass = clean build and the expected console output (see "Build natively" for what success looks like).
-2. **Expand the matrix based on the change type**. The matrix — per-app board
-   whitelists from `testcase.yaml`, version exclusions, and which samples run —
-   is single-sourced in `ci/matrix.py`; `ci/build-all.sh` runs exactly the
-   jobs `.github/workflows/main.yml` builds, trimmed with `ZEPHYR_VERSIONS`,
-   `BOARDS`, and `APPS`, e.g. `cd ci && APPS=tests/semaphore ./build-all.sh`.
-   Include the tests in `APPS` for kernel-object, syscall, or Kconfig changes.
+1. **Single-target smoketest (always, first)**: build the default sample on
+   the default board and run it with the process-group-safe runner
+   (`ci/run-sample.sh`), per "Run a built QEMU/native image". Pass: clean
+   build, console output through `Next call will crash if userspace is
+   working.`, then exit status 1 from the intentional user-mode page fault.
+   That behavior is verified only for `samples/rust-app` and `samples/no_std`
+   on `qemu_x86` (all three Zephyr versions); every other combination leaves
+   the emulator running, so the runner's process-group cleanup is required,
+   never a bare `ninja run`/`timeout` pipeline.
+2. **Expand the matrix by app**: build the affected apps across their
+   whitelists and all Zephyr versions with
+   `cd ci && APPS=<app>... ./build-all.sh` (trim further with `BOARDS=` and
+   `ZEPHYR_VERSIONS=`). Include the tests in `APPS` for kernel-object,
+   syscall, or Kconfig changes. This is build coverage, not test execution;
+   only the `RUN_CASES` samples execute (with `RUN=1`).
    - Rust version port: follow `docs/rust-upgrade.md` (rebase the rust/rust port, update the pins, rebuild the container). Only one Rust version is supported per revision, since the std port must exactly match the compiler.
    - Zephyr version port: build the full matrix on the new `ZEPHYR_VERSION`
      (`cd ci && ZEPHYR_VERSIONS=<new> ./build-all.sh`), and confirm the other
      supported versions (see `README.md`) are not broken.
-3. **Full matrix + tests (pre-PR / CI parity)**:
+3. **Lint version-gated code per version**: cfg'd-out code is not
+   type-checked, so an app that cfg-gates on `zephyrNNN` (e.g. `tests/eeprom`)
+   must be clippy-linted on every version whose branch it touches. Use a
+   separate clippy volume per Zephyr version (`CLIPPY_BUILD_DIR` is not
+   version-keyed):
+   `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy-<ver>:/tmp/zephyr-rust-clippy" CLIPPY_ARGS="-D warnings" RUST_VERSION=1.78.0 ZEPHYR_VERSION=<ver> ./build-cmd.sh ci/clippy.sh <app>`
+4. **Full matrix, tests, and clippy (pre-PR / CI parity)**:
    - `cd ci && ./build-all.sh` — the full matrix with `--resume` (reruns skip
-     completed jobs; `rm -rf ci/log/build` forces a full re-run). `RUN=1` also
-     executes only the samples verified to exit on their own (`RUN_CASES` in
-     `ci/matrix.py`); tests stay build-only here.
-   - `cd ci && ./sanitycheck.sh` — Zephyr sanitycheck over `tests/`; or individual tests via `west build -p auto -b native_posix tests/<name>` + `ninja run`.
+     completed jobs; `rm -rf ci/log/build` forces a full re-run). Optionally
+     `RUN=1` to execute the verified exiting samples.
+   - `cd ci && RUST_VERSION=1.78.0 ./sanitycheck.sh` — executes the tests on
+     Zephyr 2.3.0 (qemu_x86, qemu_cortex_m3); the only automated test
+     execution today, not full-version test execution (2.7.3/3.7.0
+     execution is separate twister work, see `docs/BUILD_MATRIX_TODO.md`).
+   - `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy-3.7.0:/tmp/zephyr-rust-clippy" CLIPPY_ARGS="-D warnings" RUST_VERSION=1.78.0 ./build-cmd.sh ci/clippy.sh`
+     — the same pass the CI clippy job runs (warnings fatal, strict).
+5. **Rust-version coupling for local runs**: containers are per (Zephyr,
+   Rust) image. When the host has no usable rustc, pass `RUST_VERSION`
+   explicitly on every `build-cmd.sh`/`sanitycheck.sh` invocation (all
+   examples above do); `ci/build-all.sh` defaults it from
+   `rust-toolchain.toml`. The image tags in `main.yml` are updated manually
+   per `docs/rust-upgrade.md`.
 
 ## Commit message style
 
