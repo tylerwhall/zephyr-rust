@@ -3,6 +3,96 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.82.0 → 1.83.0 (2026-09-30)
+
+**Result**: 16 port commits rebased from `1.82.0` onto `1.83.0`, branch
+`zephyr-1.83.0`, final tip `0aa4f0475411d633776909438bb3fdaf2824c51c`.
+The old `zephyr-1.82.0` branch was not rewritten. Rust 1.83.0 requires
+libc `0.2.161`; rebased the existing six-commit port onto that tag without
+conflicts, branch `zephyr-0.2.161`, tip
+`79f074e38df3f46ffd241f58d20135f9b9f1f50c`. The old libc port was not
+rewritten, and range-diff confirms all six patches are unchanged.
+
+**Validation checkpoint**: the Rust 1.82.0 baseline and upgraded Rust
+1.83.0 default sample built and ran on `qemu_x86` / Zephyr 3.7.0. Both
+reached `Next call will crash if userspace is working.`, the expected
+user-thread access violation and CPU exception, and run status 1. TLS
+isolation and mutex contention checks passed. After autosquashing, a
+second, fresh build with the repository mounted read-only also built and
+ran successfully. Every run used the process-group-safe
+`ci/run-sample.sh` runner. Stopped before the full matrix for user review,
+as requested; no matrix, repository test suite, or Clippy pass was
+started. Other boards and Zephyr versions remain unvalidated. Nothing
+was pushed.
+
+### Conflicts and adaptations
+
+1. **`rust: remove submodules not required to build zephyr-rust`**:
+   upstream updated eight intentionally deleted documentation/Cargo
+   submodule pointers and added `src/gcc` and `src/tools/enzyme`. Kept
+   the deletions, removed the two new compiler-only submodules, and
+   resolved `.gitmodules` to retain only stdarch and backtrace.
+2. **`zephyr: ThreadId: don't use uninitialized mutex`**: retained
+   upstream's import ordering and the new `pub(crate)` visibility of
+   `ThreadId::new`, while preserving the port's 32-bit atomic counter.
+   Rust 1.83 introduces `ThreadId::from_u64` for persistent current-thread
+   IDs stored through OS-TLS pointers. Adapted it with checked `u32`
+   conversion and `NonZeroU32`, rejecting zero and out-of-range values
+   rather than truncating them. Retained upstream's new current-thread
+   implementation unchanged.
+3. **Random backend compile errors (`E0432`, `E0425`)**: Rust 1.83 moves
+   random generation and HashMap seeding out of PAL common into
+   `sys::random`. Removed the obsolete `common::hashmap_random_keys`
+   export, then registered Zephyr with upstream's unsupported backend
+   in both the selection and default-HashMap-seeding cfgs. Each fix was
+   committed separately as a fixup of `zephyr: stub sys impl`, with a
+   build after each. Random generation remains unsupported (the new
+   unstable API panics); HashMap seeds now use upstream's allocation
+   address fallback instead of the former fixed `(1, 2)`. This is not
+   cryptographic entropy; no Zephyr RNG API or Kconfig dependency was
+   introduced.
+4. **Autosquash and review**: autosquashed both fixups after the build
+   and smoke run succeeded, without conflicts. Verified the resulting
+   tree hash exactly matched the validated pre-autosquash tree. The
+   final range-diff retains all 16 commits; semantic adaptations are
+   limited to the removals, ThreadId, and random backend above. The
+   delta from `1.83.0` contains only port changes and intentional
+   submodule deletions, with no conflict markers or new lint allows.
+
+### Dependencies and process notes
+
+- Updated the stdarch worktree to Rust 1.83.0's upstream pointer
+  `c881fe3231b3`; backtrace remains at `230570f2dac8`. Recursive submodule
+  update completed successfully; no nested port changes.
+- The first new-version build failed to update the sysroot lockfile on
+  the read-only mount. Used `WRITABLE=1` only for Cargo lock updates,
+  with `RUSTC_BOOTSTRAP=1` for std's public-dependency manifest feature.
+  Resolved compiler_builtins explicitly to `0.1.133`, matching Rust
+  1.83's library lockfile and minimum requirement, rather than selecting
+  a newer release incompatible with this compiler/Cargo.
+- Cargo initially selected hashbrown `0.15.5`, which failed with missing
+  compiler_builtins, unknown `strict_provenance_lints`, and unavailable
+  `rustc_const_stable_indirect` attributes. Resolved explicitly to
+  upstream Rust 1.83's locked `0.15.0`; the next build passed that crate.
+  The lockfile also updates libc to `0.2.161`, allocator-api2 to
+  `0.2.21`, adds std's pinned memchr `2.5.0`, and uses Cargo's lockfile
+  format 4. Existing rustc-demangle and other resolutions are retained.
+- Pulled the baseline `3.7.0-1.82.0` and all target images
+  (`2.3.0-1.83.0`, `2.7.3-1.83.0`, `3.7.0-1.83.0`) from
+  `ghcr.io/tylerwhall/zephyr-rust`. Forced the ghcr prefix and explicit
+  Rust/Zephyr versions on every container invocation. No local images
+  were built; the user required stopping if any image could not be
+  pulled.
+- Updated active pins, workflow tags/default, README, AGENTS.md, and
+  pending build-matrix command examples. Historical records are unchanged.
+- Builds still emit sysroot/Zephyr warnings, including unused std PAL
+  imports/functions and the unsupported dylib crate type. Clippy and
+  broader compatibility coverage remain pending, not claimed as passed.
+- Logs and separate timestamped Docker build volumes remain local under
+  `.upgrade-logs/`, excluded from commits. Final clean build/run logs:
+  `final-1.83-build-20260930-193739.log` and
+  `final-1.83-run-20260930-193739.log`. Push is deferred to the user.
+
 ## 1.81.0 → 1.82.0 (2026-09-30)
 
 **Result**: 16 port commits rebased from `1.81.0` onto `1.82.0`, branch
