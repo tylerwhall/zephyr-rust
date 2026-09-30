@@ -3,6 +3,87 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.79.0 → 1.80.0 (2026-09-30)
+
+**Result**: 16 port commits rebased from `1.79.0` onto `1.80.0`, branch
+`zephyr-1.80.0`, final tip `8ab4e3b06aa03faf93d2a2ed9e22ea06fe14d2f5`.
+The old `zephyr-1.79.0` branch was not rewritten. Review removed the extra
+generic OS-TLS adaptation from the new branch in favor of a local
+`zephyr-futures` initializer change.
+`rust/libc` remains at `9c4f7e0888a8fbb1e0bfaa48b1bb566f1ebcaa99`:
+Rust 1.80.0 still requires `0.2.153`, matching the existing six-commit port.
+
+**Validation checkpoint**: the Rust 1.79.0 baseline and the final Rust
+1.80.0 default sample built and ran on `qemu_x86` / Zephyr 3.7.0. Both
+reached `Next call will crash if userspace is working.`, the expected
+user-thread access violation and CPU exception, and run status 1.
+Stopped here for review at the user's request: the full build matrix,
+repository tests, full strict clippy, and per-version lint runs remain
+pending. No full runs were started. After removing the generic TLS patch,
+a fresh sysroot build reproduced the clippy warning; the local fix then
+passed targeted `zephyr-futures` clippy with `--locked --lib -D warnings`
+and the default sample build and run.
+
+### Conflicts and adaptations
+
+1. **`rust: remove submodules not required to build zephyr-rust`**:
+   upstream updated the intentionally deleted documentation, LLVM, and
+   Cargo submodule pointers. Kept the deletions and the merged
+   `.gitmodules`. Rust 1.80 also introduced `src/tools/rustc-perf`, which
+   is not needed to build this port; removed it and its `.gitmodules`
+   entry in a fixup, then autosquashed into the original removal commit.
+   No other rebase conflicts occurred.
+2. **OS-TLS const initialization**: library clippy reported
+   `initializer for thread_local value can be made const` for
+   `zephyr-futures` even though its initializer already uses `const {}`.
+   Rust 1.80's OS-TLS macro routes const initializers through a non-const
+   function, which Clippy inspects without recognizing the caller's const
+   syntax. Unlike native TLS, this backend still lazily allocates a boxed
+   per-thread value; const syntax only checks the initializer at compile
+   time, not optimizes its storage or runtime initialization. An initial
+   generic macro patch retained a const initializer function (after fixing
+   a helper-arm recursion error). Review rejected changing generic upstream
+   Rust for a local false positive, so that commit was removed entirely.
+   `zephyr-futures` now uses `RefCell::default()`, giving the same empty
+   `RefCell<Option<Reactor>>` through the ordinary lazy initializer path.
+   Default is not const in Rust 1.80, so Clippy correctly leaves it alone.
+   TLS isolation, allocation, and destruction behavior are unchanged. No
+   lint allows, alternative TLS backend, or unstable API were needed.
+3. **Rust 1.80 cfg checking**: registered all Zephyr version cfg names in
+   CMake's exported RUSTFLAGS, including disabled version thresholds.
+   Registered zephyr-core's Kconfig cfg names in its build script. These
+   declarations enable checking without enabling any additional cfgs.
+
+### Dependencies and process notes
+
+- Updated `library/backtrace` and `library/stdarch` worktrees to the
+  upstream 1.80.0 pointers (`72265bea2108`, `df3618d9f351`).
+- The first new-version build needed to update the sysroot lockfile and
+  failed on the read-only repository mount; reran with `WRITABLE=1`.
+  Rust 1.80 raises the minimum `rustc-demangle` version to `0.1.24`.
+  Cargo selected `0.1.28`, which drops its compiler_builtins dependency
+  and failed with `E0463` in this custom sysroot. Resolved explicitly to
+  upstream Rust 1.80.0's locked `0.1.24`, retaining compiler_builtins.
+  The update command required `RUSTC_BOOTSTRAP=1` for std's unstable
+  `public-dependency` manifest feature.
+- Pulled all images from `ghcr.io/tylerwhall/zephyr-rust`: the
+  `3.7.0-1.79.0` baseline and `2.3.0-1.80.0`, `2.7.3-1.80.0`,
+  `3.7.0-1.80.0` target images. Forced the ghcr prefix on every container
+  invocation; no images were built locally.
+- The host crates passed strict library-pass clippy. Subsequent library
+  passes reported success while their west build logs contained the
+  temporary TLS macro recursion error: `ci/clippy.sh` can reuse a stale
+  `zephyr.elf` after a failed rebuild. Those successes are not considered
+  final validation. The final smoke command independently required the
+  west build to succeed before running QEMU. Use fresh build directories
+  for the pending full lint pass.
+- Updated active version pins, workflow image tags, README, and current
+  command examples in AGENTS.md and the build-matrix TODO. Historical
+  examples in completed TODO tasks remain unchanged.
+- Validation logs are retained locally under `.upgrade-logs/` and are not
+  committed. Unlike the end-to-end process, broader validation and push
+  are deliberately deferred until review.
+
 ## 1.78.0 → 1.79.0 (2026-09-24)
 
 **Result**: 15 port commits rebased from `1.78.0` onto `1.79.0` plus one
