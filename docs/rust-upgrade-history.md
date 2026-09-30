@@ -18,8 +18,17 @@ user-thread access violation and CPU exception, and run status 1. The
 upgraded sample also passed a second, fresh build with the repository
 mounted read-only. Smoke output includes TLS isolation and mutex
 contention checks. Every run used the process-group-safe
-`ci/run-sample.sh` runner. Stopped before the full matrix for user review,
-as requested; broader builds, repository tests, and Clippy remain pending.
+`ci/run-sample.sh` runner. Initially stopped before the full matrix for
+user review, as requested. After authorization to continue, strict Clippy
+passed for host crates, libraries, and all eight apps/tests on Zephyr
+2.3.0, 2.7.3, and 3.7.0 / `qemu_x86`, with `--locked`, `-D warnings`,
+and no skips. The full 113-job matrix passed with `RUN=1`, including all
+six verified sample runs (expected crash marker and exit status 1).
+All six run logs contain CPU exceptions; Zephyr 2.3.0 omits the literal
+access-violation line printed on 2.7.3 and 3.7.0, as in the prior upgrade.
+Zephyr 2.3.0 sanitycheck executed and passed all seven configurations on
+`qemu_x86` and `qemu_cortex_m3`, with zero failures, skips, or warnings.
+Later-version test execution remains outside the current runner's scope.
 Nothing was pushed.
 
 ### Conflicts and adaptations
@@ -70,12 +79,26 @@ Nothing was pushed.
   pending build-matrix command examples. Historical records are unchanged.
 - Builds still emit sysroot/Zephyr warnings (including libc cfg checks,
   unused std PAL imports/functions, and the unsupported dylib crate type).
-  This checkpoint is smoke validation, not strict lint validation.
+  Strict Clippy passed without code changes. Sysroot-layer crates still
+  receive only rustc lint coverage, not true Clippy coverage; see
+  `docs/CLIPPY_SYSROOT_DEBT.md`.
 - Logs and separate timestamped Docker build volumes remain local under
   `.upgrade-logs/`, excluded from commits. The final clean build/run logs
   are named `final-1.82-build-<timestamp>.log` and
-  `final-1.82-run-<timestamp>.log`. Full validation and push are deferred
-  until review.
+  `final-1.82-run-<timestamp>.log`.
+- Broader validation used fresh, version-keyed Clippy build directories,
+  two app workers, and a host/library pass before each full pass. Audited
+  all app exit files and build logs to rule out stale ELF reuse. Archived
+  the previous matrix result link and linked `ci/log/build` to a fresh
+  1.82 directory, so `--resume` could not skip older-version jobs.
+  Independently confirmed 113 unique completed build logs and six run
+  logs. Validation artifacts use timestamp `20260930-190511`.
+- Sanitycheck used the exact runner command and flags from
+  `ci/sanitycheck.sh` through `ci/build-cmd.sh`, with a fresh volume at
+  `.upgrade-logs/sanity-1.82-20260930-190511`. This avoids deleting or
+  reusing the root-owned `ci/sanity-out` from the previous upgrade.
+  It ran in the pulled Zephyr 2.3.0 image with
+  `ZEPHYR_TOOLCHAIN_VARIANT=zephyr`. Push remains deferred to the user.
 
 ## 1.80.0 → 1.81.0 (2026-09-30)
 
