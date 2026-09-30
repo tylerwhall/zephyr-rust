@@ -12,7 +12,7 @@ committed.
 - All local evaluation happens in the CI containers; the repo is mounted
   read-only by default. Edit files on the host, commit on the host.
 - One `ci/build-cmd.sh` invocation runs one command, and containers are
-  ephemeral: pass `RUST_VERSION=1.82.0 ZEPHYR_VERSION=<ver>` and any
+  ephemeral: pass `RUST_VERSION=1.83.0 ZEPHYR_VERSION=<ver>` and any
   `DOCKER_ARGS` on *every* invocation.
 - Persist build dirs across invocations with
   `DOCKER_ARGS="-v /tmp/<name>:/tmp/build"`; never `rm` the mount point
@@ -360,7 +360,7 @@ parameterize it and do not change it to twister yet.
 
 **Steps**:
 1. Add a GitHub Actions job in `.github/workflows/main.yml` using the
-   `zephyr-rust-2.3.0-1.82.0` container.
+   `zephyr-rust-2.3.0-1.83.0` container.
 2. Run `ci/sanitycheck.sh` from that job and preserve its non-zero exit status.
    The job should use the existing 2.3.0 host-toolchain setup and should not
    reuse the sample build matrix's `/tmp/build` directory.
@@ -372,7 +372,7 @@ parameterize it and do not change it to twister yet.
 
 **Local evaluation**:
 - Run the exact container command locally:
-  `cd ci && RUST_VERSION=1.82.0 ZEPHYR_VERSION=2.3.0 ./build-cmd.sh \
+  `cd ci && RUST_VERSION=1.83.0 ZEPHYR_VERSION=2.3.0 ./build-cmd.sh \
   ./ci/sanitycheck.sh` (adapt the working-directory prefix only if the
   container command requires it), and confirm all currently supported test
   platforms are built/executed.
@@ -470,7 +470,7 @@ full 48-test-instance build matrix, including native_posix and cortex_r5 on
    platforms if its runner behavior differs.
 
 **Local evaluation** (for whichever approach is chosen): run
-`cd ci && RUST_VERSION=1.82.0 ./sanitycheck.sh` with the expanded platform
+`cd ci && RUST_VERSION=1.83.0 ./sanitycheck.sh` with the expanded platform
 list; expect the newly covered boards to pass or produce explained, stable
 failures; confirm genuine test failures still fail the run (introduce a
 temporary failing ztest assertion, then revert).
