@@ -3,6 +3,83 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.80.0 → 1.81.0 (2026-09-30)
+
+**Result**: 16 port commits rebased from `1.80.0` onto `1.81.0`, branch
+`zephyr-1.81.0`, final tip `67a812dc932f1610add9ce819d0eea0dad81ad3e`.
+The old `zephyr-1.80.0` branch was not rewritten. `rust/libc` remains at
+`9c4f7e0888a8fbb1e0bfaa48b1bb566f1ebcaa99`: Rust 1.81.0 still requires
+`0.2.153`, matching the existing six-commit port.
+
+**Validation checkpoint**: the Rust 1.80.0 baseline and upgraded Rust
+1.81.0 default sample built and ran on `qemu_x86` / Zephyr 3.7.0. Both
+reached `Next call will crash if userspace is working.`, the expected
+user-thread access violation and CPU exception, and run status 1. The new
+sample also passed a fresh, read-only build and run after autosquashing.
+The process-group-safe `ci/run-sample.sh` runner was used for every run.
+Stopped before the full matrix for review at the user's request: the full
+build matrix, repository tests, and strict clippy remain pending. None of
+those broader passes were started, and nothing was pushed.
+
+### Conflicts and adaptations
+
+1. **`rust: remove submodules not required to build zephyr-rust`**:
+   upstream updated the intentionally deleted book, edition-guide,
+   embedded-book, reference, rust-by-example, rustc-dev-guide, Cargo, and
+   rustc-perf submodule pointers. Kept these deletions and the merged
+   `.gitmodules`; no additional submodules needed removal.
+2. **`zephyr: panicking: remove get/set hook rwlock`**: Rust 1.81 renamed
+   the hook-facing `PanicInfo` to `PanicHookInfo`, changed construction to
+   `PanicHookInfo::new`, and moved backtrace support from `sys_common` to
+   `sys`. Retained upstream's imports, signatures, lazy payload handling,
+   and non-Zephyr `RwLock<Hook>` implementation. Zephyr still bypasses the
+   hook lock and calls the default hook directly; custom hook APIs remain
+   unsupported. Removed the obsolete allocation comment/return block
+   rather than restoring upstream's deleted structure. Cfg-gated unused
+   hook machinery and documented the Zephyr stubs instead of carrying
+   the old `missing_docs` and `dead_code` allows. No new lint allows.
+3. **OS-TLS compile error (`E0432`)**: Rust 1.81 moved OS-TLS keys from
+   the PAL / `sys_common` interface into `sys::thread_local::key`. Moved
+   the Zephyr implementation to `sys/thread_local/key/zephyr.rs`, removed
+   its old PAL registration, and registered it alongside upstream's other
+   key backends. Reused upstream's racy `LazyKey`, retaining its sentinel
+   handling and the existing Zephyr 32-slot, thread-custom-data-backed
+   storage with no destructor support. Made key creation safe to match
+   the new interface, made the atomic counter immutable, and added
+   explicit unsafe blocks for the new module's unsafe-operation policy.
+   Committed this adaptation as a fixup of the original TLS port commit;
+   the next build and run passed.
+4. **Autosquash**: moving the TLS fixup earlier conflicted with the later
+   thread-parking registration in `sys/pal/zephyr/mod.rs`. Removed only
+   `thread_local_key` in the TLS commit and retained `thread_parking` in
+   its own commit. Verified the final tree hash exactly matched the
+   validated pre-autosquash tree, then rebuilt from scratch.
+
+### Dependencies and process notes
+
+- `library/backtrace` and `library/stdarch` stay at the same upstream
+  pointers as Rust 1.80.0 (`72265bea2108`, `df3618d9f351`). Recursive
+  submodule update completed successfully; no nested port changes.
+- The first new-version build failed to update the sysroot lockfile on
+  the read-only mount. Reran with `WRITABLE=1`; the only lockfile change
+  is `hermit-abi 0.3.9` → `0.4.0`, matching std's new requirement. Existing
+  compiler_builtins and rustc-demangle resolutions remain compatible;
+  no explicit dependency downgrades were needed.
+- Pulled the baseline `3.7.0-1.80.0` and all target images
+  (`2.3.0-1.81.0`, `2.7.3-1.81.0`, `3.7.0-1.81.0`) from
+  `ghcr.io/tylerwhall/zephyr-rust`. Forced the ghcr prefix on every
+  container invocation; no images were built locally.
+- Updated active pins, workflow tags, README, AGENTS.md, and pending
+  build-matrix command examples. Historical records and comments about
+  Rust 1.80 introducing cfg checking remain unchanged.
+- Builds still emit existing sysroot/Zephyr warnings; Rust 1.81 also
+  reports unregistered upstream `bootstrap` cfgs in `panic_abort` and
+  `unwind`. Smoke success is not evidence of a warning-free strict lint
+  pass; that validation remains pending for review.
+- Logs and persistent build directories are retained locally under
+  `.upgrade-logs/`, not committed. Broader validation and push are
+  deliberately deferred until review.
+
 ## 1.79.0 → 1.80.0 (2026-09-30)
 
 **Result**: 16 port commits rebased from `1.79.0` onto `1.80.0`, branch
