@@ -76,9 +76,12 @@ those broader passes were started, and nothing was pushed.
   reports unregistered upstream `bootstrap` cfgs in `panic_abort` and
   `unwind`. Smoke success is not evidence of a warning-free strict lint
   pass; that validation remains pending for review.
-- Logs and persistent build directories are retained locally under
-  `.upgrade-logs/`, not committed. Broader validation and push are
-  deliberately deferred until review.
+- Create `.upgrade-logs/` with `mkdir -p .upgrade-logs`; redirect each
+  pull/build/run's stdout and stderr to a named log there (`> ... 2>&1`).
+  Check its exit status and inspect only a short tail or targeted errors.
+  Use separate timestamped build directories there as Docker volumes.
+  Keep logs/builds local and out of commits. Broader validation and push
+  are deliberately deferred until review.
 
 ## 1.79.0 → 1.80.0 (2026-09-30)
 
