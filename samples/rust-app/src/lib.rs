@@ -18,7 +18,9 @@ use zephyr::mutex::*;
 use zephyr::semaphore::*;
 use zephyr::thread::ThreadSyscalls;
 
-thread_local!(static TLS: RefCell<u8> = const { RefCell::new(1) });
+// OS-TLS initializes lazily even with const syntax; use From to avoid
+// Clippy's missing_const_for_thread_local false positive in that macro path.
+thread_local!(static TLS: RefCell<u8> = RefCell::from(1));
 
 zephyr_macros::k_mutex_define!(MUTEX);
 zephyr_macros::k_sem_define!(TLS_SEM, 0, 1);
