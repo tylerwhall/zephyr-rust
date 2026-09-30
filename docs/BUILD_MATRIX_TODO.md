@@ -12,7 +12,7 @@ committed.
 - All local evaluation happens in the CI containers; the repo is mounted
   read-only by default. Edit files on the host, commit on the host.
 - One `ci/build-cmd.sh` invocation runs one command, and containers are
-  ephemeral: pass `RUST_VERSION=1.78.0 ZEPHYR_VERSION=<ver>` and any
+  ephemeral: pass `RUST_VERSION=1.79.0 ZEPHYR_VERSION=<ver>` and any
   `DOCKER_ARGS` on *every* invocation.
 - Persist build dirs across invocations with
   `DOCKER_ARGS="-v /tmp/<name>:/tmp/build"`; never `rm` the mount point
@@ -64,7 +64,7 @@ wrong in strict mode, and `run_common_pass` treats *any* non-empty
 
 **Local evaluation** (as executed):
 - Clean pass: `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy:/tmp/zephyr-rust-clippy" \
-  RUST_VERSION=1.78.0 ZEPHYR_VERSION=3.7.0 ./build-cmd.sh ci/clippy.sh eeprom`
+  RUST_VERSION=1.79.0 ZEPHYR_VERSION=3.7.0 ./build-cmd.sh ci/clippy.sh eeprom`
   with `CLIPPY_ARGS="-D warnings"` → `tests/eeprom: OK`, `clippy: OK`.
 - Skip path: `CLIPPY_BOARD=nonexistent_board` (a guaranteed build failure;
   note tests/eeprom *does* build on qemu_cortex_m3 despite its whitelist).
@@ -199,7 +199,7 @@ remain build-only. Tests are build-only in this task.
 
 **Local evaluation** (completed):
 - First perform the inventory in each container with commands equivalent to:
-  `cd ci && RUST_VERSION=1.78.0 ZEPHYR_VERSION=<ver> ./build-cmd.sh \
+  `cd ci && RUST_VERSION=1.79.0 ZEPHYR_VERSION=<ver> ./build-cmd.sh \
   west build -d /tmp/build -p auto -b <qemu-board> <sample>` followed by the
   process-group-safe runner. Repeat for every sample/board/version candidate.
 - Run the trimmed build matrix with `RUN=0` and confirm it remains build-only.
@@ -260,7 +260,7 @@ state only after tasks 1–3 land so the doc matches reality.
 3. Add a stage 2.5: when an app/test cfg-gates on the Zephyr version
    (`zephyr250`/`zephyr270`/`zephyr300`), lint it per version:
    `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy:/tmp/zephyr-rust-clippy" \
-   CLIPPY_ARGS="-D warnings" RUST_VERSION=1.78.0 ZEPHYR_VERSION=<ver> \
+   CLIPPY_ARGS="-D warnings" RUST_VERSION=1.79.0 ZEPHYR_VERSION=<ver> \
    ./build-cmd.sh ci/clippy.sh <app>` — cfg'd-out code is not type-checked,
    so clippy on one version does not cover the others.
 4. Fix the native_posix guidance: build/test changes can be built on
@@ -360,7 +360,7 @@ parameterize it and do not change it to twister yet.
 
 **Steps**:
 1. Add a GitHub Actions job in `.github/workflows/main.yml` using the
-   `zephyr-rust-2.3.0-1.78.0` container.
+   `zephyr-rust-2.3.0-1.79.0` container.
 2. Run `ci/sanitycheck.sh` from that job and preserve its non-zero exit status.
    The job should use the existing 2.3.0 host-toolchain setup and should not
    reuse the sample build matrix's `/tmp/build` directory.
@@ -372,7 +372,7 @@ parameterize it and do not change it to twister yet.
 
 **Local evaluation**:
 - Run the exact container command locally:
-  `cd ci && RUST_VERSION=1.78.0 ZEPHYR_VERSION=2.3.0 ./build-cmd.sh \
+  `cd ci && RUST_VERSION=1.79.0 ZEPHYR_VERSION=2.3.0 ./build-cmd.sh \
   ./ci/sanitycheck.sh` (adapt the working-directory prefix only if the
   container command requires it), and confirm all currently supported test
   platforms are built/executed.
@@ -470,7 +470,7 @@ full 48-test-instance build matrix, including native_posix and cortex_r5 on
    platforms if its runner behavior differs.
 
 **Local evaluation** (for whichever approach is chosen): run
-`cd ci && RUST_VERSION=1.78.0 ./sanitycheck.sh` with the expanded platform
+`cd ci && RUST_VERSION=1.79.0 ./sanitycheck.sh` with the expanded platform
 list; expect the newly covered boards to pass or produce explained, stable
 failures; confirm genuine test failures still fail the run (introduce a
 temporary failing ztest assertion, then revert).
