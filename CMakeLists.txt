@@ -161,10 +161,12 @@ rust_env_write(ZEPHYR_KERNEL_VERSION_NUM "${KERNEL_VERSION_NUMBER}")
 # tests/eeprom), exported through RUSTFLAGS so they reach every crate in the
 # sysroot and app builds (build.rs rustc-cfgs only reach the crate whose
 # build script ran). This is the single source of these cfgs.
-# Note: rustc 1.80+ warns on cfgs it doesn't know about (unexpected_cfgs); the
-# pinned toolchain predates the lint. If the toolchain is upgraded past that,
-# add matching --check-cfg values here.
+# Register all version cfgs, including those disabled for this image, for
+# Rust 1.80's unexpected_cfgs lint.
 set(rust_version_cfgs "")
+foreach(cfg zephyr250 zephyr270 zephyr300 zephyr350)
+    string(APPEND rust_version_cfgs "--check-cfg=cfg(${cfg}) ")
+endforeach()
 if(KERNEL_VERSION_NUMBER GREATER_EQUAL 0x20500)
     string(APPEND rust_version_cfgs "--cfg zephyr250 ")
 endif()

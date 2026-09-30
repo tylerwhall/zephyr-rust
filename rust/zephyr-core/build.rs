@@ -3,6 +3,11 @@ fn main() {
     // exported via RUSTFLAGS in rust-env.sh by CMakeLists.txt, so they apply
     // to every crate in the sysroot and app builds.
 
+    // Register even disabled Kconfig cfgs for Rust 1.80's cfg checking.
+    for cfg in ["usermode", "mempool", "mutex_pool", "clock", "tls"] {
+        println!("cargo:rustc-check-cfg=cfg({cfg})");
+    }
+
     if std::env::var("CONFIG_USERSPACE").expect("CONFIG_USERSPACE must be set") == "y" {
         println!("cargo:rustc-cfg=usermode");
     }
