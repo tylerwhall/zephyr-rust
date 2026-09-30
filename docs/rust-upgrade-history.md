@@ -17,9 +17,17 @@ reached `Next call will crash if userspace is working.`, the expected
 user-thread access violation and CPU exception, and run status 1. The new
 sample also passed a fresh, read-only build and run after autosquashing.
 The process-group-safe `ci/run-sample.sh` runner was used for every run.
-Stopped before the full matrix for review at the user's request: the full
-build matrix, repository tests, and strict clippy remain pending. None of
-those broader passes were started, and nothing was pushed.
+Initially stopped before broader validation for the requested review.
+After the user authorized continuation, strict Clippy passed for host
+crates, libraries, and all eight apps/tests on Zephyr 2.3.0, 2.7.3, and
+3.7.0 / `qemu_x86`. The full 113-job matrix passed with `RUN=1`, including
+all six verified sample runs (expected crash marker and exit status 1).
+All six logs contain CPU exceptions; the Zephyr 2.3.0 logs drop some fault
+messages and omit the literal access-violation line printed on 2.7.3 and
+3.7.0. Zephyr 2.3.0 sanitycheck executed and passed
+all seven configurations on `qemu_x86` and `qemu_cortex_m3` (zero failures,
+skips, or warnings). Later-version test execution remains outside the
+current runner's scope. Nothing was pushed.
 
 ### Conflicts and adaptations
 
@@ -54,6 +62,15 @@ those broader passes were started, and nothing was pushed.
    `thread_local_key` in the TLS commit and retained `thread_parking` in
    its own commit. Verified the final tree hash exactly matched the
    validated pre-autosquash tree, then rebuilt from scratch.
+5. **Clippy `missing_const_for_thread_local`**: strict library Clippy
+   passed, but the app pass flagged `samples/rust-app`'s already-const
+   `RefCell::new(1)` initializer through the OS-TLS macro expansion.
+   Like the Rust 1.80 `zephyr-futures` case, const syntax does not change
+   OS-TLS's lazy allocation. Used the equivalent non-const
+   `RefCell::from(1)` initializer locally, without changing upstream Rust
+   or adding lint allows. Committed as `8032795`; targeted strict
+   Clippy, the smoke run's TLS isolation assertions, and full strict
+   Clippy on all three Zephyr versions passed.
 
 ### Dependencies and process notes
 
@@ -74,14 +91,24 @@ those broader passes were started, and nothing was pushed.
   Rust 1.80 introducing cfg checking remain unchanged.
 - Builds still emit existing sysroot/Zephyr warnings; Rust 1.81 also
   reports unregistered upstream `bootstrap` cfgs in `panic_abort` and
-  `unwind`. Smoke success is not evidence of a warning-free strict lint
-  pass; that validation remains pending for review.
+  `unwind`. Strict Clippy used `-D warnings`, `--locked`, and default
+  strict build handling. Sysroot-layer crates still receive only rustc
+  lint coverage, not true Clippy coverage; see CLIPPY_SYSROOT_DEBT.md.
+- Clippy used separate fresh, version-keyed build directories, two app
+  workers, and a host/library pass before each full pass. Verified the
+  common-pass west build logs independently to rule out stale ELF reuse.
+  Archived old matrix results and started fresh so `--resume` could not
+  skip an older Rust version's jobs.
 - Create `.upgrade-logs/` with `mkdir -p .upgrade-logs`; redirect each
   pull/build/run's stdout and stderr to a named log there (`> ... 2>&1`).
   Check its exit status and inspect only a short tail or targeted errors.
   Use separate timestamped build directories there as Docker volumes.
-  Keep logs/builds local and out of commits. Broader validation and push
-  are deliberately deferred until review.
+  Keep logs/builds local and out of commits. Broader validation logs are
+  also there, with matrix results linked from `ci/log/build`. Archiving
+  the existing `ci/sanity-out` hit a host permission denial; the nono
+  diagnostic failed to reload its sandbox state. Sanitycheck still
+  performed a clean run successfully in its existing output directory,
+  where those artifacts remain. Push is deferred to the user.
 
 ## 1.79.0 → 1.80.0 (2026-09-30)
 
