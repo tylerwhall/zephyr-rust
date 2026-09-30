@@ -3,6 +3,80 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.81.0 → 1.82.0 (2026-09-30)
+
+**Result**: 16 port commits rebased from `1.81.0` onto `1.82.0`, branch
+`zephyr-1.82.0`, final tip `1d3975f8558a88be15e30a787f920f6537b37ace`.
+The old `zephyr-1.81.0` branch was not rewritten. `rust/libc` remains at
+`9c4f7e0888a8fbb1e0bfaa48b1bb566f1ebcaa99`: Rust 1.82.0 still requires
+`0.2.153`, matching the existing six-commit port.
+
+**Validation checkpoint**: the Rust 1.81.0 baseline and upgraded Rust
+1.82.0 default sample built and ran on `qemu_x86` / Zephyr 3.7.0. Both
+reached `Next call will crash if userspace is working.`, the expected
+user-thread access violation and CPU exception, and run status 1. The
+upgraded sample also passed a second, fresh build with the repository
+mounted read-only. Smoke output includes TLS isolation and mutex
+contention checks. Every run used the process-group-safe
+`ci/run-sample.sh` runner. Stopped before the full matrix for user review,
+as requested; broader builds, repository tests, and Clippy remain pending.
+Nothing was pushed.
+
+### Conflicts and adaptations
+
+1. **`rust: remove submodules not required to build zephyr-rust`**:
+   upstream updated all ten intentionally deleted submodule pointers
+   (documentation, LLVM, Cargo, and rustc-perf). Kept the deletions.
+   Resolved `.gitmodules`' LLVM branch conflict by removing the entry,
+   retaining only stdarch and backtrace. No new submodules needed removal.
+2. **`zephyr: stub sys impl`** and **public dependencies**: upstream
+   reformatted the hashbrown/std_detect declarations. Retained that
+   formatting and added the Zephyr dependencies; the later port commit
+   still marks both as public.
+3. **`zephyr: panicking: remove get/set hook rwlock`**: upstream reordered
+   imports and grouped fmt/intrinsics/process/thread. Kept the new import
+   layout and cfg-gated the relocated PoisonError/RwLock import. Zephyr
+   still bypasses the hook lock and calls the default hook directly;
+   custom panic hooks remain unsupported.
+4. **`zephyr: ThreadId: don't use uninitialized mutex`**: retained
+   upstream's new ManuallyDrop import and grouped panic/panicking imports,
+   alongside the port's NonZeroU32/NonZeroU64 and atomic imports. The
+   32-bit counter and numeric conversion are unchanged.
+5. **Review**: range-diff confirms all 16 commits are retained; changes
+   to the port patches are limited to the above conflict resolutions.
+   No port compile errors, fixup commits, autosquash, or new lint allows
+   were needed. The delta from `1.82.0` contains only port changes and
+   intentional submodule deletions, with no conflict markers.
+
+### Dependencies and process notes
+
+- Updated the nested submodule worktrees to Rust 1.82.0's upstream
+  pointers: backtrace `230570f2dac8`, stdarch `d9466edb4c53`. Recursive
+  submodule update completed successfully; no nested port changes.
+- The first new-version build failed to update the sysroot lockfile on
+  the read-only mount. Reran with `WRITABLE=1`. Rust 1.82 raises the
+  minimum compiler_builtins version from `0.1.105` to `0.1.123`; Cargo
+  selected `0.1.160`, which requires edition-2024 manifest support absent
+  in Cargo 1.82. Resolved explicitly to `0.1.123` with `cargo update
+  --precise` and `RUSTC_BOOTSTRAP=1` for std's public-dependency feature.
+  The lockfile also adds upstream's local windows-targets package.
+  Existing rustc-demangle and other resolutions remain unchanged.
+- Pulled the baseline `3.7.0-1.81.0` and all target images
+  (`2.3.0-1.82.0`, `2.7.3-1.82.0`, `3.7.0-1.82.0`) from
+  `ghcr.io/tylerwhall/zephyr-rust`. Forced the ghcr prefix on every
+  container invocation. No local images were built; the user required
+  stopping if any image could not be pulled.
+- Updated active pins, workflow tags/default, README, AGENTS.md, and
+  pending build-matrix command examples. Historical records are unchanged.
+- Builds still emit sysroot/Zephyr warnings (including libc cfg checks,
+  unused std PAL imports/functions, and the unsupported dylib crate type).
+  This checkpoint is smoke validation, not strict lint validation.
+- Logs and separate timestamped Docker build volumes remain local under
+  `.upgrade-logs/`, excluded from commits. The final clean build/run logs
+  are named `final-1.82-build-<timestamp>.log` and
+  `final-1.82-run-<timestamp>.log`. Full validation and push are deferred
+  until review.
+
 ## 1.80.0 → 1.81.0 (2026-09-30)
 
 **Result**: 16 port commits rebased from `1.80.0` onto `1.81.0`, branch
