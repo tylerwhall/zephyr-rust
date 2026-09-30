@@ -28,9 +28,9 @@ dependencies = [
 
 [[package]]
 name = "compiler_builtins"
-version = "0.1.105"
+version = "0.1.123"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3686cc48897ce1950aa70fd595bd2dc9f767a3c4cca4cd17b2cb52a2d37e6eb4"
+checksum = "b47fcbecb558bdad78c7d3a998523c60a50dd6cd046d5fe74163e309e878fff7"
 dependencies = [
  "rustc-std-workspace-core",
 ]
@@ -230,6 +230,7 @@ dependencies = [
  "std_detect",
  "unwind",
  "wasi",
+ "windows-targets",
  "zephyr-core",
  "zephyr-sys",
 ]
@@ -307,6 +308,10 @@ dependencies = [
  "rustc-std-workspace-alloc",
  "rustc-std-workspace-core",
 ]
+
+[[package]]
+name = "windows-targets"
+version = "0.0.0"
 
 [[package]]
 name = "zephyr-core"

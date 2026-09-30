@@ -55,7 +55,7 @@ on qemu_x86.
   `samples/serial` waits for input. Leave those build-only. Tests
   also remain build-only here; see the sanitycheck/twister workflow below.
 - CI container, single step (build + run in one ephemeral container; `-d /tmp/build` is required because the repo is mounted read-only):
-  - `cd ci && RUST_VERSION=1.81.0 ZEPHYR_VERSION=3.7.0 ./build-cmd.sh bash -c 'west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app && bash ci/run-sample.sh'`
+  - `cd ci && RUST_VERSION=1.82.0 ZEPHYR_VERSION=3.7.0 ./build-cmd.sh bash -c 'west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app && bash ci/run-sample.sh'`
 - CI container, multiple steps (persist the build dir across invocations with a host volume via `DOCKER_ARGS`):
   - `cd ci && DOCKER_ARGS="-v /tmp/zr-build:/tmp/build" ./build-cmd.sh west build -d /tmp/build -p auto -b qemu_x86 samples/rust-app`
   - `cd ci && DOCKER_ARGS="-v /tmp/zr-build:/tmp/build" ./build-cmd.sh bash ci/run-sample.sh`
@@ -120,7 +120,7 @@ remaining warnings grouped by lint. Details:
   all tests lint fine.
 
 ### Run tests
-- Automated test execution: `cd ci && RUST_VERSION=1.81.0 ./sanitycheck.sh` —
+- Automated test execution: `cd ci && RUST_VERSION=1.82.0 ./sanitycheck.sh` —
   Zephyr 2.3.0 sanitycheck over `tests/`, executing on qemu_x86 and
   qemu_cortex_m3. Other boards/versions are build-only: the 2.3.0 runner
   hardcodes `-Werror`/`-Wl,--fatal-warnings`, which fails on the native_posix
@@ -187,16 +187,16 @@ the jobs `.github/workflows/main.yml` builds.
    must be clippy-linted on every version whose branch it touches. Use a
    separate clippy volume per Zephyr version (`CLIPPY_BUILD_DIR` is not
    version-keyed):
-   `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy-<ver>:/tmp/zephyr-rust-clippy" CLIPPY_ARGS="-D warnings" RUST_VERSION=1.81.0 ZEPHYR_VERSION=<ver> ./build-cmd.sh ci/clippy.sh <app>`
+   `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy-<ver>:/tmp/zephyr-rust-clippy" CLIPPY_ARGS="-D warnings" RUST_VERSION=1.82.0 ZEPHYR_VERSION=<ver> ./build-cmd.sh ci/clippy.sh <app>`
 4. **Full matrix, tests, and clippy (pre-PR / CI parity)**:
    - `cd ci && ./build-all.sh` — the full matrix with `--resume` (reruns skip
      completed jobs; `rm -rf ci/log/build` forces a full re-run). Optionally
      `RUN=1` to execute the verified exiting samples.
-   - `cd ci && RUST_VERSION=1.81.0 ./sanitycheck.sh` — executes the tests on
+   - `cd ci && RUST_VERSION=1.82.0 ./sanitycheck.sh` — executes the tests on
      Zephyr 2.3.0 (qemu_x86, qemu_cortex_m3); the only automated test
      execution today, not full-version test execution (2.7.3/3.7.0
      execution is separate twister work, see `docs/BUILD_MATRIX_TODO.md`).
-   - `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy-3.7.0:/tmp/zephyr-rust-clippy" CLIPPY_ARGS="-D warnings" RUST_VERSION=1.81.0 ./build-cmd.sh ci/clippy.sh`
+   - `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy-3.7.0:/tmp/zephyr-rust-clippy" CLIPPY_ARGS="-D warnings" RUST_VERSION=1.82.0 ./build-cmd.sh ci/clippy.sh`
      — the same pass the CI clippy job runs (warnings fatal, strict).
 5. **Rust-version coupling for local runs**: containers are per (Zephyr,
    Rust) image. When the host has no usable rustc, pass `RUST_VERSION`
@@ -258,7 +258,7 @@ the jobs `.github/workflows/main.yml` builds.
 ## Container investigation workflow
 
 - Inspect per-version facts directly in the pinned Zephyr source:
-  `cd ci && RUST_VERSION=1.81.0 ZEPHYR_VERSION=<ver> ./build-cmd.sh bash -c
+  `cd ci && RUST_VERSION=1.82.0 ZEPHYR_VERSION=<ver> ./build-cmd.sh bash -c
   "grep ... /zephyrproject/zephyr/include/..."`. One build-cmd.sh invocation
   runs one command; containers are ephemeral, so pass RUST_VERSION and all
   env vars explicitly every time. Host environment variables are NOT
