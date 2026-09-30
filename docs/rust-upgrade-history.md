@@ -3,6 +3,69 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.78.0 → 1.79.0 (2026-09-24)
+
+**Result**: 15 port commits rebased from `1.78.0` onto `1.79.0` plus one
+1.79-adaptation commit, branch `zephyr-1.79.0`, final tip `2816eb3f5dc`.
+`rust/libc` was unchanged: std
+1.79.0 still requires `0.2.153` and the existing `0.2.153-6` port was kept.
+The default sample built and ran on `qemu_x86` / Zephyr 3.7.0 in the pulled
+`ghcr.io/tylerwhall/zephyr-rust:zephyr-rust-3.7.0-1.79.0` image, reaching the
+intentional userspace page fault. The full 113-job build matrix
+(`ci/build-all.sh`, including the six executed `RUN=1` samples on all three
+Zephyr versions), strict clippy (`-D warnings`), and the Zephyr 2.3.0
+sanitycheck all passed. No sysroot `Cargo.lock` changes were needed.
+
+### Conflicts and compile fixes
+
+1. **`rust: remove submodules not required to build zephyr-rust`**: upstream
+   moved the deleted submodule pointers again and also rewrote `.gitmodules`
+   (limiting the `url = .` remote-submodule overlay to the `gcc-go` entry and
+   reordering). Resolved upstream's `.gitmodules` plus our deletions of the
+   documentation, `src/llvm-project`, and `src/tools/cargo` submodules.
+2. **`zephyr: panicking: remove get/set hook rwlock`**: upstream applied the
+   same removal (`RwLock<Hook>` → `StaticRwLock`/`static mut`), producing
+   identical additions on both sides; the only work was collapsing diff3
+   markers that duplicated `use crate::sys_common::thread_info;` and carrying
+   the `#[cfg(not(target_os = "zephyr"))]` gate on `use crate::thread;`
+   through. No semantic deviation from either side.
+3. **`zephyr: ThreadId: don't use uninitialized mutex`**: between 1.78 and
+   1.79 upstream only changed the import style of its 64-bit CAS loop
+   (`Ordering::Relaxed` fully qualified instead of a shorthand import), which
+   made the whole `new()` body conflict. Resolved the same way as in 1.78:
+   the port's wholesale 32-bit `AtomicU32` counter replaces the upstream
+   body, `ThreadId(NonZeroU32)` is kept, and `as_u64` casts `self.0.into()`
+   to the upstream `NonZeroU64` return type (the upstream generic `NonZero`
+   import is retained).
+4. **One compile error** in `panicking.rs` (`default_hook`), fixed inside the
+   port series as `panicking: default_hook: name threads via
+   thread::try_current`: Rust 1.79 deleted `sys_common::thread_info` and
+   moved current-thread tracking into `crate::thread` (a `thread_local!`
+   OnceCell seeded by `rt::init`). The first fix attempt restored
+   `sys_common::thread_info` as a zephyr-port-local module and cfg-gated the
+   lookup; after review it was simplified — `thread::try_current()` works
+   directly for the zephyr port (the TLS port implements
+   `thread_local_key`), and on the threadless zephyr build it degrades to
+   `None`, yielding `<unnamed>` exactly as the old `thread_info` path did.
+   The final port delta is just the deletion of the removed-module import;
+   no `sys_common::thread_info` restore is needed.
+
+### Decisions and gotchas
+
+- **`library/backtrace` and `library/stdarch` submodule pointers moved** to
+  the upstream 1.79.0 revisions (`e15130618237`, `c0257c1660e`). The
+  rebase's recorded submodule worktrees were stale; `git submodule update
+  --init` re-synced them. No zephyr port changes were required in either.
+- The first 1.79 build failed with `E0432` (`thread_info`) and `E0433`
+  (`thread`) in `panicking.rs`'s `default_hook`; see fix 4 above. No other
+  port code needed changes; the entire sysroot then compiled unmodified.
+- The ghcr.io images for all three Zephyr versions with the 1.79 tag existed
+  upstream and were pulled (`zephyr-rust-3.7.0-1.79.0`, `-2.7.3-1.79.0`,
+  `-2.3.0-1.79.0`), so no local container build was needed.
+- Hardcoded `RUST_VERSION=1.78.0` examples in `AGENTS.md` and
+  `docs/BUILD_MATRIX_TODO.md` were updated to 1.79.0 so the commands stay
+  valid for this single-version-per-revision tree.
+
 ## 1.77.0 → 1.78.0 (2026-09-23)
 
 **Result**: 15 port commits rebased from `1.77.0` onto `1.78.0`, branch
