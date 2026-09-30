@@ -22,6 +22,11 @@ thread_local!(static TLS: RefCell<u8> = const { RefCell::new(1) });
 
 zephyr_macros::k_mutex_define!(MUTEX);
 zephyr_macros::k_sem_define!(TLS_SEM, 0, 1);
+zephyr_macros::k_sem_define!(STD_MUTEX_START, 0, 1);
+zephyr_macros::k_sem_define!(STD_MUTEX_CHECKED, 0, 1);
+zephyr_macros::k_sem_define!(STD_MUTEX_DONE, 0, 1);
+
+static STD_MUTEX: std::sync::Mutex<u8> = std::sync::Mutex::new(0);
 
 fn mutex_test() {
     let data = 1u32;
@@ -38,10 +43,28 @@ fn mutex_test() {
 }
 
 fn std_mutex_test() {
+    use zephyr::context::Any as C;
+
+    // Exercise lazy native mutex allocation in both kernel and user mode.
     println!("std::sync::Mutex::new");
     let lock = std::sync::Mutex::new(0u8);
     println!("std::sync::Mutex::lock");
     *lock.lock().unwrap() = 1;
+    assert_eq!(*lock.try_lock().unwrap(), 1);
+
+    // A single-threaded lock/unlock test also passes with std's no_threads
+    // backend. Have another Zephyr thread try, then block on, a held lock.
+    let mut guard = STD_MUTEX.lock().unwrap();
+    *guard = 1;
+    STD_MUTEX_START.give::<C>();
+    STD_MUTEX_CHECKED.take::<C>();
+    // Let the contender try to enter lock() while this thread still holds the guard.
+    std::thread::sleep(Duration::from_millis(1));
+    assert_eq!(*guard, 1);
+    drop(guard);
+    STD_MUTEX_DONE.take::<C>();
+    assert_eq!(*STD_MUTEX.lock().unwrap(), 2);
+    println!("std::sync::Mutex contention passed");
 }
 
 fn thread_join_std_mem_domain(_context: zephyr::context::Kernel) {
@@ -69,6 +92,25 @@ pub extern "C" fn rust_second_thread(
 
     // Let thread 1 access TLS after we have already set it. Value should not be seen on thread 1
     TLS_SEM.give::<zephyr::context::Kernel>();
+
+    // The main thread runs std_mutex_test() once in kernel mode and once in
+    // user mode. Use Zephyr's thread because std::thread::spawn is unsupported.
+    for _ in 0..2 {
+        use zephyr::context::Kernel as C;
+
+        STD_MUTEX_START.take::<C>();
+        assert!(matches!(
+            STD_MUTEX.try_lock(),
+            Err(std::sync::TryLockError::WouldBlock)
+        ));
+        STD_MUTEX_CHECKED.give::<C>();
+        {
+            let mut guard = STD_MUTEX.lock().unwrap();
+            assert_eq!(*guard, 1);
+            *guard = 2;
+        }
+        STD_MUTEX_DONE.give::<C>();
+    }
 }
 
 #[no_mangle]
@@ -86,6 +128,9 @@ pub extern "C" fn rust_main() {
     let current = Context::k_current_get();
     current.k_object_access_grant::<Context, _>(&MUTEX);
     current.k_object_access_grant::<Context, _>(&TLS_SEM);
+    current.k_object_access_grant::<Context, _>(&STD_MUTEX_START);
+    current.k_object_access_grant::<Context, _>(&STD_MUTEX_CHECKED);
+    current.k_object_access_grant::<Context, _>(&STD_MUTEX_DONE);
     mutex_test();
     std_mutex_test();
 
