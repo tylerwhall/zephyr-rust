@@ -3,6 +3,114 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.83.0 → 1.84.0 (2026-09-30)
+
+**Result**: 16 port commits rebased from `1.83.0` onto `1.84.0`, branch
+`zephyr-1.84.0`, final tip `82c6a017a4580809c65f1ddedb360d7397b7baa7`.
+The old `zephyr-1.83.0` branch was not rewritten. Rust 1.84.0 requires
+libc `0.2.162`; rebased the six-commit port onto that tag without
+conflicts, branch `zephyr-0.2.162`, tip
+`62ee882c8cb07d640651ffd8940d2e2afaa25606`. The old libc branch was
+not rewritten; range-diff confirms all six patches are unchanged.
+
+**Validation checkpoint**: the Rust 1.83.0 baseline and upgraded Rust
+1.84.0 default sample built and ran on `qemu_x86` / Zephyr 3.7.0. Both
+reached `Next call will crash if userspace is working.`, the expected
+user-thread access violation and CPU exception, and run status 1. TLS
+isolation and mutex contention checks passed. After autosquashing, a
+second, fresh build with the repository mounted read-only also built and
+ran successfully. Every run used the process-group-safe
+`ci/run-sample.sh` runner. Stopped there for user review, continuing
+the constraints of the preceding upgrade.
+
+After user review, the remaining CI-parity stages all passed:
+- Full 113-job matrix (`ci/build-all.sh`, `RUN=1`) across Zephyr
+  2.3.0/2.7.3/3.7.0: all 107 build-only jobs green; the six sample
+  runs (rust-app and no_std on qemu_x86, one per Zephyr version)
+  each reached `Next call will crash if userspace is working.`, the
+  expected user-mode page fault, and exited 1.
+- Strict Clippy (`ci/clippy.sh`, `-D warnings`, `--locked`, Zephyr
+  3.7.0): host crates, library crates, and all eight apps/tests
+  clean.
+- Zephyr 2.3.0 sanitycheck: 7 of 7 test configurations passed on
+  qemu_x86 and qemu_cortex_m3.
+
+Nothing was pushed.
+
+### Conflicts and adaptations
+
+1. **`rust: remove submodules not required to build zephyr-rust`**:
+   upstream updated eight intentionally deleted submodule pointers
+   (six documentation trees, LLVM, and Cargo). Kept the deletions and
+   resolved `.gitmodules`' changed LLVM branch by removing its entry,
+   retaining only stdarch and backtrace. No new submodules needed removal.
+2. **Mutex const-stability compile error**: Rust 1.84 enables the check
+   that `#[rustc_const_stable]` applies only to stable functions
+   (`d066dfdb835`). The internal Zephyr `Mutex::new` had an obsolete
+   annotation inherited from the original port. Removed it, following
+   upstream's identical Xous-backend adaptation (`59944c9c9f9`), rather
+   than adding a public stability declaration or suppressing the check.
+   The constructor remains `const`; lazy allocation, atomic publication,
+   and runtime locking behavior are unchanged. Committed as a fixup of
+   `zephyr: implement mutex`; the next build and smoke run passed.
+3. **Autosquash and review**: autosquashed the fixup after successful
+   build/run validation, without conflicts. Git tracked the mutex-file
+   relocation through the later sys::sync commit. Verified the final
+   tree hash exactly matched the validated pre-autosquash tree. The
+   final range-diff retains all 16 commits; changes to the port patches
+   are limited to the submodule conflict, upstream context shifts, and
+   removal of the obsolete annotation. The delta from `1.84.0` contains
+   only port changes and intentional submodule deletions, with no
+   conflict markers or new lint allows.
+4. **RISC-V target ICE in the full matrix**: Rust 1.84 removed the
+   empty-string default from the RISC-V `llvm-abiname` match
+   (upstream `abb05c0fd50`), so `qemu_riscv32` builds ICE'd in
+   `rustc_codegen_ssa`'s `create_object_file` ("unknown RISC-V ABI
+   name") because the custom target specs never set the field. Set
+   `"llvm-abiname": "ilp32"` in the three rv32 target JSONs and
+   `"lp64"` in `riscv64imac`, matching their soft-float feature sets
+   (`+m,+a[,+c]`) and the built-in none-elf targets. Parent-repo
+   change, committed separately; the riscv32 job and then the full
+   matrix passed.
+
+### Dependencies and process notes
+
+- Updated stdarch to Rust 1.84.0's upstream pointer `e5e00aab0a8c`;
+  backtrace remains at `230570f2dac8`. Recursive submodule update
+  completed successfully; no nested port changes.
+- The first new-version build failed to update the sysroot lockfile on
+  the read-only mount. Used `WRITABLE=1` only for the Cargo lock update,
+  with `RUSTC_BOOTSTRAP=1` for std's public-dependency manifest feature.
+  Updated compiler_builtins to `0.1.138`, matching Rust 1.84's exact
+  requirement and upstream library lockfile. The lockfile also updates
+  libc to `0.2.162` and removes memchr `2.5.0`, whose direct std
+  dependency was removed upstream. Hashbrown remains at the compatible
+  `0.15.0`; other resolutions and lockfile format 4 are unchanged.
+- Pulled the baseline `3.7.0-1.83.0` and all target images
+  (`2.3.0-1.84.0`, `2.7.3-1.84.0`, `3.7.0-1.84.0`) from
+  `ghcr.io/tylerwhall/zephyr-rust`. Forced the ghcr prefix and explicit
+  Rust/Zephyr versions on every container invocation. No local images
+  were built; stopping on any pull failure remained a user requirement.
+- Updated active pins, workflow tags/default, README, AGENTS.md, and
+  pending build-matrix command examples. Historical records are unchanged.
+- Builds still emit sysroot/Zephyr warnings, including unused std PAL
+  imports/functions and the unsupported dylib crate type. Clippy and
+  the full build matrix passed as described above; 2.7.3/3.7.0 test
+  execution (twister) remains tracked in
+  `docs/BUILD_MATRIX_TODO.md`.
+- Matrix process notes: `ci/log/build` must be a real directory, not a
+  symlink (GNU parallel's results-directory `mkpath` fails on an
+  existing symlink), and `--resume` skips any job whose result files
+  exist even if it was killed mid-run. The first failed matrix run's
+  halted 3.7.0 sample-run jobs had to be deleted from the results
+  tree before the resume re-ran them.
+- Logs and separate timestamped Docker build volumes remain local under
+  `.upgrade-logs/`, excluded from commits. Final clean build/run logs:
+  `final-1.84-build-20260930-195500.log` and
+  `final-1.84-run-20260930-195500.log`; full validation logs:
+  `matrix-1.84-resume2.log`, `clippy-3.7.0-1.84.log`, and
+  `sanitycheck-2.3.0-1.84.log`. Push is deferred to the user.
+
 ## 1.82.0 → 1.83.0 (2026-09-30)
 
 **Result**: 16 port commits rebased from `1.82.0` onto `1.83.0`, branch
