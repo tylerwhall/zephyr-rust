@@ -28,9 +28,9 @@ dependencies = [
 
 [[package]]
 name = "compiler_builtins"
-version = "0.1.133"
+version = "0.1.138"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab10bf45b2ed1b4f4c25401527a61684142c042b3c86ace7da7ea6881e26741b"
+checksum = "53f0ea7fff95b51f84371588f06062557e96bbe363d2b36218ddb806f3ca8611"
 dependencies = [
  "rustc-std-workspace-core",
 ]
@@ -107,18 +107,8 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.161"
+version = "0.2.162"
 dependencies = [
- "rustc-std-workspace-core",
-]
-
-[[package]]
-name = "memchr"
-version = "2.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
-dependencies = [
- "compiler_builtins",
  "rustc-std-workspace-core",
 ]
 
@@ -233,7 +223,6 @@ dependencies = [
  "hashbrown",
  "hermit-abi",
  "libc",
- "memchr",
  "panic_abort",
  "r-efi",
  "r-efi-alloc",
