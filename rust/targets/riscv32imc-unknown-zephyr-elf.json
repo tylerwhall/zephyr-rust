@@ -8,6 +8,7 @@
   "features": "+m,+c",
   "linker": "rust-lld",
   "linker-flavor": "ld.lld",
+  "llvm-abiname": "ilp32",
   "llvm-target": "riscv32",
   "max-atomic-width": 0,
   "panic-strategy": "abort",
