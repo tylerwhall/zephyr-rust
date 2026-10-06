@@ -223,6 +223,18 @@ Library preparation for Cargo build-std and its validation are documented in
 [BUILD_STD_INVESTIGATION.md](docs/BUILD_STD_INVESTIGATION.md); the actual
 build-system switch is deferred.
 
+### Porting applications to Rust 1.85
+
+- Add explicit Cargo dependencies for each directly used `zephyr_core`,
+  `zephyr_sys`, or `libc` crate, pointing to this checkout's `rust/zephyr-core`,
+  `rust/zephyr-sys`, or `rust/libc`. Do not enable `rustc-dep-of-std` for apps.
+  Refresh the affected `Cargo.lock` files.
+- Replace `Ticks::from(instant)` or `instant.into()` with
+  `zephyr::time::instant_ticks(instant)`.
+- With `CONFIG_RUST_ALLOC_POOL`, the generated app root registers the global
+  allocator; do not register a second one. If you bypass that root, register
+  your allocator explicitly (e.g. `zephyr_core::global_sys_mem_pool!(rust_std_mem_pool)`).
+
 ## TODO
 
 * Figure out how to fail tests through assertions in code
