@@ -165,7 +165,7 @@ set(rust_bindings_dir ${CMAKE_CURRENT_BINARY_DIR}/bindings)
 rust_env_write(ZEPHYR_RUST_BINDINGS "${rust_bindings_dir}")
 # Zephyr version cfgs, consumed by zephyr-core and app crates (e.g.
 # tests/eeprom), exported through RUSTFLAGS so they reach every crate in the
-# sysroot and app builds (build.rs rustc-cfgs only reach the crate whose
+# std and app instances (build.rs rustc-cfgs only reach the crate whose
 # build script ran). This is the single source of these cfgs.
 # Register all version cfgs, including those disabled for this image, for
 # Rust 1.80's unexpected_cfgs lint.
@@ -203,7 +203,7 @@ endforeach()
 # TARGET_CFLAGS are evaluated.
 file(GENERATE OUTPUT ${rust_env_file} CONTENT "${rust_env_content}")
 
-# Add the Cargo project only if CONFIG_RUST because this will alawys invoke Cargo.
+# Add the Cargo project only if CONFIG_RUST because this always invokes Cargo.
 if (CONFIG_RUST)
     include(ExternalProject)
 

@@ -11,7 +11,7 @@ fn main() {
 
     // The Zephyr version cfgs (zephyr250/zephyr270/zephyr300/zephyr350) are
     // exported via RUSTFLAGS in rust-env.sh by CMakeLists.txt, so they apply
-    // to every crate in the sysroot and app builds.
+    // to every std and app crate instance.
 
     // Register even disabled Kconfig cfgs for Rust 1.80's cfg checking.
     for cfg in ["usermode", "mempool", "mutex_pool", "clock", "tls"] {

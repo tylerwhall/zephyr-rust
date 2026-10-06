@@ -19,13 +19,12 @@ Rules encoded here:
     whitelist, so the matrix must enumerate only whitelisted boards).
     Samples have no testcase.yaml and build on all boards.
   - qemu_riscv32/qemu_riscv64 are only supported on Zephyr 3.x.
-  - native_posix is only supported on Zephyr 2.x: the cross-compiled
-    sysroot has no std for the native_posix target on Zephyr 3.x
-    (rustc E0463).
+  - native_posix/3.7.0 is excluded: the current picolibc C build fails
+    with GCC's multiple-input/-o error before reaching Rust.
   - samples/serial needs CONFIG_UART_INTERRUPT_DRIVEN, which
     native_posix does not support.
   - Only the sample runs verified to exit on their own
-    (docs/BUILD_MATRIX_TODO.md Task 3) are marked run=true with their
+    (docs/BUILD_MATRIX_TODO.md) are marked run=true with their
     expected output and exit status; everything else is build-only.
 """
 
@@ -59,7 +58,7 @@ EXCLUDED = {
 }
 
 # Verified automatic-exit runs: (board, app) -> (expected output, expected
-# exit status). See the Task 3 inventory in docs/BUILD_MATRIX_TODO.md.
+# exit status). See the coverage rules in docs/BUILD_MATRIX_TODO.md.
 RUN_CASES = {
     ("qemu_x86", "samples/rust-app"): (
         "Next call will crash if userspace is working.", 1,

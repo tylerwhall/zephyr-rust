@@ -141,7 +141,7 @@ Individual jobs resume via `--resume` on re-runs.
    ```
 
 3. Build + run the default sample in the new image, using a **new build
-   directory** (an old one caches the previous sysroot). Prefer a new uniquely
+   directory** (an old one caches the previous toolchain/source overlay). Prefer a new uniquely
    named temporary directory rather than deleting an old Docker-created
    directory, which may contain root-owned files. Redirect verbose commands to
    a temporary log and report only the exit status and a concise tail or

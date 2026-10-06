@@ -3,8 +3,8 @@
 # group, and clean up the whole group (ninja + emulator) if it does not exit
 # on its own.
 #
-# Only use this for samples verified to exit automatically (see the RUN list
-# in ci/build-all.sh and the Task 3 inventory in docs/BUILD_MATRIX_TODO.md).
+# Only use this for samples verified to exit automatically (see RUN_CASES
+# in ci/matrix.py and the coverage rules in docs/BUILD_MATRIX_TODO.md).
 # The deadline below is a safety net against a regression that makes the
 # sample hang; it is not the success criterion.
 #

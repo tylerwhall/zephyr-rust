@@ -13,10 +13,8 @@ Zephyr app.
 
 **Rust**: exactly 1.85.0
 
-Please use one of the above Zephyr releases before reporting issues! At the
-time you are reading this, Zephyr's main branch will likely not work, though it
-is usually one 1-2 minor changes to support a new release. The project aims to
-support 2.3, the LTS releases, and the latest release.
+Use one of these supported releases before reporting issues; other releases
+and Zephyr's main branch are not covered by this repository's CI.
 
 ## Features
 
@@ -52,14 +50,12 @@ git clone --recurse-submodules https://github.com/tylerwhall/zephyr-rust.git
 
 ### Zephyr setup
 
-Refer to the Zephyr getting started [guide](https://docs.zephyrproject.org/2.5.0/getting_started/index.html). This includes installing west,
+Refer to the Zephyr getting started [guide](https://docs.zephyrproject.org/3.7.0/develop/getting_started/index.html). This includes installing west,
 getting Zephyr source, and the Zephyr toolchain. Make sure you can build a C
 sample within Zephyr.
 
-See above for tested compatible Zephyr releases. Please try a release if master
-does not work. Due to differences in the syscall header generation, v1.14 LTS
-is no longer supported.
-See [issue 16](https://github.com/tylerwhall/zephyr-rust/issues/16).
+Use the matching toolchain and setup instructions for your supported Zephyr
+release; see the version list above.
 
 ### Rust toolchain
 
@@ -110,80 +106,57 @@ ARM Cortex-M:
 west build -p auto -b qemu_cortex_m3 samples/rust-app/
 ```
 
-These errors are normal. Needs investigation, but the binary is still created
-successfully.
+Run the default qemu_x86 sample from the repository root with process-group
+cleanup (other sample/board combinations may not exit automatically):
 
 ```console
-x86_64-zephyr-elf-objdump: DWARF error: mangled line number section (bad file number)
-```
-
-Run (QEMU targets):
-
-```console
-cd build
-ninja run
+BUILD_DIR=build bash ci/run-sample.sh
 ```
 
 ### Sample Output
 
+The default sample checks TLS isolation and shared mutex-pool allocation in
+kernel and user mode. Successful output reaches:
+
 ```console
-*** Booting Zephyr OS build zephyr-v2.2.0  ***
-Hello Rust println
-Hello from Rust kernel with direct kernel call
-Hello from Rust kernel with runtime-detect syscall
-Hello from second thread
-second thread: f = 1
-second thread: now f = 55
-Time InstantMs(20)
-Time Instant(InstantMs(20))
-Locking
-Unlocking
-No device
-Boxed value 1
-main thread: f = 1
-main thread: now f = 2
-Hello from Rust userspace with forced user-mode syscall
-Locking
-Unlocking
-INFO app: TEST: info!()
-WARN app: TEST: warn!()
-ERROR app: TEST: error!()
-main thread: f = 2
-main thread: now f = 3
-Hello from Rust userspace with forced user-mode syscall
 Hello from Rust userspace with runtime-detect syscall
 Next call will crash if userspace is working.
-FAILED: zephyr/CMakeFiles/run
 ```
 
-Failure is from an intentional crash at the end of the sample.
+It then intentionally faults and returns status 1 to prove userspace isolation.
 
 ## Testing
 
-The Zephyr test runner can be used:
+Execute the tests on Zephyr 2.3.0/qemu_x86 and qemu_cortex_m3 in the CI container:
 
 ```console
-$ZEPHYR_BASE/scripts/sanitycheck --testcase-root tests -p native_posix -N
+cd ci
+RUST_VERSION=1.85.0 ./sanitycheck.sh
 ```
 
-Or you can build and run the test manually:
+Later-version tests are currently build-only; twister execution is pending.
+Build an individual test with a board from its testcase.yaml whitelist:
 
 ```console
-west build -p auto -b native_posix tests/rust
-cd build
-ninja run
+west build -p auto -b qemu_x86 tests/semaphore
 ```
 
-## Supported Architectures
+For full build coverage, run `cd ci && RUN=1 ./build-all.sh`. The six verified
+sample runs are not a substitute for executing the test suite. See
+[BUILD_MATRIX_TODO.md](docs/BUILD_MATRIX_TODO.md) for coverage and remaining work.
 
-* native_posix
-* x86
-* armv7m
-* armv7r
-* thumbv7em
+## Supported targets
 
-Really anything that works with Zephyr and Rust should work. Only need to
-define a target.json and add a case for it in CMakelists.
+The build matrix covers
+
+- x86
+- Cortex-M/R (including ARMv8-M)
+- RISC-V 32/64
+- native_posix
+
+Board/version restrictions are defined in `ci/matrix.py`. Porting another
+target requires a matching Rust target JSON, CMake target selection, and
+build/runtime validation; support is not automatic.
 
 ## Structure: Submodules pointing to forks
 

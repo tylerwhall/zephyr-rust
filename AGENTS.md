@@ -64,7 +64,7 @@ on qemu_x86.
 ### Clippy
 - `ci/clippy.sh` runs `cargo clippy` on all Rust crates: the host crates
   (`zephyr-bindgen`, `zephyr-macros`), every sample/test app crate, and the
-  app-layer library crates. The sysroot-layer crates (`zephyr-sys`,
+  app-layer library crates. The low-level crates (`zephyr-sys`,
   `zephyr-core`, `time-convert`) are selected via `-p` from the generated app
   workspace, so they remain non-members and only rustc lints surface there
   (mechanism and tracked debt in `docs/CLIPPY_SYSROOT_DEBT.md`). Each app is
@@ -113,9 +113,9 @@ remaining warnings grouped by lint. Details:
   `cargo update` for dependency bumps) and committed with the change.
 - Add `#[allow(...)]` (with a justifying comment) only when a clean fix is
   impossible; ALWAYS stop and ask the user first when allowing a warning/lint.
-- Default lint validation uses `qemu_x86`. The former native_posix E0463
-  limitation involved the removed manual sysroot; do not assume it applies
-  to build-std without reproducing it.
+- Default lint validation uses `qemu_x86`. Native_posix/3.7.0 is excluded
+  because the current picolibc C compilation fails before Rust, not because
+  build-std lacks target std; see `docs/BUILD_MATRIX_TODO.md`.
 
 ### Run tests
 - Automated test execution: `cd ci && RUST_VERSION=1.85.0 ./sanitycheck.sh` —
@@ -231,7 +231,7 @@ the jobs `.github/workflows/main.yml` builds.
   `#include <version.h>` + `KERNEL_VERSION_MAJOR` guard (see
   samples/*/src/main.c). In Rust, CMake exports `zephyr250`/`zephyr270`/
   `zephyr300`/`zephyr350` cfgs via RUSTFLAGS (the single source of these
-  thresholds), so app and sysroot crates can cfg-gate on the version directly;
+  thresholds), so app and std-private crates can cfg-gate on the version directly;
   zephyr-core's build.rs additionally emits `usermode`/`mempool`/
   `mutex_pool`/`clock` cfgs, which only reach zephyr-core itself.
 - Known drift (re-verify against the pinned tree, don't trust memory):
@@ -265,8 +265,9 @@ the jobs `.github/workflows/main.yml` builds.
 - Persist build dirs across invocations with
   `DOCKER_ARGS="-v /tmp/<name>:/tmp/build"` and `west build -d /tmp/build`;
   the repo is mounted read-only. Don't `rm` the mount point itself.
-- QEMU test runs do not exit by design; wrap `ninja run` in `timeout` instead
-  of `-t run`.
+- Use the Zephyr test runner for tests and `ci/run-sample.sh` for verified
+  samples. Non-exiting QEMU processes require process-group cleanup; never
+  use a bare `ninja run`/`timeout` pipeline.
 - To diagnose binding issues, inspect the build dir: `bindings.rs` under
   `modules/zephyr-rust/bindings/` (one huge
   line; use targeted `grep -o`), `zephyr/include/generated/` (all_syscalls.h,

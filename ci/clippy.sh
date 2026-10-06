@@ -42,10 +42,10 @@
 #        target,
 #     2. common code: a west build of samples/rust-app (whose build tree
 #        provides bindings and environment), then the
-#        sysroot-layer crates (zephyr-sys, zephyr-core, time-convert) and
+#        low-level crates (zephyr-sys, zephyr-core, time-convert) and
 #        the app-layer library crates, linted against that environment.
 #        Linting the common code first fails fast, before the per-app pass.
-#        Note: the sysroot-layer crates are linted via -p from the
+#        Note: the low-level crates are selected via -p from the
 #        generated app workspace, where they are non-member path deps, so
 #        only rustc lints surface there (RUSTC_WORKSPACE_WRAPPER applies to
 #        workspace members only); see CLIPPY_SYSROOT_DEBT.md.
@@ -204,7 +204,7 @@ run_common_pass() {
         echo "note: samples/rust-app did not build on ${BOARD}; last lines of"
         echo "      ${STATUS_DIR}/rust-app.build.log:"
         tail -n 15 "${STATUS_DIR}/rust-app.build.log"
-        echo "note: skipping the sysroot-layer and app-layer library crate passes"
+        echo "note: skipping the low-level and app-layer library crate passes"
         if [ "${CLIPPY_STRICT:-1}" != "0" ]; then
             fail=1
         fi
