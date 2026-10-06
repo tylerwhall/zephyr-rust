@@ -6,7 +6,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use bindgen::callbacks::ParseCallbacks;
+use bindgen::callbacks::{ItemInfo, ParseCallbacks};
 
 #[derive(Debug, Default)]
 struct CallbacksInner {
@@ -17,10 +17,10 @@ struct CallbacksInner {
 struct Callbacks(Arc<Mutex<CallbacksInner>>);
 
 impl ParseCallbacks for Callbacks {
-    fn item_name(&self, name: &str) -> Option<String> {
+    fn item_name(&self, item: ItemInfo<'_>) -> Option<String> {
         const PREFIX: &str = "z_anyctx_";
         let mut inner = self.0.lock().unwrap();
-        if let Some(stripped) = name.strip_prefix(PREFIX) {
+        if let Some(stripped) = item.name.strip_prefix(PREFIX) {
             inner.syscalls.push(stripped.into());
         }
         None
