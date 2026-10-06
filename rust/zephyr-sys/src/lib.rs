@@ -7,12 +7,14 @@
 pub mod raw {
     // Bindgen's incomplete-array and bitfield helpers lack safety docs and
     // use generic transmutes even when the source and destination types match
-    // (or a bitfield is bool). Keep these exceptions on generated code only;
-    // the handwritten kernel object wrappers below still receive every lint.
+    // (or a bitfield is bool). Raw bitfield helpers also cast usize offsets to
+    // isize. Keep these exceptions on generated code only; the handwritten
+    // kernel object wrappers below still receive every lint.
     #[allow(
         clippy::missing_safety_doc,
         clippy::useless_transmute,
-        clippy::transmute_int_to_bool
+        clippy::transmute_int_to_bool,
+        clippy::ptr_offset_with_cast
     )]
     mod bindings {
         include!(concat!(env!("ZEPHYR_RUST_BINDINGS"), "/bindings.rs"));
