@@ -10,6 +10,15 @@ menuconfig RUST
 
 if RUST
 
+config RUST_STD
+	bool "Build the Rust standard library"
+	default y
+	help
+	  Build the ported std library with Cargo build-std. Disable for a
+	  core/alloc-only image: all application dependencies must support
+	  no_std, and the application must provide a panic handler and allocator.
+	  RUST_ALLOC_POOL registers the allocator at the generated image root.
+
 # Define this choice to use PICOLIBC_USE_MODULE on 3.7 and be compatible with 2.x
 # This breaks older 3.x versions because PICOLIBC_SOURCE is not a choice there
 # It is not possible to use 'select' with a 'choice'

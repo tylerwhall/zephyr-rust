@@ -114,12 +114,17 @@ if(NOT DEFINED CARGO_SOURCE_DIR)
     set(CARGO_SOURCE_DIR ${CMAKE_SOURCE_DIR})
 endif()
 
-set(rust_allocator_arg "")
+set(rust_project_args "")
 if(CONFIG_RUST_ALLOC_POOL)
-    set(rust_allocator_arg --alloc-pool)
+    list(APPEND rust_project_args --alloc-pool)
+endif()
+set(rust_build_std std,panic_abort)
+if(NOT CONFIG_RUST_STD)
+    set(rust_build_std core,alloc)
+    list(APPEND rust_project_args --no-std)
 endif()
 add_custom_command(OUTPUT ${rust_generated_project}/Cargo.toml
-  COMMAND ${rust_src_dir}/genproject.sh ${CARGO_SOURCE_DIR} ${rust_generated_project} ${rust_allocator_arg}
+  COMMAND ${rust_src_dir}/genproject.sh ${CARGO_SOURCE_DIR} ${rust_generated_project} ${rust_project_args}
   DEPENDS ${rust_src_dir}/genproject.sh
 )
 add_custom_target(rust_generated_project DEPENDS ${rust_generated_project}/Cargo.toml)
@@ -154,6 +159,7 @@ rust_env_write(RUST_TARGET "${rust_target}")
 rust_env_write(CLANG_TARGET "${clang_target}")
 rust_env_write(TARGET_CFLAGS "${external_project_cflags}")
 rust_env_write(RUST_BUILD_TOOLCHAIN "${rust_build_toolchain}")
+rust_env_write(RUST_BUILD_STD "${rust_build_std}")
 rust_env_write(APP_BUILD "${rust_app_build}")
 rust_env_write(RUST_TARGET_SPEC "${rust_src_dir}/targets/${rust_target}.json")
 rust_env_write(CARGO_MANIFEST "${rust_generated_project}/Cargo.toml")

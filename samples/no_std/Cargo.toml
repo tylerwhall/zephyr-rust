@@ -6,14 +6,6 @@ repository = "https://github.com/tylerwhall/zephyr-rust.git"
 edition = "2018"
 
 [dependencies]
+zephyr-sys = { path = "../../rust/zephyr-sys" }
 zephyr-core = { path = "../../rust/zephyr-core" }
-cstr = "0.2.10"
-log = "0.4"
-zephyr = { path = "../../rust/zephyr" }
 zephyr-macros = { path = "../../rust/zephyr-macros" }
-zephyr-logger = { path = "../../rust/zephyr-logger" }
-
-[features]
-default = []
-# Enable this to add the std examples back into the sample
-have_std = []

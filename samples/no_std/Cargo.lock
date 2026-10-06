@@ -6,22 +6,9 @@ version = 4
 name = "app"
 version = "0.1.0"
 dependencies = [
- "cstr",
- "log",
- "zephyr",
  "zephyr-core",
- "zephyr-logger",
  "zephyr-macros",
-]
-
-[[package]]
-name = "cstr"
-version = "0.2.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68523903c8ae5aacfa32a0d9ae60cadeb764e1da14ee0d26b1f3089f13a54636"
-dependencies = [
- "proc-macro2 1.0.107",
- "quote 1.0.47",
+ "zephyr-sys",
 ]
 
 [[package]]
@@ -30,8 +17,8 @@ version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6d944ac6003ed268757ef1ee686753b57efc5fcf0ebe7b64c9fc81e7e32ff839"
 dependencies = [
- "proc-macro2 0.4.30",
- "quote 0.6.13",
+ "proc-macro2",
+ "quote",
  "rustc_version",
  "syn",
 ]
@@ -39,12 +26,6 @@ dependencies = [
 [[package]]
 name = "libc"
 version = "0.2.169"
-
-[[package]]
-name = "log"
-version = "0.4.34"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
 name = "proc-macro2"
@@ -56,30 +37,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "proc-macro2"
-version = "1.0.107"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
-dependencies = [
- "unicode-ident",
-]
-
-[[package]]
 name = "quote"
 version = "0.6.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ce23b6b870e8f94f81fb0a363d65d86675884b34a09043c81e5562f11c1f8e1"
 dependencies = [
- "proc-macro2 0.4.30",
-]
-
-[[package]]
-name = "quote"
-version = "1.0.47"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001"
-dependencies = [
- "proc-macro2 1.0.107",
+ "proc-macro2",
 ]
 
 [[package]]
@@ -112,8 +75,8 @@ version = "0.15.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ca4b3b69a77cbe1ffc9e198781b7acb0c7365a883670e8f1c1bc66fba79a5c5"
 dependencies = [
- "proc-macro2 0.4.30",
- "quote 0.6.13",
+ "proc-macro2",
+ "quote",
  "unicode-xid",
 ]
 
@@ -122,24 +85,10 @@ name = "time-convert"
 version = "0.1.0"
 
 [[package]]
-name = "unicode-ident"
-version = "1.0.24"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
-
-[[package]]
 name = "unicode-xid"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc72304796d0818e357ead4e000d19c9c174ab23dc11093ac919054d20a6a7fc"
-
-[[package]]
-name = "zephyr"
-version = "0.1.0"
-dependencies = [
- "zephyr-core",
- "zephyr-sys",
-]
 
 [[package]]
 name = "zephyr-core"
@@ -152,18 +101,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "zephyr-logger"
-version = "0.1.0"
-dependencies = [
- "log",
-]
-
-[[package]]
 name = "zephyr-macros"
 version = "0.1.0"
 dependencies = [
- "proc-macro2 0.4.30",
- "quote 0.6.13",
+ "proc-macro2",
+ "quote",
 ]
 
 [[package]]
