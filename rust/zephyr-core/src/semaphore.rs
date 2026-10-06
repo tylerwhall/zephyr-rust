@@ -76,7 +76,7 @@ pub trait Semaphore {
 
 impl Semaphore for k_sem {
     unsafe fn init<C: SemaphoreSyscalls>(&self, initial_count: u32, limit: u32) {
-        C::k_sem_init(&self, initial_count, limit)
+        C::k_sem_init(self, initial_count, limit)
     }
 
     fn take<C: SemaphoreSyscalls>(&self) {

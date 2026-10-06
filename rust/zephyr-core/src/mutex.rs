@@ -101,7 +101,7 @@ impl<T> Clone for Mutex<'_, &T> {
     fn clone(&self) -> Self {
         Mutex {
             mutex: self.mutex,
-            data: unsafe { MutexData::new(&*self.data.0.get()) },
+            data: unsafe { MutexData::new(*self.data.0.get()) },
         }
     }
 }
