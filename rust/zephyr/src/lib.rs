@@ -6,6 +6,7 @@ use std::io;
 pub use zephyr_core::*;
 pub mod device;
 pub mod eeprom;
+pub mod time;
 pub mod uart;
 
 trait NegErrno: NegErr {

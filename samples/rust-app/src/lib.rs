@@ -161,7 +161,13 @@ pub extern "C" fn rust_main() {
 
     std::thread::sleep(Duration::from_millis(1));
     println!("Time {:?}", zephyr::any::k_uptime_ticks().as_millis());
-    println!("Time {:?}", std::time::Instant::now());
+    let instant = std::time::Instant::now();
+    let ticks = zephyr::time::instant_ticks(instant);
+    assert_eq!(ticks.0 as u64, instant.as_zephyr_ticks());
+    assert_eq!(ticks.sub_timeout(ticks).0.ticks, 0);
+    let later = instant + Duration::from_secs(1);
+    assert!(zephyr::time::instant_ticks(later) > ticks);
+    println!("Time {:?}", instant);
 
     let current = Context::k_current_get();
     current.k_object_access_grant::<Context, _>(&MUTEX);

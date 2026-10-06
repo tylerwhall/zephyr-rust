@@ -3,7 +3,8 @@ use std::pin::Pin;
 use std::task::{Context, Poll, Waker};
 use std::time::{Duration, Instant};
 
-use zephyr_core::{Ticks, Timeout};
+use zephyr_core::Timeout;
+use zephyr::time::instant_ticks;
 
 #[derive(Debug)]
 pub struct Delay(Instant);
@@ -96,7 +97,7 @@ impl TimerReactor {
                 true
             }
         });
-        ret.map(|deadline| Ticks::from(deadline).sub_timeout(Ticks::from(now)))
+        ret.map(|deadline| instant_ticks(deadline).sub_timeout(instant_ticks(now)))
     }
 }
 
