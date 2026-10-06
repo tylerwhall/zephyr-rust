@@ -80,7 +80,7 @@ impl Semaphore for k_sem {
     }
 
     fn take<C: SemaphoreSyscalls>(&self) {
-        C::k_sem_take(self, zephyr_sys::raw::K_FOREVER.into())
+        C::k_sem_take(self, zephyr_sys::raw::K_FOREVER)
             .neg_err()
             .expect("sem take");
     }
@@ -96,7 +96,7 @@ impl Semaphore for k_sem {
     }
 
     fn try_take<C: SemaphoreSyscalls>(&self) -> bool {
-        match C::k_sem_take(self, (zephyr_sys::raw::K_NO_WAIT).into()).neg_err() {
+        match C::k_sem_take(self, zephyr_sys::raw::K_NO_WAIT).neg_err() {
             Ok(_) => Ok(true),
             Err(zephyr_sys::raw::EBUSY) => Ok(false),
             Err(e) => Err(e),
@@ -113,8 +113,7 @@ impl Semaphore for k_sem {
     }
 
     fn count<C: SemaphoreSyscalls>(&self) -> u32 {
-        // .into() will fail to compile on platforms where uint != u32
-        // can do a conversion if that case ever occurs
-        C::k_sem_count_get(self).into()
+        // This signature also checks that the target's c_uint is u32.
+        C::k_sem_count_get(self)
     }
 }
