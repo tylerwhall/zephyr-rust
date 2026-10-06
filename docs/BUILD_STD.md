@@ -111,18 +111,12 @@ Exceptions for only these four Clippy lints are scoped to the private generated
 full lint coverage; there is no crate-wide Clippy suppression. Recheck these
 exceptions when updating bindgen.
 
-## Validation and limitations
+## Known limitations
 
-The migration passed the 113-job matrix across Zephyr 2.3.0/2.7.3/3.7.0,
-including six expected-fault sample runs, all seven 2.3.0 sanitycheck
-configurations, and strict 3.7.0 Clippy. `samples/no_std` genuinely omits
-target libstd; its generated root also passes dev-profile check/Clippy.
-Regression checks cover std lock mutation and failed west builds with stale
-ELFs. Later-version test execution still requires the twister work described
-in [BUILD_MATRIX_TODO.md](BUILD_MATRIX_TODO.md).
-
-The dedicated allocator's userspace allocation path remains a separate runtime
-issue: an extra Box test on 3.7.0 faulted in MempoolAlloc's privileged
-arch_irq_lock call. The no_std sample validates kernel allocation and user
-syscalls, not safe userspace heap allocation. See
-[rust-upgrade-history.md](rust-upgrade-history.md) for version-port history.
+- Userspace heap allocation through `MempoolAlloc` is not established as safe:
+  a Zephyr 3.7.0 allocation probe faulted in its privileged `arch_irq_lock`
+  call. `samples/no_std` covers kernel allocation and user syscalls, not safe
+  userspace heap allocation.
+- Tests on Zephyr 2.7.3/3.7.0 remain build-only. Twister integration is tracked
+  in [BUILD_MATRIX_TODO.md](BUILD_MATRIX_TODO.md); automated test execution
+  currently uses Zephyr 2.3.0 sanitycheck.

@@ -52,7 +52,7 @@ results were reset before resuming, retaining only completed, unaffected
 jobs; all rust-app combinations were rerun after moving the nine-slot pool
 test setting to the qemu_x86 board config.
 
-Library separation is detailed in BUILD_STD_INVESTIGATION.md. Two appended
+Library separation is detailed in BUILD_STD.md. Two appended
 std-port commits expose primitive Instant ticks and make core/sys private
 backend dependencies; the branch now ends at
 `61e773a1c7e` (the earlier rebased port history was not rewritten).

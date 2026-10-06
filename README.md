@@ -195,7 +195,7 @@ CMake runs `rust/cargo.sh` to build std and the app together with Cargo
 `-Zbuild-std`. A build-local toolchain/source overlay leaves your installed
 toolchain untouched; neither upstream `rust-src` nor a compiler wrapper is
 required. The reviewed std resolution is in `rust/Cargo.lock`. See
-[BUILD_STD_INVESTIGATION.md](docs/BUILD_STD_INVESTIGATION.md) for details.
+[BUILD_STD.md](docs/BUILD_STD.md) for details.
 
 For a core/alloc-only image, set `CONFIG_RUST_STD=n`, use only no_std-capable
 dependencies, and supply a `#[panic_handler]`. `CONFIG_RUST_ALLOC_POOL`

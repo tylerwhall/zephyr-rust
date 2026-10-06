@@ -15,7 +15,7 @@
   - `zephyr`: std-facing API layer built on `zephyr-core`
   - helper crates: `zephyr-macros`, `zephyr-futures`, `zephyr-logger`, `zephyr-uart-buffered`
 - C shims (`src/main.c`) are the ABI bridge: Zephyr C entrypoints call exported Rust symbols (`extern "C"`, `#[no_mangle]`).
-- Std and apps compile independent instances of `zephyr-core`/`zephyr-sys`. Kernel resources and mutex-pool bookkeeping are C-owned; register global allocators only at the generated app root. Adapt `Instant` with `zephyr::time::instant_ticks`, not the removed std-private `From<Instant>` implementation. `CONFIG_RUST_STD=n` selects core/alloc-only builds; the app must provide a panic handler and an allocator (or select `RUST_ALLOC_POOL`). See `docs/BUILD_STD_INVESTIGATION.md` for source staging and std lockfile enforcement.
+- Std and apps compile independent instances of `zephyr-core`/`zephyr-sys`. Kernel resources and mutex-pool bookkeeping are C-owned; register global allocators only at the generated app root. Adapt `Instant` with `zephyr::time::instant_ticks`, not the removed std-private `From<Instant>` implementation. `CONFIG_RUST_STD=n` selects core/alloc-only builds; the app must provide a panic handler and an allocator (or select `RUST_ALLOC_POOL`). See `docs/BUILD_STD.md` for source staging and std lockfile enforcement.
 
 ## Build, test, and run commands
 
@@ -67,7 +67,7 @@ on qemu_x86.
   app-layer library crates, and the low-level crates (`zephyr-sys`,
   `zephyr-core`, `time-convert`). Every library is linted from its own manifest
   with a committed lockfile, so Clippy checks it as a root rather than a
-  non-member dependency. See `docs/BUILD_STD_INVESTIGATION.md#clippy` for
+  non-member dependency. See `docs/BUILD_STD.md#clippy` for
   coverage and generated-code exceptions. Each app is `west build`-ed in its
   own build dir first for image-specific bindings and Kconfig. Cross-Clippy uses `rust/cargo.sh` with the same build-std roots,
   source overlay, and std lock guard; host crates use ordinary Cargo.
