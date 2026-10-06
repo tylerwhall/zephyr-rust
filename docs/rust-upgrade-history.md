@@ -3,6 +3,114 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.84.0 → 1.85.0 (2026-10-06)
+
+**Result**: 16 port commits rebased from `1.84.0` onto `1.85.0`, branch
+`zephyr-1.85.0`, final tip `f9102398680c918ea3ff4aff9872bea15f07edf2`.
+Rust 1.85.0 requires libc `0.2.169`; rebased the six-commit libc port
+onto that tag, branch `zephyr-0.2.169`, final tip
+`3f4a9a93606ff0ae0880e2ee583a89165a9c4cf1`. Neither old port branch
+was rewritten.
+
+**Validation checkpoint**: the Rust 1.84.0 baseline and upgraded Rust
+1.85.0 default sample built and ran on `qemu_x86` / Zephyr 3.7.0. Both
+reached `Next call will crash if userspace is working.`, the expected
+user-thread access violation and CPU exception, and run status 1. TLS
+isolation and mutex contention checks passed. After autosquashing, a
+second fresh build with the repository mounted read-only also built and
+ran successfully. Every run used the process-group-safe
+`ci/run-sample.sh` runner. A separate stable Rust compile check confirmed
+const `HashMap::with_hasher` and `HashSet::with_hasher` initialization
+without feature gates. Shell syntax and wrapper argument-routing checks
+also passed.
+
+Stopped before the full matrix for user review, as requested. No full
+matrix, repository test suite, or Clippy pass was started. Other boards
+and Zephyr versions remain unvalidated. Nothing was pushed.
+
+### Conflicts and adaptations
+
+1. **`rust: remove submodules not required to build zephyr-rust`**:
+   upstream updated seven intentionally deleted pointers (five
+   documentation trees, LLVM, and Cargo). Kept their deletions and
+   resolved `.gitmodules` to retain only stdarch and backtrace.
+   Upstream itself removed the rustc-dev-guide submodule, so there is
+   no longer a corresponding port deletion. No new submodules needed
+   removal.
+2. **`zephyr: stub sys impl` / `c_char`**: upstream replaced the OS
+   whitelist with architecture-based signedness selection. Retained
+   upstream's selection and documentation for other targets, but
+   preserved Zephyr's existing unsigned aarch64/riscv64 and signed
+   other-architecture types, matching the libc port. Otherwise the
+   rebase would silently change Zephyr arm/riscv32 types. Applied the
+   signedness preservation as a fixup of the original stub commit.
+3. **`zephyr: panicking: remove get/set hook rwlock`**: retained
+   upstream's new `#[derive(Default)]` and `#[default]` enum variant,
+   dropping the obsolete manual `Default` implementation. Cfg-gated
+   the enum and hook static as before; Zephyr still calls the default
+   hook directly and does not support custom hooks.
+4. **Libc registration**: retained upstream's `crate::`-qualified
+   re-exports and new `prelude!()` call for Xous. Registered Zephyr
+   with the same prelude pattern rather than restoring the old layout.
+   Range-diff confirms the other five libc patches are unchanged.
+5. **Review and autosquash**: autosquashed the c_char fixup after the
+   build and smoke run passed, without conflicts. Verified that the
+   final tree hash exactly matched the validated pre-autosquash tree.
+   Range-diff retains all 16 Rust commits; patch changes are limited
+   to the submodule, c_char, and panic-hook adaptations above. Deltas
+   from the release tags contain only the ports and intentional
+   submodule deletions, with no conflict markers or new lint allows.
+
+### Dependencies and build integration
+
+- Updated nested worktrees to Rust 1.85.0's upstream pointers:
+  backtrace `4d7906bb24ae`, stdarch `684de0d6fef7`. Recursive submodule
+  update completed successfully; no nested port changes.
+- The first new-version build failed to update the sysroot lockfile
+  on the read-only mount. Used `WRITABLE=1` only for Cargo updates,
+  with `RUSTC_BOOTSTRAP=1` for std's public-dependency manifest feature.
+  Updated compiler_builtins to Rust 1.85's exact `0.1.140` requirement
+  and libc to `0.2.169`; other existing resolutions were retained
+  except hashbrown as described next.
+- Rust 1.85 stabilizes const collection constructors. The old
+  hashbrown `0.15.0` caused errors that `with_hasher` cannot be
+  indirectly exposed to stable. Updated to upstream's locked `0.15.2`,
+  which has the required `#[rustc_const_stable_indirect]` annotations,
+  but the error persisted because this custom Cargo build lacked
+  Rust bootstrap's `-Zforce-unstable-if-unmarked` stability metadata.
+- Added `rust/sysroot-rustc.sh`, invoked only during std's Cargo build,
+  to supply that flag to hashbrown and its std consumer. Applying it
+  to the entire sysroot fixed std but incorrectly marked the public
+  Zephyr crates as `rustc_private`; scoping it to hashbrown alone
+  required that feature in std. The final wrapper covers std and
+  hashbrown only, preserving stable application access to Zephyr APIs
+  without changing upstream std or weakening const-stability checks.
+  The build integration is committed separately from the version bump.
+- Changing global sysroot flags during investigation also left duplicate
+  core/compiler_builtins artifacts in the experimental build directory.
+  Discarded that directory from validation and used fresh directories
+  for both successful upgraded builds. No stale ELF was used.
+
+### Process notes
+
+- Pulled the baseline `3.7.0-1.84.0` and all target images
+  (`2.3.0-1.85.0`, `2.7.3-1.85.0`, `3.7.0-1.85.0`) from
+  `ghcr.io/tylerwhall/zephyr-rust`. The initial combined pull command
+  hit its tool deadline during the last download; explicitly pulling
+  that image again completed successfully. No image pull failed and
+  no local images were built. Forced the ghcr prefix and explicit
+  Rust/Zephyr versions on every container invocation.
+- Updated active pins, workflow tags/default, README, AGENTS.md, and
+  pending build-matrix examples. Historical references are unchanged.
+- Existing sysroot/Zephyr warnings remain, including unused PAL items
+  and unsupported dylib crate type. Broader validation is pending,
+  not claimed as passed.
+- Logs and timestamped build volumes remain local under `.upgrade-logs/`,
+  excluded from commits. Final clean build/run logs are
+  `final-1.85-build.log` and `final-1.85-run.log`; the final volume's
+  timestamp is recorded in `1.85-final-stamp`. Push is deferred to the
+  user, in submodule-before-parent order.
+
 ## 1.83.0 → 1.84.0 (2026-09-30)
 
 **Result**: 16 port commits rebased from `1.83.0` onto `1.84.0`, branch
