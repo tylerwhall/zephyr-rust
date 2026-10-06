@@ -6,7 +6,8 @@ and conflict, per `docs/rust-upgrade.md`. Newest first.
 ## 1.84.0 → 1.85.0 (2026-10-06)
 
 **Result**: 16 port commits rebased from `1.84.0` onto `1.85.0`, branch
-`zephyr-1.85.0`, final tip `f9102398680c918ea3ff4aff9872bea15f07edf2`.
+`zephyr-1.85.0`, rebased tip `f9102398680c918ea3ff4aff9872bea15f07edf2`.
+The later library-preparation commits advance this branch as noted below.
 Rust 1.85.0 requires libc `0.2.169`; rebased the six-commit libc port
 onto that tag, branch `zephyr-0.2.169`, final tip
 `3f4a9a93606ff0ae0880e2ee583a89165a9c4cf1`. Neither old port branch
@@ -24,9 +25,39 @@ const `HashMap::with_hasher` and `HashSet::with_hasher` initialization
 without feature gates. Shell syntax and wrapper argument-routing checks
 also passed.
 
-Stopped before the full matrix for user review, as requested. No full
-matrix, repository test suite, or Clippy pass was started. Other boards
-and Zephyr versions remain unvalidated. Nothing was pushed.
+Initially stopped before the full matrix for user review, as requested.
+No broader validation was claimed at that checkpoint. After review the
+user requested library preparation for build-std, keeping the manual
+sysroot build functional, then the full matrix. That validation passed:
+
+- Full 113-job matrix with RUN=1 on Zephyr 2.3.0/2.7.3/3.7.0, including
+  six expected-crash sample runs and all 107 build-only combinations.
+- Zephyr 2.3.0 sanitycheck: all seven configurations executed and passed
+  on qemu_x86 and qemu_cortex_m3, with no failures or skips.
+- Strict Clippy on Zephyr 3.7.0: host crates, libraries, and all eight
+  app/test crates passed with --locked and -D warnings. The sysroot
+  lint-root limitation documented in CLIPPY_SYSROOT_DEBT.md remains.
+- Every preparation commit passed the default smoke test. Shared bindings
+  and shared mutex bookkeeping additionally passed smoke runs on all
+  three Zephyr versions. The final autosquash preserved the validated
+  tree hash, followed by a fresh successful smoke build/run.
+
+The full matrix exposed two Rust 1.85 target-validation requirements:
+ARM targets must specify llvm-floatabi (soft/hard, matching their upstream
+none/eabi counterparts), and the soft-float Cortex-R5 feature string had
+an invalid leading comma. Fixed the seven ARM target JSONs and the feature
+join in update-targets.sh; folded these fixes into the upgrade commit.
+All twelve target JSONs pass rustc's parser. The affected/incomplete matrix
+results were reset before resuming, retaining only completed, unaffected
+jobs; all rust-app combinations were rerun after moving the nine-slot pool
+test setting to the qemu_x86 board config.
+
+Library separation is detailed in BUILD_STD_INVESTIGATION.md. Two appended
+std-port commits expose primitive Instant ticks and make core/sys private
+backend dependencies; the branch now ends at
+`61e773a1c7e` (the earlier rebased port history was not rewritten).
+The production build still uses rust/build.sh and its compiler wrapper.
+No production build-std switch was made, and nothing was pushed.
 
 ### Conflicts and adaptations
 
@@ -103,13 +134,15 @@ and Zephyr versions remain unvalidated. Nothing was pushed.
 - Updated active pins, workflow tags/default, README, AGENTS.md, and
   pending build-matrix examples. Historical references are unchanged.
 - Existing sysroot/Zephyr warnings remain, including unused PAL items
-  and unsupported dylib crate type. Broader validation is pending,
-  not claimed as passed.
+  and unsupported dylib crate type. Broader validation subsequently passed
+  as described above; 2.7.3/3.7.0 test execution remains separate twister work.
 - Logs and timestamped build volumes remain local under `.upgrade-logs/`,
   excluded from commits. Final clean build/run logs are
   `final-1.85-build.log` and `final-1.85-run.log`; the final volume's
   timestamp is recorded in `1.85-final-stamp`. Push is deferred to the
-  user, in submodule-before-parent order.
+  user, in submodule-before-parent order. Subsequent preparation validation
+  logs are prep-matrix.log, prep-sanity.log, and prep-clippy.log, with matrix
+  results under ci/log/build/run-1. Per-commit smoke logs are in prep-*/.
 
 ## 1.83.0 → 1.84.0 (2026-09-30)
 

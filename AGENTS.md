@@ -6,7 +6,7 @@
 - Build flow is split between Zephyr CMake and Rust Cargo:
   1. Top-level `CMakeLists.txt` derives `rust_target`/`clang_target` from Zephyr `ARCH`/Kconfig.
   2. `scripts/gen_syscalls.py` generates syscall thunk C/header files from Zephyr syscall metadata.
-  3. `zephyr-bindgen` is built and invoked by `rust/zephyr-sys/build.rs` to generate Rust FFI bindings (`bindings.rs`, `syscalls.rs`).
+  3. CMake builds and invokes `zephyr-bindgen` once per Zephyr image to generate Rust FFI bindings (`bindings.rs`, `syscalls.rs`). `zephyr-sys/build.rs` tracks those shared inputs for both std-private and ordinary app crate instances.
   4. `rust/genproject.sh` creates a generated Cargo project that depends on the app crate (from the sample/test directory).
   5. `rust/build.sh` builds a custom sysroot (`rust/sysroot-stage1`) and then builds the app staticlib (`librust_app.a`), which CMake imports and links into the Zephyr app.
 - Crate layering is intentional:
@@ -15,6 +15,7 @@
   - `zephyr`: std-facing API layer built on `zephyr-core`
   - helper crates: `zephyr-macros`, `zephyr-futures`, `zephyr-logger`, `zephyr-uart-buffered`
 - C shims (`src/main.c`) are the ABI bridge: Zephyr C entrypoints call exported Rust symbols (`extern "C"`, `#[no_mangle]`).
+- Std and apps compile independent instances of `zephyr-core`/`zephyr-sys`. Kernel resources and mutex-pool bookkeeping are C-owned; register global allocators only at the generated app root. Adapt `Instant` with `zephyr::time::instant_ticks`, not the removed std-private `From<Instant>` implementation. The manual sysroot build is retained pending build-std review (see `docs/BUILD_STD_INVESTIGATION.md`).
 
 ## Build, test, and run commands
 
@@ -270,7 +271,7 @@ the jobs `.github/workflows/main.yml` builds.
 - QEMU test runs do not exit by design; wrap `ninja run` in `timeout` instead
   of `-t run`.
 - To diagnose binding issues, inspect the build dir: `bindings.rs` under
-  `sysroot-build-stage1/<target>/release/build/zephyr-sys-*/out/` (one huge
+  `modules/zephyr-rust/bindings/` (one huge
   line; use targeted `grep -o`), `zephyr/include/generated/` (all_syscalls.h,
   syscall_thunks.c, devicetree_generated.h), and the cflags bindgen receives
   in the build dir's `rust-env.sh` (`TARGET_CFLAGS`, which includes

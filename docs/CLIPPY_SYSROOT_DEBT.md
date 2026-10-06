@@ -1,12 +1,15 @@
 # Known clippy debt: sysroot-layer crates
 
 The sysroot-layer crates (`zephyr-sys`, `zephyr-core`, `time-convert`) are
-built as part of the Rust std port (see `rust/rust/library/std/Cargo.toml`
-and `rust/build.sh`), not as standalone crate workspaces. This means
-`ci/clippy.sh` cannot actually run clippy on them, only rustc. Their known
-clippy warnings are therefore invisible to the normal clippy/report flow and
-are tracked here until a structural fix or toolchain upgrade makes them
-lintable for real.
+built privately as part of the Rust std port (see
+`rust/rust/library/std/Cargo.toml` and `rust/build.sh`). Since the build-std
+library preparation they are also ordinary Cargo dependencies of apps, but
+`ci/clippy.sh` still selects them with `-p` from the sysroot workspace,
+where they are non-members. That pass still runs rustc, not Clippy. Their
+known clippy warnings remain invisible to the normal report and are tracked
+here until they have standalone lint roots/workspaces and committed locks.
+See `BUILD_STD_INVESTIGATION.md` for the implemented library separation;
+it does not itself resolve this lint-root limitation.
 
 ## Why plain clippy cannot see them
 

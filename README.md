@@ -205,6 +205,24 @@ Nested Rust submodules that remain upstream:
 * ``rust/rust/library/backtrace`` -> https://github.com/rust-lang/backtrace-rs.git
 * ``rust/rust/library/stdarch`` -> https://github.com/rust-lang/stdarch.git
 
+## Rust crate layering
+
+- `zephyr-sys` contains the generated low-level FFI and syscall bindings.
+- `zephyr-core` contains no_std-capable wrappers used by both std and apps.
+- `zephyr` adds application-facing APIs and std adapters.
+
+Applications and helpers declare their Zephyr crate dependencies in Cargo.
+The std port builds private instances of core/sys; these do not share Rust
+crate identity with application instances. CMake generates bindings once
+per image, the C runtime owns shared mutex-pool bookkeeping, and the generated
+application root registers the allocator once. Use
+`zephyr::time::instant_ticks(instant)` for conversion to Zephyr ticks.
+
+The build still uses a manually installed sysroot and compiler wrapper.
+Library preparation for Cargo build-std and its validation are documented in
+[BUILD_STD_INVESTIGATION.md](docs/BUILD_STD_INVESTIGATION.md); the actual
+build-system switch is deferred.
+
 ## TODO
 
 * Figure out how to fail tests through assertions in code
@@ -220,10 +238,8 @@ Nested Rust submodules that remain upstream:
   architecture-specific C macros that would not be wise to try to duplicate
   exactly in Rust. Possibly could generate C code like in the "cpp" crate, but
   for now just define threads in C and point them at a Rust FFI entry point.
-* std::sync::{Mutex, RwLock}. Mutex should work when built without userspace
-  support. Userspace would require (at least) CONFIG_DYNAMIC_OBJECTS. While
-  this is possible, I don't want to require it to use libstd. May revisit.
-  The small number of uses in libstd are patched out.
+* std::sync::RwLock. std::sync::Mutex is supported, including userspace
+  through CONFIG_RUST_MUTEX_POOL; it does not require CONFIG_DYNAMIC_OBJECTS.
 
 ## License
 
