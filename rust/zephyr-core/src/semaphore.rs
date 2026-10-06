@@ -15,6 +15,13 @@ crate::make_static_wrapper!(k_sem, zephyr_sys::raw::k_sem);
 
 /// Raw syscall API
 pub trait SemaphoreSyscalls {
+    /// Initialize semaphore storage.
+    ///
+    /// # Safety
+    ///
+    /// No other thread may access `sem` during initialization. `limit` must
+    /// be nonzero and `initial_count` must not exceed it. The caller must be
+    /// permitted to initialize the object in this syscall context.
     unsafe fn k_sem_init(sem: &k_sem, initial_count: libc::c_uint, limit: libc::c_uint);
     fn k_sem_take(sem: &k_sem, timeout: k_timeout_t) -> libc::c_int;
     fn k_sem_give(sem: &k_sem);
@@ -62,6 +69,13 @@ trait_impl!(any, crate::context::Any);
 
 /// Safe API implemented on the sem struct. Converts errors.
 pub trait Semaphore {
+    /// Initialize the semaphore before use.
+    ///
+    /// # Safety
+    ///
+    /// No other thread may access the semaphore during initialization.
+    /// `limit` must be nonzero and `initial_count` must not exceed it. The
+    /// caller must be permitted to initialize the object in `C`.
     unsafe fn init<C: SemaphoreSyscalls>(&self, initial_count: u32, limit: u32);
     /// Take with infinite timeout
     fn take<C: SemaphoreSyscalls>(&self);

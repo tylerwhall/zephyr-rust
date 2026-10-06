@@ -35,6 +35,14 @@ impl DynMutex {
         ptr
     }
 
+    /// Reclaim ownership transferred by `into_raw`.
+    ///
+    /// # Safety
+    ///
+    /// `m` must be a non-null pointer returned by `DynMutex::into_raw` using
+    /// this image's allocation backend. Ownership must not already have been
+    /// reclaimed or freed. No locks or borrowed references may remain when
+    /// the reconstructed owner is dropped.
     pub unsafe fn from_raw(m: *mut KMutex) -> Self {
         DynMutex(NonNull::new_unchecked(m))
     }

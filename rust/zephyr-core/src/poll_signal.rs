@@ -12,6 +12,12 @@ unsafe impl KObj for KPollSignal {
 crate::make_static_wrapper!(k_poll_signal, zephyr_sys::raw::k_poll_signal);
 
 pub trait KPollSignalSyscalls {
+    /// Initialize poll signal storage.
+    ///
+    /// # Safety
+    ///
+    /// No other thread may access `signal` during initialization, and the
+    /// caller must be permitted to initialize it in this syscall context.
     unsafe fn k_poll_signal_init(signal: &KPollSignal);
     fn k_poll_signal_reset(signal: &KPollSignal);
     fn k_poll_signal_check(signal: &KPollSignal, signaled: &mut c_uint, result: &mut c_int);
@@ -64,6 +70,12 @@ trait_impl!(user, crate::context::User);
 trait_impl!(any, crate::context::Any);
 
 pub trait Signal {
+    /// Initialize the signal before use.
+    ///
+    /// # Safety
+    ///
+    /// No other thread may access the signal during initialization, and the
+    /// caller must be permitted to initialize the object in `C`.
     unsafe fn init<C: KPollSignalSyscalls>(&self);
     fn reset<C: KPollSignalSyscalls>(&self);
     fn check<C: KPollSignalSyscalls>(&self) -> Option<c_int>;

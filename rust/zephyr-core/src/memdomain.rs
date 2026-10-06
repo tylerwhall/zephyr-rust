@@ -11,6 +11,13 @@ pub struct MemDomain<'a>(&'a k_mem_domain);
 pub struct MemDomain<'a>(PhantomData<&'a ()>);
 
 impl<'a> MemDomain<'a> {
+    /// Wrap an initialized memory domain.
+    ///
+    /// # Safety
+    ///
+    /// The domain must remain initialized for `'a`. Its partitions must only
+    /// grant access to memory that the added threads may safely access, and
+    /// domain changes must obey Zephyr's synchronization requirements.
     #[cfg(usermode)]
     pub unsafe fn new(domain: &'a k_mem_domain) -> Self {
         MemDomain(domain)

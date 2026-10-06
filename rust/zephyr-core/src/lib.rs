@@ -55,7 +55,13 @@ impl NegErr for i32 {
 }
 
 pub mod context {
-    /// Kernel, user, or runtime-detect (any)
+    /// Kernel, user, or runtime-detect (any).
+    ///
+    /// # Safety
+    ///
+    /// Implementors must select syscall entrypoints matching their execution
+    /// context. Kernel-only entrypoints must never be invoked from userspace;
+    /// runtime-detect entrypoints must retain Zephyr's privilege checks.
     pub unsafe trait Context {}
 
     pub struct Kernel;

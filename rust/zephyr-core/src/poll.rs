@@ -13,6 +13,13 @@ pub use crate::poll_signal::*;
 
 pub type KPollEvent = k_poll_event;
 
+/// A kernel object accepted by Zephyr's poll API.
+///
+/// # Safety
+///
+/// `POLL_TYPE` must identify the actual object layout provided by `KObj`.
+/// Zephyr must support polling that type through the pointer returned by
+/// `as_void_ptr`, including its synchronization of shared object access.
 pub unsafe trait PollableKobj: KObj {
     const POLL_TYPE: u32;
 }

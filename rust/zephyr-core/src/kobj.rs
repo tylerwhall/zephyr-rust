@@ -8,6 +8,12 @@ pub use zephyr_sys::raw::k_objects;
 ///
 /// This implies locking is done in the kernel and this is therefore Send + Sync. e.g. mutex,
 /// semaphore, fifo. Implement this for the raw Zephyr C structs.
+///
+/// # Safety
+///
+/// The type must have the layout of the Zephyr object identified by `OTYPE`.
+/// Its address must be usable as that object's kernel API pointer, and kernel
+/// operations through shared references must synchronize all mutations.
 pub unsafe trait KObj {
     const OTYPE: k_objects;
 
@@ -28,8 +34,13 @@ unsafe impl<T: KObj> Send for StaticKObj<T> {}
 unsafe impl<T: KObj> Sync for StaticKObj<T> {}
 
 impl<T> StaticKObj<T> {
-    // Unsafe because there must be some provision to initialize this before it is referenced and
-    // it must be declared static because we hand out KObjRef with static lifetime.
+    /// Reserve storage for a statically initialized kernel object.
+    ///
+    /// # Safety
+    ///
+    /// The returned storage must live at a stable static address. The caller
+    /// must initialize it through the appropriate Zephyr initialization API
+    /// before dereferencing it or exposing references to the contained object.
     pub const unsafe fn uninit() -> Self {
         StaticKObj(UnsafeCell::new(MaybeUninit::uninit()))
     }
@@ -76,6 +87,13 @@ macro_rules! make_static_wrapper {
             }
 
             impl $k_type {
+                /// Reserve storage for a statically initialized kernel object.
+                ///
+                /// # Safety
+                ///
+                /// The wrapper must live at a stable static address and be
+                /// initialized through Zephyr before `kobj` or dereferencing
+                /// exposes a reference to the contained object.
                 pub const unsafe fn uninit() -> Self {
                     $k_type(StaticKObj::uninit())
                 }
