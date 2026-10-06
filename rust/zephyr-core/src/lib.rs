@@ -39,10 +39,6 @@ impl fmt::Display for KernelVersion {
     }
 }
 
-// Use this mem pool for global allocs instead of kmalloc
-#[cfg(mempool)]
-crate::global_sys_mem_pool!(rust_std_mem_pool);
-
 /// Convert a negative error code to a Result
 pub trait NegErr {
     fn neg_err(&self) -> Result<u32, u32>;

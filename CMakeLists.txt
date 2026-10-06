@@ -115,8 +115,12 @@ if(NOT DEFINED CARGO_SOURCE_DIR)
     set(CARGO_SOURCE_DIR ${CMAKE_SOURCE_DIR})
 endif()
 
+set(rust_allocator_arg "")
+if(CONFIG_RUST_ALLOC_POOL)
+    set(rust_allocator_arg --alloc-pool)
+endif()
 add_custom_command(OUTPUT ${rust_generated_project}/Cargo.toml
-  COMMAND ${rust_src_dir}/genproject.sh ${CARGO_SOURCE_DIR} ${rust_generated_project}
+  COMMAND ${rust_src_dir}/genproject.sh ${CARGO_SOURCE_DIR} ${rust_generated_project} ${rust_allocator_arg}
   DEPENDS ${rust_src_dir}/genproject.sh
 )
 add_custom_target(rust_generated_project DEPENDS ${rust_generated_project}/Cargo.toml)
