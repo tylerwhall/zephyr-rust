@@ -247,20 +247,6 @@ if (CONFIG_RUST)
     endif()
     add_dependencies(rust_c syscall_thunks_target)
 
-    # Compatibility for Zephyr 1.14
-    if (NOT COMMAND zephyr_library_import)
-        # Add the imported library 'library_name', located at 'library_path' to the
-        # global list of Zephyr CMake libraries.
-        function(zephyr_library_import library_name library_path)
-          add_library(${library_name} STATIC IMPORTED GLOBAL)
-          set_target_properties(${library_name}
-            PROPERTIES IMPORTED_LOCATION
-            ${library_path}
-            )
-          zephyr_append_cmake_library(${library_name})
-        endfunction()
-    endif()
-
     zephyr_library_import(rust ${rust_staticlib})
     if(CONFIG_USERSPACE)
         set_property(TARGET zephyr_property_target
