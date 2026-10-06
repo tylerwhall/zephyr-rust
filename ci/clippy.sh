@@ -24,30 +24,29 @@
 #
 # How it works:
 #   The cross-compiled Rust build is driven by CMake (see CMakeLists.txt and
-#   rust/build.sh), and the sysroot it produces is app-specific: zephyr-sys
-#   regenerating its bindings depends on the app's headers/devicetree, and
+#   rust/cargo.sh), and the std build is app-specific: zephyr-sys
+#   bindings depend on the app's headers/devicetree, and
 #   zephyr-core's cfgs depend on the app's Kconfig. So for every sample and
 #   test this script:
 #     1. runs a regular `west build` in its own build dir, which produces
-#        the cross-compiled sysroot (std + zephyr-sys + zephyr-core) and the
-#        zephyr-bindgen binary,
+#        bindings and build-local source/toolchain overlay,
 #     2. sources rust-env.sh, the environment file CMake generates into the
-#        build dir (sysroot, target, bindgen flags, Kconfig values; see
+#        build dir (toolchain, target, bindgen flags, Kconfig values; see
 #        CMakeLists.txt), so clippy sees exactly the same configuration as a
 #        real build,
-#     3. runs `cargo clippy` on the app crate (clippy also lints its local
-#        path dependencies, e.g. the zephyr, zephyr-logger,
-#        zephyr-futures, and zephyr-uart-buffered crates).
+#     3. runs `rust/cargo.sh clippy` with the same build-std configuration.
+#        Library roots are linted explicitly: ordinary non-member path
+#        dependencies do not receive Clippy's workspace wrapper.
 #   The passes, in order:
 #     1. host crates (zephyr-bindgen, zephyr-macros), linted without a
 #        target,
 #     2. common code: a west build of samples/rust-app (whose build tree
-#        provides the cross-compiled sysroot and environment), then the
+#        provides bindings and environment), then the
 #        sysroot-layer crates (zephyr-sys, zephyr-core, time-convert) and
 #        the app-layer library crates, linted against that environment.
 #        Linting the common code first fails fast, before the per-app pass.
 #        Note: the sysroot-layer crates are linted via -p from the
-#        sysroot-stage1 workspace, where they are non-member path deps, so
+#        generated app workspace, where they are non-member path deps, so
 #        only rustc lints surface there (RUSTC_WORKSPACE_WRAPPER applies to
 #        workspace members only); see CLIPPY_SYSROOT_DEBT.md.
 #     3. per-app west builds + clippy, parallelized; when pass 2 ran, the
@@ -144,11 +143,12 @@ mkdir -p "${STATUS_DIR}"
 
 # Load the Rust build environment CMake generated into the build dir
 # (rust-env.sh; see CMakeLists.txt). Exports: RUST_TARGET, RUST_TARGET_SPEC,
-# CLANG_TARGET, TARGET_CFLAGS, SYSROOT, ZEPHYR_BINDGEN,
+# CLANG_TARGET, TARGET_CFLAGS, RUST_BUILD_TOOLCHAIN, ZEPHYR_BINDGEN,
 # ZEPHYR_KERNEL_VERSION_NUM, RUSTC_BOOTSTRAP, CONFIG_*.
 derive_env() {
     local bdir=$1
     local env_file="${bdir}/rust-env.sh"
+    export RUST_ENV="${env_file}"
     if [ ! -f "${env_file}" ]; then
         echo "error: ${env_file} not found; did the west build configure successfully?" >&2
         exit 1
@@ -156,7 +156,7 @@ derive_env() {
     # shellcheck disable=SC1090
     . "${env_file}"
     local k
-    for k in RUST_TARGET RUST_TARGET_SPEC TARGET_CFLAGS SYSROOT ZEPHYR_BINDGEN ZEPHYR_KERNEL_VERSION_NUM; do
+    for k in RUST_TARGET RUST_TARGET_SPEC TARGET_CFLAGS RUST_BUILD_TOOLCHAIN ZEPHYR_BINDGEN ZEPHYR_KERNEL_VERSION_NUM; do
         if [ -z "${!k:-}" ]; then
             echo "error: ${k} is missing or empty in ${env_file};" >&2
             echo "       the CMake-generated environment may have changed" >&2
@@ -165,17 +165,12 @@ derive_env() {
     done
 }
 
-# RUSTFLAGS for cross-compiled clippy invocations against a given sysroot.
-cross_rustflags() {
-    echo "${RUSTFLAGS:+${RUSTFLAGS} }--sysroot $1"
-}
-
 fail=0
 run_clippy() {
     echo
-    echo "=== cargo clippy $*"
+    echo "=== $*"
     # shellcheck disable=SC2086
-    if ! cargo clippy "$@" --locked -- ${CLIPPY_ARGS}; then
+    if ! "$@" --locked -- ${CLIPPY_ARGS}; then
         fail=1
         return 1
     fi
@@ -185,8 +180,8 @@ run_clippy() {
 # 1. Host crates (no --target: proc-macros and host tools build for the
 #    host, and must not use the cross-compiled sysroot).
 # ---------------------------------------------------------------------------
-run_clippy --manifest-path zephyr-bindgen/Cargo.toml --all-targets
-run_clippy --manifest-path rust/zephyr-macros/Cargo.toml --all-targets
+run_clippy cargo clippy --manifest-path zephyr-bindgen/Cargo.toml --all-targets
+run_clippy cargo clippy --manifest-path rust/zephyr-macros/Cargo.toml --all-targets
 
 # Common code pass: build samples/rust-app to get the sysroot and
 # environment, then lint the sysroot-layer and app-layer library crates.
@@ -201,17 +196,11 @@ run_common_pass() {
         > "${STATUS_DIR}/rust-app.build.log" 2>&1 || true
     if [ -f "${BUILD_DIR}/rust-app/zephyr/zephyr.elf" ]; then
         derive_env "${BUILD_DIR}/rust-app"
-        # Inline (not exported): cross_rustflags appends to RUSTFLAGS, so an
-        # exported value would be doubled up by later invocations.
-        rf="$(cross_rustflags "${SYSROOT}")"
-
-        RUSTFLAGS="${rf}" run_clippy --manifest-path rust/sysroot-stage1/Cargo.toml \
-            -p zephyr-sys -p zephyr-core -p time-convert \
-            --target "${RUST_TARGET_SPEC}" --lib
+        run_clippy rust/cargo.sh clippy --manifest-path "${CARGO_MANIFEST}" \
+            -p zephyr-sys -p zephyr-core -p time-convert --lib
 
         for m in rust/zephyr rust/zephyr-logger rust/zephyr-futures; do
-            RUSTFLAGS="${rf}" run_clippy --manifest-path "${m}/Cargo.toml" \
-                --target "${RUST_TARGET_SPEC}" --lib
+            run_clippy rust/cargo.sh clippy --manifest-path "${m}/Cargo.toml" --lib
         done
     else
         echo "note: samples/rust-app did not build on ${BOARD}; last lines of"
@@ -242,9 +231,8 @@ app_worker() {
         derive_env "${bdir}"
         echo "Rust target: ${RUST_TARGET}"
         echo "=== cargo clippy ${app}"
-        RUSTFLAGS="$(cross_rustflags "${SYSROOT}")" \
-            cargo clippy --manifest-path "${app}/Cargo.toml" \
-            --target "${RUST_TARGET_SPEC}" --locked --lib \
+        rust/cargo.sh clippy --manifest-path "${app}/Cargo.toml" \
+            --locked --lib \
             -- ${CLIPPY_ARGS}
     ) > "${STATUS_DIR}/${name}.log" 2>&1 || clippy_rc=$?
     # Distinguish "cannot build on this board" from clippy failures: a
