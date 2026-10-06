@@ -8,6 +8,7 @@ version = "0.1.0"
 dependencies = [
  "libc",
  "zephyr",
+ "zephyr-core",
  "zephyr-macros",
 ]
 

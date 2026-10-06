@@ -9,6 +9,7 @@ dependencies = [
  "cstr",
  "log",
  "zephyr",
+ "zephyr-core",
  "zephyr-logger",
  "zephyr-macros",
 ]

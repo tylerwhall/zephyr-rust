@@ -5,6 +5,7 @@ authors = ["Tyler Hall <tylerwhall@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+zephyr-core = { path = "../../rust/zephyr-core" }
 libc = { path = "../../rust/libc" }
 zephyr = { path = "../../rust/zephyr" }
 zephyr-macros = { path = "../../rust/zephyr-macros" }

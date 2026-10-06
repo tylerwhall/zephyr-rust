@@ -9,6 +9,7 @@ dependencies = [
  "futures",
  "libc",
  "zephyr",
+ "zephyr-core",
  "zephyr-futures",
  "zephyr-macros",
 ]

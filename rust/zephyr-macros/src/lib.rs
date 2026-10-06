@@ -23,13 +23,13 @@ pub fn k_mutex_define(item: TokenStream) -> TokenStream {
     let expanded = quote! {
         // The static storage for the object, itself
         #[link_section = #section]
-        static #ident: zephyr::mutex::global::k_mutex = unsafe { zephyr::mutex::global::k_mutex::uninit() };
+        static #ident: ::zephyr_core::mutex::global::k_mutex = unsafe { ::zephyr_core::mutex::global::k_mutex::uninit() };
 
         // A constructor function that calls its init
         #[allow(non_snake_case)]
         extern "C" fn #ctor() {
-            use zephyr::mutex::RawMutex;
-            unsafe { #ident.init::<zephyr::context::Kernel>() }
+            use ::zephyr_core::mutex::RawMutex;
+            unsafe { #ident.init::<::zephyr_core::context::Kernel>() }
         }
 
         // Add a pointer to the constructor to .ctors table
@@ -56,13 +56,13 @@ pub fn k_poll_signal_define(item: TokenStream) -> TokenStream {
     let expanded = quote! {
         // The static storage for the object, itself
         #[link_section = #section]
-        static #ident: zephyr::poll::global::k_poll_signal = unsafe { zephyr::poll::global::k_poll_signal::uninit() };
+        static #ident: ::zephyr_core::poll::global::k_poll_signal = unsafe { ::zephyr_core::poll::global::k_poll_signal::uninit() };
 
         // A constructor function that calls its init
         #[allow(non_snake_case)]
         extern "C" fn #ctor() {
-            use zephyr::poll::*;
-            unsafe { #ident.init::<zephyr::context::Kernel>() }
+            use ::zephyr_core::poll::*;
+            unsafe { #ident.init::<::zephyr_core::context::Kernel>() }
         }
 
         // Add a pointer to the constructor to .ctors table
@@ -109,13 +109,13 @@ pub fn k_sem_define(item: TokenStream) -> TokenStream {
     let expanded = quote! {
         // The static storage for the object, itself
         #[link_section = #section]
-        static #ident: zephyr::semaphore::global::k_sem = unsafe { zephyr::semaphore::global::k_sem::uninit() };
+        static #ident: ::zephyr_core::semaphore::global::k_sem = unsafe { ::zephyr_core::semaphore::global::k_sem::uninit() };
 
         // A constructor function that calls its init
         #[allow(non_snake_case)]
         extern "C" fn #ctor() {
-            use zephyr::semaphore::*;
-            unsafe { #ident.init::<zephyr::context::Kernel>(#initial, #limit) }
+            use ::zephyr_core::semaphore::*;
+            unsafe { #ident.init::<::zephyr_core::context::Kernel>(#initial, #limit) }
         }
 
         // Add a pointer to the constructor to .ctors table

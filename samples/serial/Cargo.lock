@@ -8,6 +8,7 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "zephyr",
+ "zephyr-core",
  "zephyr-futures",
  "zephyr-macros",
  "zephyr-sys",
