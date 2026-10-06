@@ -64,10 +64,10 @@ on qemu_x86.
 ### Clippy
 - `ci/clippy.sh` runs `cargo clippy` on all Rust crates: the host crates
   (`zephyr-bindgen`, `zephyr-macros`), every sample/test app crate, and the
-  app-layer library crates. The low-level crates (`zephyr-sys`,
-  `zephyr-core`, `time-convert`) are selected via `-p` from the generated app
-  workspace, so they remain non-members and only rustc lints surface there
-  (mechanism and tracked debt in `docs/CLIPPY_SYSROOT_DEBT.md`). Each app is
+  app-layer library crates, and the low-level crates (`zephyr-sys`,
+  `zephyr-core`, `time-convert`). Every library is linted from its own manifest
+  with a committed lockfile, so Clippy checks it as a root rather than a
+  non-member dependency (see `docs/CLIPPY_SYSROOT_DEBT.md`). Each app is
   `west build`-ed in its own build dir first for image-specific bindings and
   Kconfig. Cross-Clippy uses `rust/cargo.sh` with the same build-std roots,
   source overlay, and std lock guard; host crates use ordinary Cargo.
@@ -185,7 +185,7 @@ the jobs `.github/workflows/main.yml` builds.
    must be clippy-linted on every version whose branch it touches. Use a
    separate clippy volume per Zephyr version (`CLIPPY_BUILD_DIR` is not
    version-keyed):
-   `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy-<ver>:/tmp/zephyr-rust-clippy" CLIPPY_ARGS="-D warnings" RUST_VERSION=1.85.0 ZEPHYR_VERSION=<ver> ./build-cmd.sh ci/clippy.sh <app>`
+   `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy-<ver>:/tmp/zephyr-rust-clippy" RUST_VERSION=1.85.0 ZEPHYR_VERSION=<ver> ./build-cmd.sh env CLIPPY_ARGS="-D warnings" ci/clippy.sh <app>`
 4. **Full matrix, tests, and clippy (pre-PR / CI parity)**:
    - `cd ci && ./build-all.sh` — the full matrix with `--resume` (reruns skip
      completed jobs; `rm -rf ci/log/build` forces a full re-run). Optionally
@@ -194,7 +194,7 @@ the jobs `.github/workflows/main.yml` builds.
      Zephyr 2.3.0 (qemu_x86, qemu_cortex_m3); the only automated test
      execution today, not full-version test execution (2.7.3/3.7.0
      execution is separate twister work, see `docs/BUILD_MATRIX_TODO.md`).
-   - `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy-3.7.0:/tmp/zephyr-rust-clippy" CLIPPY_ARGS="-D warnings" RUST_VERSION=1.85.0 ./build-cmd.sh ci/clippy.sh`
+   - `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy-3.7.0:/tmp/zephyr-rust-clippy" RUST_VERSION=1.85.0 ZEPHYR_VERSION=3.7.0 ./build-cmd.sh env CLIPPY_ARGS="-D warnings" ci/clippy.sh`
      — the same pass the CI clippy job runs (warnings fatal, strict).
 5. **Rust-version coupling for local runs**: containers are per (Zephyr,
    Rust) image. When the host has no usable rustc, pass `RUST_VERSION`

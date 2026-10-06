@@ -45,10 +45,10 @@
 #        low-level crates (zephyr-sys, zephyr-core, time-convert) and
 #        the app-layer library crates, linted against that environment.
 #        Linting the common code first fails fast, before the per-app pass.
-#        Note: the low-level crates are selected via -p from the
-#        generated app workspace, where they are non-member path deps, so
-#        only rustc lints surface there (RUSTC_WORKSPACE_WRAPPER applies to
-#        workspace members only); see CLIPPY_SYSROOT_DEBT.md.
+#        Each library is a standalone Clippy root with its own manifest
+#        and committed lockfile, including the low-level crates used by std.
+#        Selecting non-member dependencies with -p would run only rustc,
+#        not Clippy; see docs/CLIPPY_SYSROOT_DEBT.md.
 #     3. per-app west builds + clippy, parallelized; when pass 2 ran, the
 #        samples/rust-app build from it is reused (its west build is a
 #        no-op).
@@ -184,8 +184,8 @@ run_clippy cargo clippy --manifest-path zephyr-bindgen/Cargo.toml --all-targets
 run_clippy cargo clippy --manifest-path rust/zephyr-macros/Cargo.toml --all-targets
 
 # Common code pass: build samples/rust-app to get bindings and the
-# environment, then select low-level packages and lint app-layer library roots.
-# Low-level packages remain non-members; see CLIPPY_SYSROOT_DEBT.md.
+# environment, then lint each low-level and app-layer library from its own
+# manifest so Cargo applies Clippy's workspace wrapper to that crate.
 # zephyr-uart-buffered is not linted here: it only compiles in builds with
 # CONFIG_UART_BUFFERED, covered by the samples/serial pass.)
 run_common_pass() {
@@ -194,10 +194,8 @@ run_common_pass() {
     if west build -d "${BUILD_DIR}/rust-app" -p auto -b "${BOARD}" samples/rust-app \
         > "${STATUS_DIR}/rust-app.build.log" 2>&1; then
         derive_env "${BUILD_DIR}/rust-app"
-        run_clippy rust/cargo.sh clippy --manifest-path "${CARGO_MANIFEST}" \
-            -p zephyr-sys -p zephyr-core -p time-convert --lib
-
-        for m in rust/zephyr rust/zephyr-logger rust/zephyr-futures; do
+        for m in rust/zephyr-sys rust/zephyr-core rust/zephyr-core/time-convert \
+            rust/zephyr rust/zephyr-logger rust/zephyr-futures; do
             run_clippy rust/cargo.sh clippy --manifest-path "${m}/Cargo.toml" --lib
         done
     else

@@ -63,9 +63,11 @@ sharing source selection, bindings, Kconfig, and the std lock guard. Host
 bindgen/proc-macro crates use ordinary Cargo. CI checks west's exit status,
 not merely the existence of an ELF left by an earlier build.
 
-Core/sys/time-convert are still selected as non-members from the generated
-app workspace, so that selection runs rustc rather than real Clippy. See
-[CLIPPY_SYSROOT_DEBT.md](CLIPPY_SYSROOT_DEBT.md) for the remaining lint-root work.
+Core/sys/time-convert and the app-layer libraries are each linted from their
+own manifests with committed lockfiles. Selecting them as non-members from
+the generated app workspace would run rustc rather than real Clippy. See
+[CLIPPY_SYSROOT_DEBT.md](CLIPPY_SYSROOT_DEBT.md) for coverage, generated-code
+exceptions, and the warning inventory resolved when enabling these roots.
 
 ## Validation and limitations
 
