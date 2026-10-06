@@ -43,7 +43,9 @@ publish_sysroot() {
     mv ${SYSROOT_LIB_HOST}-new ${SYSROOT_LIB_HOST}
 }
 
-# Build std
+# Build std. The wrapper supplies bootstrap's stability metadata for hashbrown
+# without marking our public zephyr-core/zephyr-sys APIs as rustc_private.
+RUSTC_WRAPPER="$(pwd)/sysroot-rustc.sh" \
 RUSTFLAGS="$RUSTFLAGS -Cembed-bitcode=yes" cargo ${CARGO_ARGS} \
     --target-dir=${SYSROOT_BUILD}-stage1 \
     --manifest-path=./sysroot-stage1/Cargo.toml -p std
