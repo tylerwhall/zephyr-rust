@@ -143,8 +143,8 @@ mkdir -p "${STATUS_DIR}"
 
 # Load the Rust build environment CMake generated into the build dir
 # (rust-env.sh; see CMakeLists.txt). Exports: RUST_TARGET, RUST_TARGET_SPEC,
-# CLANG_TARGET, TARGET_CFLAGS, RUST_BUILD_TOOLCHAIN, ZEPHYR_BINDGEN,
-# ZEPHYR_KERNEL_VERSION_NUM, RUSTC_BOOTSTRAP, CONFIG_*.
+# TARGET_CFLAGS, RUST_BUILD_TOOLCHAIN, RUST_BUILD_STD, CARGO_MANIFEST,
+# RUSTC_BOOTSTRAP, CONFIG_*.
 derive_env() {
     local bdir=$1
     local env_file="${bdir}/rust-env.sh"
@@ -156,7 +156,7 @@ derive_env() {
     # shellcheck disable=SC1090
     . "${env_file}"
     local k
-    for k in RUST_TARGET RUST_TARGET_SPEC TARGET_CFLAGS RUST_BUILD_TOOLCHAIN ZEPHYR_BINDGEN ZEPHYR_KERNEL_VERSION_NUM; do
+    for k in RUST_TARGET RUST_TARGET_SPEC TARGET_CFLAGS RUST_BUILD_TOOLCHAIN RUST_BUILD_STD CARGO_MANIFEST; do
         if [ -z "${!k:-}" ]; then
             echo "error: ${k} is missing or empty in ${env_file};" >&2
             echo "       the CMake-generated environment may have changed" >&2
@@ -178,23 +178,21 @@ run_clippy() {
 
 # ---------------------------------------------------------------------------
 # 1. Host crates (no --target: proc-macros and host tools build for the
-#    host, and must not use the cross-compiled sysroot).
+#    host, without build-std).
 # ---------------------------------------------------------------------------
 run_clippy cargo clippy --manifest-path zephyr-bindgen/Cargo.toml --all-targets
 run_clippy cargo clippy --manifest-path rust/zephyr-macros/Cargo.toml --all-targets
 
-# Common code pass: build samples/rust-app to get the sysroot and
-# environment, then lint the sysroot-layer and app-layer library crates.
-# (The library crates are also covered as path dependencies in the per-app
-# passes; this makes the coverage explicit and fails fast.
+# Common code pass: build samples/rust-app to get bindings and the
+# environment, then select low-level packages and lint app-layer library roots.
+# Low-level packages remain non-members; see CLIPPY_SYSROOT_DEBT.md.
 # zephyr-uart-buffered is not linted here: it only compiles in builds with
 # CONFIG_UART_BUFFERED, covered by the samples/serial pass.)
 run_common_pass() {
     echo
     echo "=== west build -b ${BOARD} samples/rust-app"
-    west build -d "${BUILD_DIR}/rust-app" -p auto -b "${BOARD}" samples/rust-app \
-        > "${STATUS_DIR}/rust-app.build.log" 2>&1 || true
-    if [ -f "${BUILD_DIR}/rust-app/zephyr/zephyr.elf" ]; then
+    if west build -d "${BUILD_DIR}/rust-app" -p auto -b "${BOARD}" samples/rust-app \
+        > "${STATUS_DIR}/rust-app.build.log" 2>&1; then
         derive_env "${BUILD_DIR}/rust-app"
         run_clippy rust/cargo.sh clippy --manifest-path "${CARGO_MANIFEST}" \
             -p zephyr-sys -p zephyr-core -p time-convert --lib
@@ -222,30 +220,25 @@ app_worker() {
     local name bdir build_rc=0 clippy_rc=0
     name="$(basename "${app}")"
     bdir="${BUILD_DIR}/${name}"
-    # The subshell contains any `exit` from derive_env; set -e is re-enabled
-    # inside because the `|| clippy_rc=$?` below would suppress it.
-    (
-        set -e
+    {
         echo "=== west build -b ${BOARD} ${app}"
-        west build -d "${bdir}" -p auto -b "${BOARD}" "${app}"
-        derive_env "${bdir}"
-        echo "Rust target: ${RUST_TARGET}"
-        echo "=== cargo clippy ${app}"
-        rust/cargo.sh clippy --manifest-path "${app}/Cargo.toml" \
-            --locked --lib \
-            -- ${CLIPPY_ARGS}
-    ) > "${STATUS_DIR}/${name}.log" 2>&1 || clippy_rc=$?
-    # Distinguish "cannot build on this board" from clippy failures: a
-    # successful west build links zephyr.elf.
-    if [ ! -f "${bdir}/zephyr/zephyr.elf" ]; then
-        build_rc=1
-    fi
+        if west build -d "${bdir}" -p auto -b "${BOARD}" "${app}"; then
+            # Contain any fatal `exit` from derive_env in this worker.
+            (
+                derive_env "${bdir}"
+                echo "Rust target: ${RUST_TARGET}"
+                rust/cargo.sh clippy --manifest-path "${app}/Cargo.toml" \
+                    --locked --lib -- ${CLIPPY_ARGS}
+            ) || clippy_rc=$?
+        else
+            build_rc=1
+        fi
+    } > "${STATUS_DIR}/${name}.log" 2>&1
     echo "${build_rc} ${clippy_rc}" > "${STATUS_DIR}/${name}.exit"
 }
 
 # ---------------------------------------------------------------------------
-# 3. Per-app: west build + clippy on the app crate (clippy also lints the
-#    app's local path dependencies). When the common code pass ran, the
+# 3. Per-app: west build + clippy on the app crate. When the common pass ran, the
 #    samples/rust-app build from it is reused (a no-op west build).
 # ---------------------------------------------------------------------------
 if [ "${#APPS[@]}" -gt 0 ]; then

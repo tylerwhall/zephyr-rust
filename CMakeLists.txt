@@ -156,17 +156,13 @@ function(rust_env_write var value)
     set(rust_env_content "${rust_env_content}" PARENT_SCOPE)
 endfunction()
 rust_env_write(RUST_TARGET "${rust_target}")
-rust_env_write(CLANG_TARGET "${clang_target}")
 rust_env_write(TARGET_CFLAGS "${external_project_cflags}")
 rust_env_write(RUST_BUILD_TOOLCHAIN "${rust_build_toolchain}")
 rust_env_write(RUST_BUILD_STD "${rust_build_std}")
-rust_env_write(APP_BUILD "${rust_app_build}")
 rust_env_write(RUST_TARGET_SPEC "${rust_src_dir}/targets/${rust_target}.json")
 rust_env_write(CARGO_MANIFEST "${rust_generated_project}/Cargo.toml")
 set(rust_bindings_dir ${CMAKE_CURRENT_BINARY_DIR}/bindings)
 rust_env_write(ZEPHYR_RUST_BINDINGS "${rust_bindings_dir}")
-rust_env_write(ZEPHYR_BINDGEN "${ZEPHYR_BINDGEN}")
-rust_env_write(ZEPHYR_KERNEL_VERSION_NUM "${KERNEL_VERSION_NUMBER}")
 # Zephyr version cfgs, consumed by zephyr-core and app crates (e.g.
 # tests/eeprom), exported through RUSTFLAGS so they reach every crate in the
 # sysroot and app builds (build.rs rustc-cfgs only reach the crate whose
