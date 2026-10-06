@@ -2,7 +2,7 @@ use core::cell::UnsafeCell;
 use core::mem::MaybeUninit;
 use core::ops::Deref;
 
-use zephyr_sys::raw::k_objects;
+pub use zephyr_sys::raw::k_objects;
 
 /// A kernel object that is usable via system calls.
 ///
@@ -65,14 +65,14 @@ macro_rules! make_static_wrapper {
         /// the same structure name, we trick gen_kobject_list.py into whitelisting the
         /// address of this struct as a kernel object.
         pub mod global {
-            use crate::kobj::*;
+            use $crate::kobj::*;
             use core::ops::Deref;
 
             #[allow(non_camel_case_types)]
             pub struct $k_type(StaticKObj<$k_path>);
 
             unsafe impl KObj for $k_type {
-                const OTYPE: zephyr_sys::raw::k_objects = <$k_path as KObj>::OTYPE;
+                const OTYPE: $crate::kobj::k_objects = <$k_path as KObj>::OTYPE;
             }
 
             impl $k_type {
