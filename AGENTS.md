@@ -8,14 +8,14 @@
   2. `scripts/gen_syscalls.py` generates syscall thunk C/header files from Zephyr syscall metadata.
   3. CMake builds and invokes `zephyr-bindgen` once per Zephyr image to generate Rust FFI bindings (`bindings.rs`, `syscalls.rs`). `zephyr-sys/build.rs` tracks those shared inputs for both std-private and ordinary app crate instances.
   4. `rust/genproject.sh` creates a generated Cargo project that depends on the app crate (from the sample/test directory).
-  5. `rust/build.sh` builds a custom sysroot (`rust/sysroot-stage1`) and then builds the app staticlib (`librust_app.a`), which CMake imports and links into the Zephyr app.
+  5. `rust/cargo.sh` stages a build-local toolchain/source overlay and builds std plus the app staticlib (`librust_app.a`) together with Cargo build-std. CMake imports and links that archive; no compiled sysroot is published.
 - Crate layering is intentional:
   - `zephyr-sys`: generated/raw FFI and syscall bindings
   - `zephyr-core`: core/no_std-safe wrappers and context-aware syscall traits
   - `zephyr`: std-facing API layer built on `zephyr-core`
   - helper crates: `zephyr-macros`, `zephyr-futures`, `zephyr-logger`, `zephyr-uart-buffered`
 - C shims (`src/main.c`) are the ABI bridge: Zephyr C entrypoints call exported Rust symbols (`extern "C"`, `#[no_mangle]`).
-- Std and apps compile independent instances of `zephyr-core`/`zephyr-sys`. Kernel resources and mutex-pool bookkeeping are C-owned; register global allocators only at the generated app root. Adapt `Instant` with `zephyr::time::instant_ticks`, not the removed std-private `From<Instant>` implementation. The manual sysroot build is retained pending build-std review (see `docs/BUILD_STD_INVESTIGATION.md`).
+- Std and apps compile independent instances of `zephyr-core`/`zephyr-sys`. Kernel resources and mutex-pool bookkeeping are C-owned; register global allocators only at the generated app root. Adapt `Instant` with `zephyr::time::instant_ticks`, not the removed std-private `From<Instant>` implementation. `CONFIG_RUST_STD=n` selects core/alloc-only builds; the app must provide a panic handler and an allocator (or select `RUST_ALLOC_POOL`). See `docs/BUILD_STD_INVESTIGATION.md` for source staging and std lockfile enforcement.
 
 ## Build, test, and run commands
 
@@ -31,7 +31,7 @@ on qemu_x86.
 ### Prerequisites used by this repository
 - Make sure submodules are in sync: `git submodule status --recursive`, `git diff --submodule`
   - There may be local commits above the submodule version, but the base should be the submodule rev
-- Rust toolchain is pinned to the version in rust-toolchain.toml (enforced by `rust/build.sh`).
+- Rust toolchain is pinned to the version in rust-toolchain.toml (enforced by `rust/cargo.sh`). Std's independent resolution is pinned in `rust/Cargo.lock`; the helper rejects mutation of its staged copy.
 - Use a Zephyr version this repo targets (documented in `README.md`).
 
 ### Build natively
@@ -65,13 +65,12 @@ on qemu_x86.
 - `ci/clippy.sh` runs `cargo clippy` on all Rust crates: the host crates
   (`zephyr-bindgen`, `zephyr-macros`), every sample/test app crate, and the
   app-layer library crates. The sysroot-layer crates (`zephyr-sys`,
-  `zephyr-core`, `time-convert`) are linted via `-p` from the sysroot-stage1
-  workspace, so only rustc lints surface there, never clippy (mechanism and
-  tracked debt in `docs/CLIPPY_SYSROOT_DEBT.md`). Each app is
-  `west build`-ed in its own build dir first, because the cross-compiled
-  sysroot (and the
-  `zephyr-sys` bindings generated from the app's headers/devicetree/Kconfig)
-  is app-specific; clippy then reuses that build's sysroot and environment.
+  `zephyr-core`, `time-convert`) are selected via `-p` from the generated app
+  workspace, so they remain non-members and only rustc lints surface there
+  (mechanism and tracked debt in `docs/CLIPPY_SYSROOT_DEBT.md`). Each app is
+  `west build`-ed in its own build dir first for image-specific bindings and
+  Kconfig. Cross-Clippy uses `rust/cargo.sh` with the same build-std roots,
+  source overlay, and std lock guard; host crates use ordinary Cargo.
 - CI container: `cd ci && ./build-cmd.sh ci/clippy.sh`
 - Natively (west, Zephyr, Zephyr SDK, and the clippy component must be
   available): `./ci/clippy.sh`
@@ -107,18 +106,16 @@ remaining warnings grouped by lint. Details:
 
 - Persist the build dir across runs so re-runs are incremental:
   `cd ci && DOCKER_ARGS="-v /tmp/zr-clippy:/tmp/zephyr-rust-clippy" ./build-cmd.sh ci/clippy.sh lib`
-- Re-lint one crate without a full pass: source the build dir's rust-env.sh
-  and lint a single manifest, e.g.
-  `./build-cmd.sh sh -c '. /tmp/zephyr-rust-clippy/rust-app/rust-env.sh; CARGO_TARGET_DIR=/tmp/zephyr-rust-clippy/cargo-target RUSTFLAGS="--sysroot $SYSROOT" cargo clippy --manifest-path rust/zephyr/Cargo.toml --target "$RUST_TARGET_SPEC" --lib'`
+- Re-lint one crate without a full pass using the build's environment, e.g.
+  `./build-cmd.sh sh -c 'RUST_ENV=/tmp/zephyr-rust-clippy/rust-app/rust-env.sh CARGO_TARGET_DIR=/tmp/zephyr-rust-clippy/cargo-target rust/cargo.sh clippy --manifest-path rust/zephyr/Cargo.toml --locked --lib'`
 - A stale `Cargo.lock` reported by `--locked` is regenerated with
   `cargo generate-lockfile --manifest-path <crate>/Cargo.toml` (or
   `cargo update` for dependency bumps) and committed with the change.
 - Add `#[allow(...)]` (with a justifying comment) only when a clean fix is
   impossible; ALWAYS stop and ask the user first when allowing a warning/lint.
-- `CLIPPY_BOARD=native_posix` fails in the Zephyr 3.7.0 container: the
-  cross-compiled sysroot has no `std` for the native_posix target (rustc
-  `E0463`), so no app can be linted there; on the default `qemu_x86` board
-  all tests lint fine.
+- Default lint validation uses `qemu_x86`. The former native_posix E0463
+  limitation involved the removed manual sysroot; do not assume it applies
+  to build-std without reproducing it.
 
 ### Run tests
 - Automated test execution: `cd ci && RUST_VERSION=1.85.0 ./sanitycheck.sh` —

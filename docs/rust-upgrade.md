@@ -97,7 +97,9 @@ to the new upstream code; no hacks.
 In the parent repo, in the same commit as the submodule pointer bump:
 
 - `rust-toolchain.toml`: `channel = "<new>"`
-- `rust/build.sh`: the `VERSION=` rustc-version assertion
+- `rust/cargo.sh` reads the exact compiler pin from `rust-toolchain.toml`;
+  no separate version assertion needs updating
+- `rust/Cargo.lock`: reviewed std dependency resolution (separate from app locks)
 - `README.md`: version references ("exactly ...", "stable-...",
   `rustup toolchain install ...`)
 - `.github/workflows/*.yml`: container image tags and the
@@ -164,13 +166,14 @@ Individual jobs resume via `--resume` on re-runs.
    Omit this override when validating against the local image produced by
    `container-build.sh`.
 
-   **Gotcha**: the first build may fail with
-   `error: failed to write .../rust/sysroot-stage1/Cargo.lock` — the repo
-   is mounted read-only and std's dependency graph changed. Rerun with
-   `WRITABLE=1`; the lockfile diff is a real change, committed with the
-   port. Check that updated dependencies are compatible with the pinned Cargo;
-   if resolution selects a dependency requiring a newer Cargo, resolve it to
-   a compatible version explicitly and record the decision.
+   **Gotcha**: `rust/cargo.sh` rejects changes to std's staged lockfile,
+   even when Cargo's incomplete std-workspace `--locked` handling permits
+   them. Review the reported file under
+   `modules/zephyr-rust/toolchain/lib/rustlib/src/rust/library/Cargo.lock`,
+   then commit the reviewed resolution as `rust/Cargo.lock`. Do not simply
+   bypass the guard or update upstream's library lock: std uses the parent
+   repo's lock plus the staged libc patch. Check dependency compatibility
+   with the pinned compiler/Cargo and record any necessary version pins.
 
 4. **Compile errors in the port** (upstream std/core API churn): identify the
    original port commit that introduced the affected code. Fix one error at a

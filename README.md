@@ -218,17 +218,24 @@ per image, the C runtime owns shared mutex-pool bookkeeping, and the generated
 application root registers the allocator once. Use
 `zephyr::time::instant_ticks(instant)` for conversion to Zephyr ticks.
 
-The build still uses a manually installed sysroot and compiler wrapper.
-Library preparation for Cargo build-std and its validation are documented in
-[BUILD_STD_INVESTIGATION.md](docs/BUILD_STD_INVESTIGATION.md); the actual
-build-system switch is deferred.
+CMake runs `rust/cargo.sh` to build std and the app together with Cargo
+`-Zbuild-std`. A build-local toolchain/source overlay leaves your installed
+toolchain untouched; neither upstream `rust-src` nor a compiler wrapper is
+required. The reviewed std resolution is in `rust/Cargo.lock`. See
+[BUILD_STD_INVESTIGATION.md](docs/BUILD_STD_INVESTIGATION.md) for details.
+
+For a core/alloc-only image, set `CONFIG_RUST_STD=n`, use only no_std-capable
+dependencies, and supply a `#[panic_handler]`. `CONFIG_RUST_ALLOC_POOL`
+registers the allocator automatically; otherwise supply your own. See
+`samples/no_std` (the default remains std-enabled).
 
 ### Porting applications to Rust 1.85
 
 - Add explicit Cargo dependencies for each directly used `zephyr_core`,
   `zephyr_sys`, or `libc` crate, pointing to this checkout's `rust/zephyr-core`,
   `rust/zephyr-sys`, or `rust/libc`. Do not enable `rustc-dep-of-std` for apps.
-  Refresh the affected `Cargo.lock` files.
+  Object-definition macros from `zephyr-macros` also require a direct
+  `zephyr-core` dependency. Refresh the affected `Cargo.lock` files.
 - Replace `Ticks::from(instant)` or `instant.into()` with
   `zephyr::time::instant_ticks(instant)`.
 - With `CONFIG_RUST_ALLOC_POOL`, the generated app root registers the global

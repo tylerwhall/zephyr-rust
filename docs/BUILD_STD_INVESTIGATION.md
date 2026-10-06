@@ -4,10 +4,77 @@ Investigation against Rust/Cargo 1.85.0, using the pulled
 `ghcr.io/tylerwhall/zephyr-rust:zephyr-rust-3.7.0-1.85.0` image.
 The initial experiments used copies under
 `.upgrade-logs/build-std-investigation/`, without changing production crates.
-The library preparation described below has subsequently been implemented;
-the actual build-std switch remains deferred for review.
+Both the library preparation and production build-std migration are now
+implemented. The later sections preserve the original investigation and
+preparation checkpoint; the production description below supersedes them.
 
-## Implemented preparation (manual sysroot build retained)
+## Production build-std
+
+CMake invokes `rust/cargo.sh build` once for std and the generated application
+staticlib. `CONFIG_RUST_STD=y` (default) selects `std,panic_abort`; disabling
+it selects `core,alloc` and marks the generated image root no_std. The std
+feature list is empty, preserving the absence of optional backtrace/unwind
+features. Both generated dev and release profiles use panic=abort.
+
+### Source discovery without an installed-toolchain change
+
+Cargo 1.85 discovers sources from its host compiler sysroot, not RUST_LIB_SRC.
+Each image gets `modules/zephyr-rust/toolchain`: copied rustc/clippy drivers
+and librustc_driver establish a private default sysroot, while other installed
+host resources are symlinked. Real Cargo is invoked directly, avoiding the
+rustup proxy's original-toolchain dynamic-library path. This is toolchain
+relocation, not a compiler-argument wrapper.
+
+The source hierarchy under `lib/rustlib/src` mirrors the port's relative paths
+with symlinks. Only the library workspace manifest and Cargo.lock are copied;
+no full source tree or compiled std artifacts are copied. The staged workspace
+patches libc to the pinned fork. The installed toolchain and upstream rust-src,
+if present, are untouched.
+
+Std's reviewed resolution moved unchanged from sysroot-stage1 to
+`rust/Cargo.lock`. Cargo's incomplete std-workspace --locked enforcement is
+handled by comparing the staged lock after every invocation, including failed
+commands. Unexpected mutation fails the build and reports the diff for review.
+App/standalone Clippy locks retain their separate --locked policy.
+
+### Removed machinery and genuine no_std coverage
+
+- Removed `rust/build.sh`, `rust/sysroot-rustc.sh`, and the custom sysroot
+  manifest: no two-stage Cargo build, artifact publication, or app-directory
+  invalidation based on copied rlibs remains.
+- Cross-Clippy uses the same Cargo entry point; host tools use ordinary Cargo.
+  Its build checks use west's exit status, not a possibly stale ELF.
+- Object macros expand against zephyr-core, not the std-facing zephyr crate.
+  Macro consumers declare that direct dependency.
+- `samples/no_std` now really excludes target std, supplies a panic handler,
+  and exercises kernel allocation plus kernel/user mutexes and syscalls.
+  Removed its optional std examples; rust-app already covers those APIs.
+
+### Migration validation
+
+- Default smoke passed at each atomic change; the baseline used the old build.
+- Fresh 113-job matrix passed (35/35/43 across 2.3.0/2.7.3/3.7.0), including
+  all six expected-fault runs. Both std and genuine no_std run on all versions.
+- All seven Zephyr 2.3.0 sanitycheck configurations executed and passed.
+- Strict Clippy passed on 3.7.0 for host crates, libraries, and all eight apps.
+  Core/sys remain non-member selections, not real Clippy roots; see
+  CLIPPY_SYSROOT_DEBT.md. No lint suppression was added.
+- Core/alloc-only artifact inspection found no target libstd; generated-root
+  check and Clippy also passed in the dev profile.
+- Regression checks rejected a mutated std lock and failed west builds with
+  stale ELFs.
+
+Artifacts: `.upgrade-logs/build-std-*` and `ci/log/build/run-1`. Validation used
+only the previously pulled GHCR images. Later-version test execution still
+awaits twister; the matrix does not claim to execute those tests.
+
+An additional userspace Box test exposed the existing dedicated allocator's
+privileged arch_irq_lock path (3.7.0, MempoolAlloc::alloc). It was not part of
+the old sample's coverage and is not fixed by changing Cargo. The no_std sample
+retains kernel allocation and user syscall coverage, not a claim of safe
+userspace heap allocation. That runtime issue requires separate work.
+
+## Library preparation checkpoint (before the switch)
 
 - CMake generates one pair of bindings per Zephyr image. Both instances of
   zephyr-sys consume them; unchanged outputs retain their timestamps.
@@ -23,11 +90,9 @@ the actual build-std switch remains deferred for review.
   lockfiles. Core/sys depend directly on the pinned libc port. Std's core/sys
   dependencies are private, and core's Kconfig environment inputs are tracked.
 
-The current rust/build.sh still builds and installs a custom sysroot, uses
-sysroot-rustc.sh, and then builds the app. No production command uses
--Zbuild-std. Source staging and std workspace lockfile enforcement remain
-work for the separate build-system migration. The evidence below describes
-historical feasibility probes, not validation of a completed build-std switch.
+At this checkpoint rust/build.sh still installed a custom sysroot and used
+sysroot-rustc.sh. Source provisioning and lockfile enforcement were deferred;
+both are now implemented above. The detailed probes below remain historical.
 
 ## Preparation validation
 
@@ -52,7 +117,7 @@ upgrade: explicit ARM float ABIs and removal of an empty Cortex-R5 target
 feature. All target JSONs now pass compiler parsing. No local images were
 built; all validation used the pulled GHCR images.
 
-Review stops here, before the production build-std switch. Later-version
+Review initially stopped here, before the production build-std switch. Later-version
 test execution still requires the separately tracked twister migration.
 Local validation artifacts are in `.upgrade-logs/prep-*`; the complete
 matrix result tree is `ci/log/build/run-1`.
@@ -76,7 +141,7 @@ public API boundary.
 
 This removes the reason for publishing Zephyr crates into a custom sysroot.
 Cargo supplies the bootstrap compilation flags itself, so
-`rust/sysroot-rustc.sh` is unnecessary after the migration.
+`rust/sysroot-rustc.sh` has been removed by the migration.
 
 ## What the pinned Cargo actually does
 

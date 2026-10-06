@@ -2,46 +2,46 @@
 
 The sysroot-layer crates (`zephyr-sys`, `zephyr-core`, `time-convert`) are
 built privately as part of the Rust std port (see
-`rust/rust/library/std/Cargo.toml` and `rust/build.sh`). Since the build-std
-library preparation they are also ordinary Cargo dependencies of apps, but
-`ci/clippy.sh` still selects them with `-p` from the sysroot workspace,
-where they are non-members. That pass still runs rustc, not Clippy. Their
+`rust/rust/library/std/Cargo.toml` and `rust/cargo.sh`). They are also
+ordinary Cargo dependencies of apps, but `ci/clippy.sh` selects them with
+`-p` from the generated app workspace, where they are non-members. That
+pass still runs rustc, not Clippy. Their
 known clippy warnings remain invisible to the normal report and are tracked
 here until they have standalone lint roots/workspaces and committed locks.
-See `BUILD_STD_INVESTIGATION.md` for the implemented library separation;
-it does not itself resolve this lint-root limitation.
+Build-std removes the custom-sysroot/host-std blocker. Standalone linting
+now needs dedicated roots with committed locks and explicit CI invocations;
+that lint expansion is separate from the build-system migration.
 
 ## Why plain clippy cannot see them
 
 `cargo clippy` injects `clippy-driver` via `RUSTC_WORKSPACE_WRAPPER`, which
 cargo applies **only to workspace members**. `ci/clippy.sh` lints the
-sysroot-layer crates with `-p` against the `rust/sysroot-stage1` workspace
-manifest, where they are non-member path dependencies of `std`. Cargo
+low-level crates with `-p` against the generated app manifest
+(`CARGO_MANIFEST` in rust-env.sh), where they are non-member path dependencies. Cargo
 compiles non-member packages with plain `rustc`, so only rustc lints
 (obeying `--cap-lints`) can surface; clippy lints never run. Verified in
 `cargo -vv` logs: the `zephyr_core` compile is `/bin/rustc`, not
 `clippy-driver`.
 
-For reference, the only mechanism found that does run real clippy on them is
-`cargo clippy --fix` (the fix/diagnostics-server path). It is not used in
+The historical inventory below was discovered with `cargo clippy --fix`
+(the fix/diagnostics-server path). It is not used in
 the tooling on purpose: it applies fixes without a preceding clippy report
 (the report under-counts while `--fix` over-applies), and some of its
 machine-applicable suggestions are unsafe for this project (see below).
 
 ## Reproducing the debt (how to list the warnings)
 
-`--fix` is the only way to surface them today. Run it in a throwaway or
-writable checkout, then inspect the diff and revert:
+The historical `--fix` discovery can still run in a throwaway or writable
+checkout; inspect and revert any unreviewed changes:
 
 ```
 cd ci
 WRITABLE=1 ./build-cmd.sh sh -c '
-  . /tmp/zephyr-rust-clippy/rust-app/rust-env.sh
+  export RUST_ENV=/tmp/zephyr-rust-clippy/rust-app/rust-env.sh
+  . "$RUST_ENV"
   CARGO_TARGET_DIR=/tmp/zephyr-rust-clippy/cargo-target \
-  RUSTFLAGS="--sysroot $SYSROOT" \
-  cargo clippy --manifest-path rust/sysroot-stage1/Cargo.toml \
-    -p zephyr-core --target "$RUST_TARGET_SPEC" \
-    --fix --allow-dirty --allow-staged --lib'
+  rust/cargo.sh clippy --manifest-path "$CARGO_MANIFEST" \
+    -p zephyr-core --locked --fix --allow-dirty --allow-staged --lib'
 git diff rust/zephyr-core/   # applied fixes (machine-applicable)
 git checkout rust/zephyr-core/   # discard, or keep per-item after review
 ```
@@ -85,7 +85,7 @@ Remaining, not machine-fixable:
   `rust/zephyr-core/src/mutex_alloc.rs:79` — hoist the block into a `let`
   binding.
 
-## Structural fix / version exploration (picked up later, no other context)
+## Historical structural exploration (Rust 1.75, before build-std)
 
 Goal: make `ci/clippy.sh` genuinely run clippy on the sysroot-layer crates.
 Options investigated (all blocked as of Rust 1.75.0 / cargo in this repo):
@@ -114,10 +114,9 @@ Options investigated (all blocked as of Rust 1.75.0 / cargo in this repo):
    cargo passes the real rustc path as an argument, which clippy-driver
    rejects ("multiple input filenames").
 
-Revisit when: a newer cargo/clippy changes the `-p`/member wrapping behavior
-or adds a way to lint path deps; the sysroot layout is restructured (e.g.
-the crates get their own workspaces/locks); or `cargo clippy --fix` becomes
-acceptable as a discovery tool with a manual review gate. When the fix
-lands, refresh the inventory above, fix it per warning type (one commit per
-lint, `# Safety` docs for `missing_safety_doc`), and run the full build
-matrix to validate the version-sensitive `.into()`/conversion changes.
+With Rust 1.85 build-std, prefer standalone manifests plus committed locks,
+using `rust/cargo.sh clippy` with the selected image's `RUST_ENV`. The host
+std and Cargo-version blockers above no longer apply. Refresh this inventory,
+fix warnings per type (`# Safety` docs for `missing_safety_doc`), then switch
+CI's common pass to those manifests. Run the full matrix for version-sensitive
+conversions. No new lint suppression was added during the build-std migration.
