@@ -47,6 +47,11 @@ fn main() {
         // XXX: doesn't handle args with spaces in quotes
         .clang_args(flags.split(' '))
         .opaque_type("z_x86_thread_stack_header")
+        // Rust has no C long double type. Preserve these structs' C size and
+        // alignment as opaque storage rather than generating incorrect fields
+        // (and failing bindgen's compile-time layout checks on x86).
+        .opaque_type("max_align_t")
+        .opaque_type("z_max_align_t")
         // Finish the builder and generate the bindings.
         .generate()
         // Unwrap the Result and panic on failure.
