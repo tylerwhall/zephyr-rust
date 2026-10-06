@@ -69,6 +69,42 @@ fn std_mutex_test() {
     println!("std::sync::Mutex contention passed");
 }
 
+fn mutex_pool_test() {
+    use zephyr::context::Any as C;
+    use zephyr::mutex_alloc::{DynMutex, MUTEX_POOL_SIZE};
+
+    if MUTEX_POOL_SIZE == 0 {
+        return;
+    }
+    let fill = || {
+        // Stack storage avoids allocator growth while running in userspace.
+        let mut mutexes: [Option<DynMutex>; MUTEX_POOL_SIZE] = std::array::from_fn(|_| None);
+        let mut count = 0;
+        while let Some(mutex) = DynMutex::new::<C>() {
+            assert!(count < MUTEX_POOL_SIZE);
+            let ptr = &*mutex as *const _;
+            assert!(mutexes.iter().flatten().all(|other| &**other as *const _ != ptr));
+            mutexes[count] = Some(mutex);
+            count += 1;
+        }
+        (mutexes, count)
+    };
+    // Exhaustion, uniqueness, and free/reuse, including a partial bitmap byte.
+    let available = fill().1;
+    assert!(available > 0);
+    assert_eq!(fill().1, available);
+
+    // std and app wrappers must reserve slots from the SAME bitmap, even when
+    // Cargo compiles independent instances of zephyr-core for them.
+    let std_mutex = std::sync::Mutex::new(0u8);
+    let guard = std_mutex.lock().unwrap();
+    let app_mutexes = fill();
+    assert_eq!(app_mutexes.1, available - 1);
+    drop(app_mutexes);
+    drop(guard);
+    println!("Shared mutex pool exhaustion and reuse passed");
+}
+
 fn thread_join_std_mem_domain(_context: zephyr::context::Kernel) {
     use zephyr::context::Kernel as C;
     zephyr::static_mem_domain!(rust_std_domain).add_thread::<C>(C::k_current_get());
@@ -135,6 +171,7 @@ pub extern "C" fn rust_main() {
     current.k_object_access_grant::<Context, _>(&STD_MUTEX_DONE);
     mutex_test();
     std_mutex_test();
+    mutex_pool_test();
 
     if let Some(_device) = Context::device_get_binding(cstr!("nonexistent")) {
         println!("Got device");
@@ -178,6 +215,7 @@ pub extern "C" fn rust_main() {
 
         mutex_test();
         std_mutex_test();
+        mutex_pool_test();
 
         zephyr_logger::init(LevelFilter::Info);
 

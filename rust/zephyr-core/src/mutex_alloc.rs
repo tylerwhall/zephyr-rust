@@ -5,6 +5,12 @@ use core::ptr::NonNull;
 
 use crate::mutex::*;
 
+/// Number of preallocated mutexes, or zero when mutexes are heap allocated.
+#[cfg(mutex_pool)]
+pub const MUTEX_POOL_SIZE: usize = zephyr_sys::raw::CONFIG_RUST_MUTEX_POOL_SIZE as usize;
+#[cfg(not(mutex_pool))]
+pub const MUTEX_POOL_SIZE: usize = 0;
+
 pub struct DynMutex(NonNull<KMutex>);
 
 impl DynMutex {
@@ -17,7 +23,7 @@ impl DynMutex {
                 m
             };
             #[cfg(mutex_pool)]
-            let m = mutex_pool::alloc_mutex().expect("mutex pool exhausted");
+            let m = mutex_pool::alloc_mutex()?;
 
             Some(DynMutex(NonNull::new_unchecked(m)))
         }
@@ -66,15 +72,18 @@ mod mutex_pool {
     }
 
     const NUM_USED: usize = (NUM_MUTEX + 7) / 8;
-    /// Bitfield tracking allocated mutexes
-    static USED: [AtomicU8; NUM_USED] = unsafe { core::mem::transmute([0u8; NUM_USED]) };
+    extern "C" {
+        // C owns one zero-initialized byte array in rust_std_partition.
+        // Every crate instance accesses it exclusively through AtomicU8.
+        static rust_mutex_pool_used: [AtomicU8; NUM_USED];
+    }
 
     pub fn alloc_mutex() -> Option<*mut KMutex> {
         let mut ret = None;
 
-        for (i, byte) in USED.iter().enumerate() {
+        for (i, byte) in unsafe { &rust_mutex_pool_used }.iter().enumerate() {
             // Valid bits in this byte
-            let valid = core::cmp::max(NUM_MUTEX - i * 8, 8);
+            let valid = core::cmp::min(NUM_MUTEX - i * 8, 8);
             if byte
                 .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |val| {
                     ret = None;
@@ -102,6 +111,6 @@ mod mutex_pool {
         let index = unsafe { mutex.offset_from(&rust_mutex_pool[0] as *const _) } as usize;
         let byte = index / 8;
         let bit = index % 8;
-        USED[byte].fetch_and(!(1 << bit), Ordering::Relaxed);
+        unsafe { rust_mutex_pool_used[byte].fetch_and(!(1 << bit), Ordering::Relaxed) };
     }
 }

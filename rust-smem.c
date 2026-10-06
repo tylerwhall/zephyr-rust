@@ -17,6 +17,16 @@ K_APPMEM_PARTITION_DEFINE(rust_std_partition);
 #define RUST_STD_SECTION .data
 #endif
 
+#ifdef CONFIG_RUST_MUTEX_POOL
+/* One bitmap for all Rust crate instances referencing the same C mutex array.
+ * Only Rust AtomicU8 accesses these bytes after zero initialization. AtomicU8
+ * has the size/alignment of uint8_t; keep this userspace-accessible like Rust
+ * statics in librust_app.a, not in the kernel's ordinary .bss.
+ */
+uint8_t Z_GENERIC_SECTION(RUST_STD_SECTION)
+	rust_mutex_pool_used[(CONFIG_RUST_MUTEX_POOL_SIZE + 7) / 8] = { 0 };
+#endif
+
 #if defined(CONFIG_RUST_ALLOC_POOL)
 
 #define RUST_STD_MEM_POOL_SIZE (WB_UP(CONFIG_RUST_HEAP_MEM_POOL_MAX_SIZE) * \
