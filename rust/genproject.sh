@@ -2,6 +2,7 @@
 
 crate_dir=$1
 outdir=$2
+rust_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 rm -rf $outdir
 mkdir -p $outdir/src
@@ -26,6 +27,7 @@ crate-type = ["staticlib"]
 
 [dependencies]
 app = { path = "${crate_dir}" }
+zephyr-core = { path = "${rust_dir}/zephyr-core" }
 
 [profile.release]
 panic = "abort"

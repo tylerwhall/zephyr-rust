@@ -6,3 +6,5 @@ authors = ["Tyler Hall <tylerwhall@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+zephyr-core = { path = "../zephyr-core" }
+zephyr-sys = { path = "../zephyr-sys" }

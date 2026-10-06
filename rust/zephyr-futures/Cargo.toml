@@ -5,6 +5,7 @@ authors = ["Tyler Hall <tylerwhall@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+zephyr-core = { path = "../zephyr-core" }
 zephyr = { path = "../zephyr" }
 log = "0.4"
 futures = "0.3.1"
