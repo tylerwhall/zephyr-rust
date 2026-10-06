@@ -1,12 +1,14 @@
-use std::env;
+use std::{env, path::Path};
 
 fn main() {
-    // This build.rs just invokes a binary from a different project.  We do it this way to avoid
-    // having any build-dependencies in this project.  Cargo hopelessly conflates dependencies and
-    // build-dependencies in a way that makes it impossible to build libstd
-    let zb = env::var("ZEPHYR_BINDGEN").expect("ZEPHYR_BINDGEN unset");
-    let rc = std::process::Command::new(zb)
-        .status()
-        .expect("cargo run failed");
-    assert!(rc.success());
+    // CMake generates these once from this image's headers/devicetree/Kconfig.
+    // Both std-private and ordinary application instances consume the same ABI.
+    println!("cargo:rerun-if-env-changed=ZEPHYR_RUST_BINDINGS");
+    let bindings = env::var("ZEPHYR_RUST_BINDINGS").expect("ZEPHYR_RUST_BINDINGS unset");
+    for name in ["bindings.rs", "syscalls.rs"] {
+        let path = Path::new(&bindings).join(name);
+        assert!(path.is_file(), "missing generated bindings: {}", path.display());
+        println!("cargo:rerun-if-changed={}", path.display());
+    }
+    println!("cargo:rustc-env=ZEPHYR_RUST_BINDINGS={bindings}");
 }

@@ -5,7 +5,7 @@
 #![allow(improper_ctypes)] // Zero size struct for k_spinlock
 
 pub mod raw {
-    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+    include!(concat!(env!("ZEPHYR_RUST_BINDINGS"), "/bindings.rs"));
 
     unsafe impl Send for k_mutex {}
     unsafe impl Sync for k_mutex {}
@@ -23,5 +23,5 @@ pub mod raw {
 }
 
 pub mod syscalls {
-    include!(concat!(env!("OUT_DIR"), "/syscalls.rs"));
+    include!(concat!(env!("ZEPHYR_RUST_BINDINGS"), "/syscalls.rs"));
 }

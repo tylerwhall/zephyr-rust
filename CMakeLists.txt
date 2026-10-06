@@ -155,6 +155,8 @@ rust_env_write(SYSROOT_BUILD "${rust_sysroot_build}")
 rust_env_write(APP_BUILD "${rust_app_build}")
 rust_env_write(RUST_TARGET_SPEC "${rust_src_dir}/targets/${rust_target}.json")
 rust_env_write(CARGO_MANIFEST "${rust_generated_project}/Cargo.toml")
+set(rust_bindings_dir ${CMAKE_CURRENT_BINARY_DIR}/bindings)
+rust_env_write(ZEPHYR_RUST_BINDINGS "${rust_bindings_dir}")
 rust_env_write(ZEPHYR_BINDGEN "${ZEPHYR_BINDGEN}")
 rust_env_write(ZEPHYR_KERNEL_VERSION_NUM "${KERNEL_VERSION_NUMBER}")
 # Zephyr version cfgs, consumed by zephyr-core and app crates (e.g.
@@ -201,13 +203,25 @@ file(GENERATE OUTPUT ${rust_env_file} CONTENT "${rust_env_content}")
 if (CONFIG_RUST)
     include(ExternalProject)
 
+    # Generate once per Zephyr image, not once per Cargo instance of zephyr-sys.
+    # Run after kernel's generated headers on every build; bindgen preserves
+    # unchanged outputs so Cargo only recompiles when the bindings change.
+    add_custom_target(rust_bindings
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${rust_bindings_dir}
+        COMMAND sh -c ". '${rust_env_file}' && export OUT_DIR='${rust_bindings_dir}' && exec '${ZEPHYR_BINDGEN}'"
+        WORKING_DIRECTORY ${rust_src_dir}/zephyr-sys
+        DEPENDS syscall_thunks_target ${zephyr_bindgen_target}
+        BYPRODUCTS ${rust_bindings_dir}/bindings.rs ${rust_bindings_dir}/syscalls.rs
+        VERBATIM
+    )
+
     ExternalProject_Add(
         rust_project
         PREFIX     ${CMAKE_CURRENT_BINARY_DIR}
         SOURCE_DIR ${rust_src_dir}
         BUILD_IN_SOURCE 1
         BUILD_ALWAYS 1
-        DEPENDS syscall_thunks_target ${zephyr_bindgen_target} rust_generated_project
+        DEPENDS rust_bindings rust_generated_project
         CONFIGURE_COMMAND ""
         BUILD_COMMAND
             env "RUST_ENV=${rust_env_file}"

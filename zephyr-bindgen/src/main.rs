@@ -1,7 +1,7 @@
 extern crate bindgen;
 
 use std::env;
-use std::fs::File;
+use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -54,12 +54,10 @@ fn main() {
 
     // Write the bindings to the $OUT_DIR/bindings.rs file.
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    bindings
-        .write_to_file(out_path.join("bindings.rs"))
-        .expect("Couldn't write bindings!");
+    write_if_changed(&out_path.join("bindings.rs"), bindings.to_string().as_bytes());
 
     // Namespace aliases to syscalls by their valid contexts
-    let mut out = File::create(out_path.join("syscalls.rs")).unwrap();
+    let mut out = Vec::new();
     let syscalls = callbacks.0.lock().unwrap();
 
     writeln!(&mut out, "pub mod any {{").unwrap();
@@ -104,4 +102,11 @@ fn main() {
         writeln!(&mut out, "pub use super::any::*;").unwrap();
     }
     writeln!(&mut out, "}}").unwrap();
+    write_if_changed(&out_path.join("syscalls.rs"), &out);
+}
+
+fn write_if_changed(path: &std::path::Path, contents: &[u8]) {
+    if fs::read(path).ok().as_deref() != Some(contents) {
+        fs::write(path, contents).expect("Couldn't write bindings!");
+    }
 }
