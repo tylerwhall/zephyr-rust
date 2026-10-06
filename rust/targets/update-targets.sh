@@ -28,7 +28,7 @@ for target in "${targets[@]}"; do
     thumbv7r-*)
         # Rust does not have a thumbv7 target. Use armv7 and add thumb features
         rust_target=${rust_target/thumbv7/armv7}
-        extra_filter='| .["features"] += ",+v7,+thumb-mode,+thumb2,+rclass"'
+        extra_filter='| .["features"] = ([.["features"] // "", "+v7,+thumb-mode,+thumb2,+rclass"] | map(select(length > 0)) | join(","))'
         ;;
     *)
         extra_filter=""
