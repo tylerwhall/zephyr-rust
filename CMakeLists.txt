@@ -100,8 +100,11 @@ if(NOT ZEPHYR_BINDGEN)
     add_custom_command(OUTPUT ${ZEPHYR_BINDGEN}
         WORKING_DIRECTORY ${zephyr_bindgen_src_dir}
         DEPENDS syscall_thunks_target
+                ${zephyr_bindgen_src_dir}/Cargo.toml
+                ${zephyr_bindgen_src_dir}/Cargo.lock
+                ${zephyr_bindgen_src_dir}/src/main.rs
         COMMAND
-              cargo -v build --release --target-dir=${zephyr_bindgen_build_dir}
+              cargo -v build --locked --release --target-dir=${zephyr_bindgen_build_dir}
     )
 endif()
 
