@@ -67,9 +67,9 @@ on qemu_x86.
   app-layer library crates, and the low-level crates (`zephyr-sys`,
   `zephyr-core`, `time-convert`). Every library is linted from its own manifest
   with a committed lockfile, so Clippy checks it as a root rather than a
-  non-member dependency (see `docs/CLIPPY_SYSROOT_DEBT.md`). Each app is
-  `west build`-ed in its own build dir first for image-specific bindings and
-  Kconfig. Cross-Clippy uses `rust/cargo.sh` with the same build-std roots,
+  non-member dependency. See `docs/BUILD_STD_INVESTIGATION.md#clippy` for
+  coverage and generated-code exceptions. Each app is `west build`-ed in its
+  own build dir first for image-specific bindings and Kconfig. Cross-Clippy uses `rust/cargo.sh` with the same build-std roots,
   source overlay, and std lock guard; host crates use ordinary Cargo.
 - CI container: `cd ci && ./build-cmd.sh ci/clippy.sh`
 - Natively (west, Zephyr, Zephyr SDK, and the clippy component must be

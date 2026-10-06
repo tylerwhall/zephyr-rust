@@ -48,7 +48,7 @@
 #        Each library is a standalone Clippy root with its own manifest
 #        and committed lockfile, including the low-level crates used by std.
 #        Selecting non-member dependencies with -p would run only rustc,
-#        not Clippy; see docs/CLIPPY_SYSROOT_DEBT.md.
+#        not Clippy; see docs/BUILD_STD_INVESTIGATION.md (Clippy section).
 #     3. per-app west builds + clippy, parallelized; when pass 2 ran, the
 #        samples/rust-app build from it is reused (its west build is a
 #        no-op).

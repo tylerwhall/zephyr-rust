@@ -22,6 +22,14 @@ std exposes primitive Instant ticks, while `zephyr::time::instant_ticks`
 converts them to the application's Ticks. Object macros use zephyr-core;
 applications using those macros need a direct Cargo dependency on that crate.
 
+## Generated FFI bindings
+
+Bindgen's compile-time layout checks remain enabled. C `long double` fields
+in `max_align_t` and `z_max_align_t` cannot be represented directly in Rust
+on x86, so these types use opaque bindings that preserve C size and alignment.
+CMake tracks the generator's source, manifest, and lockfile to rebuild it when
+these inputs change, and builds the host tool with `--locked`.
+
 ## Toolchain and source discovery
 
 Cargo 1.85 discovers std sources through the host compiler's sysroot at
@@ -63,11 +71,45 @@ sharing source selection, bindings, Kconfig, and the std lock guard. Host
 bindgen/proc-macro crates use ordinary Cargo. CI checks west's exit status,
 not merely the existence of an ELF left by an earlier build.
 
-Core/sys/time-convert and the app-layer libraries are each linted from their
-own manifests with committed lockfiles. Selecting them as non-members from
-the generated app workspace would run rustc rather than real Clippy. See
-[CLIPPY_SYSROOT_DEBT.md](CLIPPY_SYSROOT_DEBT.md) for coverage, generated-code
-exceptions, and the warning inventory resolved when enabling these roots.
+`zephyr-sys`, `zephyr-core`, `time-convert`, and the app-layer libraries are
+each linted from their own manifests with committed lockfiles and `--locked`.
+Selecting non-member dependencies with `-p` from the generated app workspace
+would not apply Cargo's `RUSTC_WORKSPACE_WRAPPER`, running rustc rather than
+Clippy. Standalone roots do not change the crates' workspace membership or
+independent private std instances.
+
+`ci/clippy.sh lib` builds `samples/rust-app` for its bindings and Kconfig,
+then lints the low-level and app-layer libraries. The default full pass also
+builds and lints every app/test root. Inside the CI container:
+
+```sh
+CLIPPY_ARGS="-D warnings" ci/clippy.sh lib
+```
+
+To lint a low-level crate against a different built image:
+
+```sh
+RUST_ENV=/tmp/build/rust-env.sh CARGO_TARGET_DIR=/tmp/clippy-target \
+    rust/cargo.sh clippy --manifest-path rust/zephyr-core/Cargo.toml \
+    --locked --lib -- -D warnings
+```
+
+Use `rust/zephyr-sys/Cargo.toml` or
+`rust/zephyr-core/time-convert/Cargo.toml` for the other low-level roots. The
+common pass checks the rust-app configuration, not every Kconfig or version
+branch. Changes to cfg-gated code require runs against the corresponding
+images and every affected Zephyr version. The standard application/library
+pass remains required; see [AGENTS.md](../AGENTS.md#clippy) for the workflow.
+
+### Generated-code exceptions
+
+Bindgen's incomplete-array and bitfield helpers trigger `missing_safety_doc`,
+`useless_transmute`, `transmute_int_to_bool`, and `ptr_offset_with_cast`.
+Exceptions for only these four Clippy lints are scoped to the private generated
+`bindings` module in `rust/zephyr-sys/src/lib.rs`. Reexports preserve the public
+`raw` API. Handwritten kernel object wrappers and all of `zephyr-core` retain
+full lint coverage; there is no crate-wide Clippy suppression. Recheck these
+exceptions when updating bindgen.
 
 ## Validation and limitations
 

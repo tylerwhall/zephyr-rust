@@ -35,8 +35,8 @@ sysroot build functional, then the full matrix. That validation passed:
 - Zephyr 2.3.0 sanitycheck: all seven configurations executed and passed
   on qemu_x86 and qemu_cortex_m3, with no failures or skips.
 - Strict Clippy on Zephyr 3.7.0: host crates, libraries, and all eight
-  app/test crates passed with --locked and -D warnings. The sysroot
-  lint-root limitation documented in CLIPPY_SYSROOT_DEBT.md remains.
+  app/test crates passed with --locked and -D warnings. At this checkpoint,
+  low-level crates received only rustc lint coverage, not true Clippy coverage.
 - Every preparation commit passed the default smoke test. Shared bindings
   and shared mutex bookkeeping additionally passed smoke runs on all
   three Zephyr versions. The final autosquash preserved the validated
@@ -418,9 +418,8 @@ Nothing was pushed.
   pending build-matrix command examples. Historical records are unchanged.
 - Builds still emit sysroot/Zephyr warnings (including libc cfg checks,
   unused std PAL imports/functions, and the unsupported dylib crate type).
-  Strict Clippy passed without code changes. Sysroot-layer crates still
-  receive only rustc lint coverage, not true Clippy coverage; see
-  `docs/CLIPPY_SYSROOT_DEBT.md`.
+  Strict Clippy passed without code changes. At this checkpoint, sysroot-layer
+  crates received only rustc lint coverage, not true Clippy coverage.
 - Logs and separate timestamped Docker build volumes remain local under
   `.upgrade-logs/`, excluded from commits. The final clean build/run logs
   are named `final-1.82-build-<timestamp>.log` and
@@ -528,8 +527,8 @@ current runner's scope. Nothing was pushed.
 - Builds still emit existing sysroot/Zephyr warnings; Rust 1.81 also
   reports unregistered upstream `bootstrap` cfgs in `panic_abort` and
   `unwind`. Strict Clippy used `-D warnings`, `--locked`, and default
-  strict build handling. Sysroot-layer crates still receive only rustc
-  lint coverage, not true Clippy coverage; see CLIPPY_SYSROOT_DEBT.md.
+  strict build handling. At this checkpoint, sysroot-layer crates received
+  only rustc lint coverage, not true Clippy coverage.
 - Clippy used separate fresh, version-keyed build directories, two app
   workers, and a host/library pass before each full pass. Verified the
   common-pass west build logs independently to rule out stale ELF reuse.
