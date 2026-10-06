@@ -36,7 +36,7 @@ pub trait RawMutex {
     unsafe fn try_lock<C: MutexSyscalls>(self) -> bool;
 }
 
-impl<'a> RawMutex for &'a KMutex {
+impl RawMutex for &KMutex {
     #[inline]
     unsafe fn init<C: MutexSyscalls>(self) {
         C::k_mutex_init(self as *const _ as *mut _)
@@ -84,7 +84,7 @@ impl<'m, T> Mutex<'m, T> {
         self.mutex as *const _ as *mut _
     }
 
-    pub fn lock<'a, C: MutexSyscalls>(&'a self) -> MutexGuard<'a, T, C> {
+    pub fn lock<C: MutexSyscalls>(&self) -> MutexGuard<'_, T, C> {
         unsafe {
             self.mutex.lock::<C>();
         }
@@ -97,7 +97,7 @@ impl<'m, T> Mutex<'m, T> {
 
 /// Allow cloning a mutex where the data is a reference. This allows multiple references to static
 /// data with a static lock without wrapping those references in another Arc layer.
-impl<'m, 'd, T> Clone for Mutex<'m, &'d T> {
+impl<T> Clone for Mutex<'_, &T> {
     fn clone(&self) -> Self {
         Mutex {
             mutex: self.mutex,
