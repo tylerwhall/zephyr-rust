@@ -17,25 +17,39 @@ that does not make their non-member dependencies Clippy roots either.
 2. Invoke those roots through `rust/cargo.sh clippy` with an image's RUST_ENV,
    retaining --locked and the independent std lock guard. The build-std
    toolchain overlay supplies host std; no custom-sysroot workaround is needed.
-3. Inventory the current warnings before changing CI. Fix them per warning
-   type, with safety documentation for unsafe APIs and careful macro hygiene.
-   Do not carry forward the old Rust 1.75 warning counts or blindly apply
-   --fix: conversions and kernel-object code depend on the Zephyr version.
+3. The Rust 1.85 inventory below has been reproduced and the handwritten
+   crate warnings fixed per lint type. Resolve the remaining generated
+   bindgen warnings before changing CI. Updating bindgen from 0.69 to 0.71
+   was tested and did not remove these warnings; that experiment was reverted.
 4. Validate fixes on every affected Zephyr version, then the full matrix,
    before making the new lint roots warning-fatal in CI.
 
 ## Rust 1.85 inventory
 
-A standalone, `--locked` Clippy pass against the Zephyr 3.7.0 qemu_x86
-rust-app image found:
+The initial standalone, `--locked` Clippy pass against the Zephyr 3.7.0
+qemu_x86 rust-app image found:
 
 - `time-convert`: no warnings.
 - `zephyr-core`: `crate_in_macro_def`, `missing_safety_doc`,
   `needless_lifetimes`, `needless_borrow`, and `useless_conversion`.
 - `zephyr-sys`: generated bindgen helpers trigger `missing_safety_doc`,
   `useless_transmute`, and `transmute_int_to_bool`.
-- The standalone resolution also exposes libc's `libc_core_cvoid`
-  `unexpected_cfgs` warning, unlike the generated app's patched resolution.
+- Libc's Zephyr module also exposed the stale `libc_core_cvoid`
+  `unexpected_cfgs` warning.
+
+The handwritten `zephyr-core` warnings are now fixed: static wrapper macros
+resolve helpers through `$crate`, unsafe public APIs document their safety
+contracts, and redundant lifetimes, borrows, and identity conversions are
+removed. Each fix passed rust-app builds and standalone Clippy with the
+respective lint denied on qemu_x86 with Zephyr 2.3.0, 2.7.3, and 3.7.0.
+Libc now uses its shared `core::ffi::c_void` definition rather than the stale
+conditional Zephyr definition. Standalone `zephyr-core` Clippy passes with
+`-D warnings` on all three versions.
+
+`zephyr-sys`'s generated helper warnings remain unresolved. The common pass
+has not yet switched to standalone manifests and must not be described as
+providing genuine low-level coverage. Full matrix validation and the standard
+application/library pass are still required before enabling the new CI roots.
 
 No new lint suppression was introduced by the build-std migration. This
 remaining coverage gap must not be described as a clean Clippy pass for the
