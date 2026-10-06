@@ -1,6 +1,8 @@
 #![cfg_attr(not(feature = "have_std"), no_std)]
 #![feature(never_type)]
 
+extern crate alloc;
+
 #[macro_use]
 extern crate derive_more;
 

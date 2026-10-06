@@ -317,10 +317,10 @@ version = "0.0.0"
 name = "zephyr-core"
 version = "0.1.0"
 dependencies = [
- "alloc",
  "compiler_builtins",
  "derive_more",
  "libc",
+ "rustc-std-workspace-alloc",
  "rustc-std-workspace-core",
  "time-convert",
  "zephyr-sys",
