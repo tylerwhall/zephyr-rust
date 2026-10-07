@@ -61,14 +61,23 @@ cp "$rust_dir/Cargo.lock" "$lib/Cargo.lock"
 export RUSTC="$root/bin/rustc"
 export PATH="$root/bin:$PATH"
 export LD_LIBRARY_PATH="$root/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+# Cargo 1.86's build-std resolve skips writing the std lockfile and does not
+# enforce --locked. Validate the complete workspace first so an incompatible
+# pin cannot silently resolve to a different version during the build.
+if ! "$root/bin/cargo" metadata --manifest-path "$lib/Cargo.toml" \
+    --locked --format-version 1 > /dev/null; then
+    echo "Error: std resolution is stale; review $lib/Cargo.toml and update rust/Cargo.lock" >&2
+    exit 1
+fi
+
 command=$1
 shift
 rc=0
 "$root/bin/cargo" "$command" --target "$RUST_TARGET_SPEC" \
     -Zbuild-std="${RUST_BUILD_STD:-std,panic_abort}" \
     -Zbuild-std-features= "$@" || rc=$?
-# Cargo 1.85 does not fully enforce --locked for std. Fail rather than silently
-# accepting a new resolution; the staged diff can be reviewed and committed.
+# Retain the post-command guard as well, in case Cargo writes the std lock.
+# Never accept an unreviewed resolution, including after a failed command.
 if ! cmp -s "$rust_dir/Cargo.lock" "$lib/Cargo.lock"; then
     echo "Error: std resolution changed; review $lib/Cargo.lock and update rust/Cargo.lock" >&2
     diff -u "$rust_dir/Cargo.lock" "$lib/Cargo.lock" >&2 || true

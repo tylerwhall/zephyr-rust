@@ -23,7 +23,7 @@ for target in "${targets[@]}"; do
     case $rust_target in
     i686-unknown-none)
         rust_target=i686-unknown-linux-gnu
-        extra_filter='| .["features"] = "-mmx,-sse,+soft-float"'
+        extra_filter='| .["features"] = "-mmx,-sse,+soft-float" | .["rustc-abi"] = "x86-softfloat"'
         ;;
     thumbv7r-*)
         # Rust does not have a thumbv7 target. Use armv7 and add thumb features

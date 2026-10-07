@@ -3,11 +3,34 @@
 version = 4
 
 [[package]]
+name = "addr2line"
+version = "0.24.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dfbe277e56a376000877090da837660b4427aad530e3028d44e0bffe4f89a1c1"
+dependencies = [
+ "compiler_builtins",
+ "gimli 0.31.1",
+ "rustc-std-workspace-alloc",
+ "rustc-std-workspace-core",
+]
+
+[[package]]
+name = "adler2"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
+dependencies = [
+ "rustc-std-workspace-core",
+]
+
+[[package]]
 name = "alloc"
 version = "0.0.0"
 dependencies = [
  "compiler_builtins",
  "core",
+ "rand",
+ "rand_xorshift",
 ]
 
 [[package]]
@@ -15,6 +38,15 @@ name = "allocator-api2"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
+
+[[package]]
+name = "cc"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1aeb932158bd710538c73702db6945cb68a8fb08c519e6e12706b94263b36db8"
+dependencies = [
+ "shlex",
+]
 
 [[package]]
 name = "cfg-if"
@@ -28,10 +60,11 @@ dependencies = [
 
 [[package]]
 name = "compiler_builtins"
-version = "0.1.140"
+version = "0.1.146"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df14d41c5d172a886df3753d54238eefb0f61c96cbd8b363c33ccc92c457bee3"
+checksum = "a97117b1434b79833f39a5fabdf82f890bd98c1988334dea1cb67f7e627fa311"
 dependencies = [
+ "cc",
  "rustc-std-workspace-core",
 ]
 
@@ -40,15 +73,23 @@ name = "core"
 version = "0.0.0"
 
 [[package]]
+name = "coretests"
+version = "0.0.0"
+dependencies = [
+ "rand",
+ "rand_xorshift",
+]
+
+[[package]]
 name = "derive_more"
 version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6d944ac6003ed268757ef1ee686753b57efc5fcf0ebe7b64c9fc81e7e32ff839"
 dependencies = [
- "proc-macro2",
- "quote",
+ "proc-macro2 0.4.30",
+ "quote 0.6.13",
  "rustc_version",
- "syn",
+ "syn 0.15.44",
 ]
 
 [[package]]
@@ -69,6 +110,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57cafc2274c10fab234f176b25903ce17e690fca7597090d50880e047a0389c5"
 dependencies = [
  "compiler_builtins",
+ "rustc-std-workspace-core",
+]
+
+[[package]]
+name = "getopts"
+version = "0.2.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "14dbbfd5c71d70241ecf9e6f13737f7b5ce823821063188d7e46c41d371eebd5"
+dependencies = [
+ "rustc-std-workspace-core",
+ "rustc-std-workspace-std",
+ "unicode-width",
+]
+
+[[package]]
+name = "gimli"
+version = "0.31.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
+dependencies = [
+ "compiler_builtins",
+ "rustc-std-workspace-alloc",
  "rustc-std-workspace-core",
 ]
 
@@ -113,6 +176,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "memchr"
+version = "2.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
+dependencies = [
+ "compiler_builtins",
+ "rustc-std-workspace-core",
+]
+
+[[package]]
+name = "miniz_oxide"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8402cab7aefae129c6977bb0ff1b8fd9a04eb5b51efc50a70bea51cda0c7924"
+dependencies = [
+ "adler2",
+ "compiler_builtins",
+ "rustc-std-workspace-alloc",
+ "rustc-std-workspace-core",
+]
+
+[[package]]
+name = "object"
+version = "0.36.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62948e14d923ea95ea2c7c86c71013138b66525b86bdc08d2dcc262bdb497b87"
+dependencies = [
+ "compiler_builtins",
+ "memchr",
+ "rustc-std-workspace-alloc",
+ "rustc-std-workspace-core",
+]
+
+[[package]]
 name = "panic_abort"
 version = "0.0.0"
 dependencies = [
@@ -121,6 +218,18 @@ dependencies = [
  "compiler_builtins",
  "core",
  "libc",
+]
+
+[[package]]
+name = "panic_unwind"
+version = "0.0.0"
+dependencies = [
+ "alloc",
+ "cfg-if",
+ "compiler_builtins",
+ "core",
+ "libc",
+ "unwind",
 ]
 
 [[package]]
@@ -133,12 +242,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "proc-macro2"
+version = "1.0.93"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60946a68e5f9d28b0dc1c21bb8a97ee7d018a8b322fa57838ba31cc878e22d99"
+dependencies = [
+ "unicode-ident",
+]
+
+[[package]]
+name = "proc_macro"
+version = "0.0.0"
+dependencies = [
+ "core",
+ "std",
+]
+
+[[package]]
+name = "profiler_builtins"
+version = "0.0.0"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "quote"
 version = "0.6.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ce23b6b870e8f94f81fb0a363d65d86675884b34a09043c81e5562f11c1f8e1"
 dependencies = [
- "proc-macro2",
+ "proc-macro2 0.4.30",
+]
+
+[[package]]
+name = "quote"
+version = "1.0.38"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e4dccaaaf89514f546c693ddc140f729f958c247918a13380cccc6078391acc"
+dependencies = [
+ "proc-macro2 1.0.93",
 ]
 
 [[package]]
@@ -160,6 +302,34 @@ dependencies = [
  "compiler_builtins",
  "r-efi",
  "rustc-std-workspace-core",
+]
+
+[[package]]
+name = "rand"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3779b94aeb87e8bd4e834cee3650289ee9e0d5677f976ecdb6d219e5f4f6cd94"
+dependencies = [
+ "rand_core",
+ "zerocopy",
+]
+
+[[package]]
+name = "rand_core"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b08f3c9802962f7e1b25113931d94f43ed9725bebc59db9d0c3e9a23b67e15ff"
+dependencies = [
+ "zerocopy",
+]
+
+[[package]]
+name = "rand_xorshift"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "513962919efc330f829edb2535844d1b912b0fbe2ca165d613e4e8788bb05a5a"
+dependencies = [
+ "rand_core",
 ]
 
 [[package]]
@@ -187,6 +357,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustc-std-workspace-std"
+version = "1.99.0"
+dependencies = [
+ "std",
+]
+
+[[package]]
 name = "rustc_version"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -211,9 +388,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
+name = "shlex"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
+
+[[package]]
 name = "std"
 version = "0.0.0"
 dependencies = [
+ "addr2line",
  "alloc",
  "cfg-if",
  "compiler_builtins",
@@ -223,9 +407,14 @@ dependencies = [
  "hashbrown",
  "hermit-abi",
  "libc",
+ "miniz_oxide",
+ "object",
  "panic_abort",
+ "panic_unwind",
  "r-efi",
  "r-efi-alloc",
+ "rand",
+ "rand_xorshift",
  "rustc-demangle",
  "std_detect",
  "unwind",
@@ -241,6 +430,7 @@ version = "0.1.5"
 dependencies = [
  "cfg-if",
  "compiler_builtins",
+ "libc",
  "rustc-std-workspace-alloc",
  "rustc-std-workspace-core",
 ]
@@ -251,15 +441,39 @@ version = "0.15.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ca4b3b69a77cbe1ffc9e198781b7acb0c7365a883670e8f1c1bc66fba79a5c5"
 dependencies = [
- "proc-macro2",
- "quote",
+ "proc-macro2 0.4.30",
+ "quote 0.6.13",
  "unicode-xid",
+]
+
+[[package]]
+name = "syn"
+version = "2.0.98"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36147f1a48ae0ec2b5b3bc5b537d267457555a10dc06f3dbc8cb11ba3006d3b1"
+dependencies = [
+ "proc-macro2 1.0.93",
+ "quote 1.0.38",
+ "unicode-ident",
 ]
 
 [[package]]
 name = "sysroot"
 version = "0.0.0"
 dependencies = [
+ "proc_macro",
+ "profiler_builtins",
+ "std",
+ "test",
+]
+
+[[package]]
+name = "test"
+version = "0.0.0"
+dependencies = [
+ "core",
+ "getopts",
+ "libc",
  "std",
 ]
 
@@ -269,6 +483,23 @@ version = "0.1.0"
 dependencies = [
  "compiler_builtins",
  "rustc-std-workspace-core",
+]
+
+[[package]]
+name = "unicode-ident"
+version = "1.0.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a210d160f08b701c8721ba1c726c11662f877ea6b7094007e1ca9a1041945034"
+
+[[package]]
+name = "unicode-width"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dd6e30e90baa6f72411720665d41d89b9a3d039dc45b8faea1ddd07f617f6af"
+dependencies = [
+ "compiler_builtins",
+ "rustc-std-workspace-core",
+ "rustc-std-workspace-std",
 ]
 
 [[package]]
@@ -294,7 +525,7 @@ version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b134ada16dda9e435abe2a6d76a01d497bc60707357845a15f9b0ed42dc88ce"
 dependencies = [
- "gimli",
+ "gimli 0.34.0",
  "rustc-std-workspace-core",
 ]
 
@@ -333,4 +564,24 @@ dependencies = [
  "compiler_builtins",
  "libc",
  "rustc-std-workspace-core",
+]
+
+[[package]]
+name = "zerocopy"
+version = "0.8.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa91407dacce3a68c56de03abe2760159582b846c6a4acd2f456618087f12713"
+dependencies = [
+ "zerocopy-derive",
+]
+
+[[package]]
+name = "zerocopy-derive"
+version = "0.8.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06718a168365cad3d5ff0bb133aad346959a2074bd4a85c121255a11304a8626"
+dependencies = [
+ "proc-macro2 1.0.93",
+ "quote 1.0.38",
+ "syn 2.0.98",
 ]

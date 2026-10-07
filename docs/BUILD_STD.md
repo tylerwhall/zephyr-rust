@@ -1,6 +1,6 @@
 # Cargo build-std in zephyr-rust
 
-The production build uses Cargo 1.85 build-std, not a manually published
+The production build uses Cargo 1.86 build-std, not a manually published
 sysroot. CMake generates the syscall thunks, one pair of Rust binding files,
 and an application staticlib project, then invokes `rust/cargo.sh` once to
 build the standard-library roots and application together.
@@ -32,7 +32,7 @@ these inputs change, and builds the host tool with `--locked`.
 
 ## Toolchain and source discovery
 
-Cargo 1.85 discovers std sources through the host compiler's sysroot at
+Cargo 1.86 discovers std sources through the host compiler's sysroot at
 `lib/rustlib/src/rust/library`; it does not consult RUST_LIB_SRC. The build
 uses the pinned port sources, not upstream rust-src.
 
@@ -58,11 +58,15 @@ compilation flags; there is no manual rlib publication or sysroot-copy step.
 - `-Zbuild-std-features=` preserves the absence of optional std
   backtrace/unwind features. Generated dev and release profiles use panic=abort.
 
-Std has its own resolution, pinned in `rust/Cargo.lock`. Cargo 1.85 does not
-fully enforce --locked on that workspace, so the helper compares its staged
-lock after every invocation, including failed commands. Unexpected changes
-fail the build and report a diff. Review that staged resolution before
-updating the committed lock; app lockfiles are independent.
+Std has its own resolution, pinned in `rust/Cargo.lock`. Cargo 1.86's
+build-std resolver neither enforces --locked nor writes the std lockfile.
+The helper first validates the complete staged workspace with
+`cargo metadata --locked`, then compares its staged lock after every build
+or Clippy invocation, including failed commands. A stale resolution fails
+before compilation; unexpected lock changes report a diff. The lock includes
+optional and development dependencies for this metadata check, though normal
+builds still compile only the selected roots/features. Review updates in the
+staged workspace before committing them; app lockfiles are independent.
 
 ## Clippy
 

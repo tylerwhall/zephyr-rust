@@ -36,5 +36,6 @@
   "target-family": "zephyr",
   "target-pointer-width": "32",
   "relocation-model": "static",
-  "features": "-mmx,-sse,+soft-float"
+  "features": "-mmx,-sse,+soft-float",
+  "rustc-abi": "x86-softfloat"
 }
