@@ -3,6 +3,112 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.85.0 → 1.86.0 (2026-10-06)
+
+**Result**: 18 std-port commits rebased onto `1.86.0`, branch
+`zephyr-1.86.0`, final tip `e9b6af1eeca70031ecff4b889ed2b842a8ff8d5b`.
+The old `zephyr-1.85.0` branch was not rewritten. Rust 1.86.0 still
+requires libc `0.2.169`; the existing seven-commit port remains at
+`3322bd1aec683d311b98f66d66a5851bc8ba9375`, with no libc changes.
+
+**Validation checkpoint**: the Rust 1.85.0 baseline and upgraded Rust
+1.86.0 default sample built and ran on `qemu_x86` / Zephyr 3.7.0.
+Both reached `Next call will crash if userspace is working.`, the
+expected user-thread access violation and CPU exception, and status 1.
+TLS isolation, mutex contention, and shared mutex-pool exhaustion/reuse
+checks passed. After autosquashing and strengthening the lock guard, a
+fresh read-only build and process-group-safe smoke run passed again.
+All twelve target JSONs pass Rust 1.86's parser; shell syntax and a
+negative lock-guard test also passed.
+
+Stopped before the full matrix for user review, as requested, because
+non-trivial port and Cargo integration changes were needed. No matrix,
+repository test-suite execution, or Clippy pass was started. Other boards,
+Zephyr 2.3.0/2.7.3, and no_std builds remain unvalidated at this checkpoint.
+Nothing was pushed.
+
+### Conflicts and adaptations
+
+1. **Submodule removals**: kept nine intentionally deleted pointers
+   updated upstream (six documentation trees, Cargo, enzyme, rustc-perf).
+   The other compiler-only deletions and `.gitmodules` applied cleanly;
+   only stdarch/backtrace remain. No new submodule removals were needed.
+2. **C primitives relocation**: retained upstream's new
+   `core::ffi::primitives` module and re-exports instead of restoring the
+   obsolete definitions in `ffi/mod.rs`. Moved Zephyr's existing c_char
+   signedness override to `primitives.rs`, preserving unsigned
+   aarch64/riscv64 and signed other architectures to match the libc port.
+3. **Networking and I/O relocation**: retained upstream's removal of
+   sys_common's network selection, adding the Zephyr exclusion in the
+   new `sys::net` selection instead. The first std compilation then
+   failed on the deleted PAL `unsupported/io.rs` include. Removed both
+   obsolete `io` and `net` PAL registrations; upstream's `sys::io` and
+   `sys::net` now select their unsupported implementations for Zephyr.
+   Committed this as a fixup of `zephyr: stub sys impl`, rebuilt, and ran
+   the smoke sample successfully before autosquashing.
+4. **Autosquash conflicts**: preserved the PAL `locks` registration
+   when applying the I/O/network fixup early, then removed only `locks`
+   in its later sys::sync migration. The resulting tree hash exactly
+   matches the validated pre-autosquash tree. Range-diff retains all
+   18 commits; semantic adaptations are limited to the above changes.
+   The release-tag delta contains only the port and intentional
+   submodule deletions, with no conflict markers or new lint allows.
+5. **x86 target ABI validation**: the first build failed before std
+   compilation because `+soft-float` is incompatible with the default
+   x86 hard-float ABI in Rust 1.86. Added `rustc-abi = x86-softfloat`
+   to i686's target JSON and its generator, retaining existing features
+   and calling-convention behavior. This matches upstream's explicit
+   soft-float designation rather than enabling FPU/SSE instructions.
+
+### Dependencies and lock enforcement
+
+- Updated nested backtrace to upstream's `9d2c34e7e63a`; stdarch remains
+  at `684de0d6fef7`. Recursive submodule update succeeded; no nested port
+  changes were needed.
+- Updated compiler_builtins to std's exact `0.1.146` requirement.
+  Hashbrown `0.15.2`, libc `0.2.169`, rustc-demangle `0.1.24`, and other
+  existing compatible versions are retained.
+- The first successful build compiled compiler_builtins `0.1.146` while
+  leaving the staged lock at `0.1.140`: Cargo 1.86's build-std resolver
+  disables optional/dev-dependency resolution and skips lock writes.
+  Inspection of the release's Cargo `standard_lib.rs` and `resolve.rs`
+  confirmed that the existing post-command comparison could no longer
+  detect silent resolution drift.
+- Added a pre-compilation `cargo metadata --locked` check on the complete
+  staged library workspace, retaining the post-command comparison.
+  Regenerated the staged lock with ordinary Cargo inside the read-only
+  container, without bypassing any guard or modifying upstream's lock.
+  The complete lock now includes optional/dev dependencies and coretests;
+  normal builds retain their existing roots and disabled std features.
+- Newly resolved packages use Rust 1.86's upstream locked versions,
+  including getopts `0.2.21`, unicode-width `0.1.14`, memchr `2.7.4`,
+  miniz_oxide `0.8.3`, rand/rand_core `0.9.0`, zerocopy `0.8.17`, and
+  its proc-macro dependencies. Initial latest selections were replaced
+  with these release-tested versions before final validation.
+- A negative test mounted the old 1.85 std lock into the upgraded tree.
+  The helper rejected it with `Error: std resolution is stale` before
+  any compilation. The reviewed complete lock passed the fresh build.
+
+### Process notes
+
+- Pulled the baseline `3.7.0-1.85.0` and all target images
+  (`2.3.0-1.86.0`, `2.7.3-1.86.0`, `3.7.0-1.86.0`) from
+  `ghcr.io/tylerwhall/zephyr-rust`. Every pull succeeded; no local images
+  were built. Forced the ghcr prefix and explicit versions on every
+  container invocation.
+- Updated active version references and documented the new lock preflight
+  in BUILD_STD.md and the upgrade guide. Changed the guide's run examples
+  to the process-group-safe runner used throughout this upgrade.
+- The container lacks rustfmt; bindgen reports that non-fatally, as in
+  the baseline. Rust 1.86 also warns about libc's existing implicit-C-ABI
+  extern block (`missing_abi`); no suppression or libc change was made.
+  Broader lint coverage remains pending, not claimed as passed.
+- Logs and timestamped build volumes remain local in `.upgrade-logs/`,
+  excluded from commits. Final logs: `final-1.86-build.log` and
+  `final-1.86-run.log`; the volume timestamp is in `1.86-stamp`.
+  Lock-regression output is in `std-1.86-stale-lock-test.log`.
+  Push remains deferred in submodule-before-parent order.
+
 ## 1.84.0 → 1.85.0 (2026-10-06)
 
 **Result**: 16 port commits rebased from `1.84.0` onto `1.85.0`, branch

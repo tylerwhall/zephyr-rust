@@ -33,7 +33,7 @@ the CI images. Per-upgrade decisions and conflicts are recorded in
        > /tmp/zr-baseline.log 2>&1
    rc=$?; tail -100 /tmp/zr-baseline.log; exit $rc
    DOCKER_ARGS="-v /tmp/zr-smoke:/tmp/build" \
-       ./build-cmd.sh ninja -C /tmp/build run \
+       ./build-cmd.sh bash ci/run-sample.sh \
        > /tmp/zr-baseline-run.log 2>&1
    rc=$?; tail -100 /tmp/zr-baseline-run.log; exit $rc
    ```
@@ -156,7 +156,7 @@ Individual jobs resume via `--resume` on re-runs.
        > /tmp/zr-new.log 2>&1
    rc=$?; tail -100 /tmp/zr-new.log; exit $rc
    DOCKER_ARGS="-v /tmp/zr-smoke-new:/tmp/build" \
-       ./build-cmd.sh ninja -C /tmp/build run \
+       ./build-cmd.sh bash ci/run-sample.sh \
        > /tmp/zr-new-run.log 2>&1
    rc=$?; tail -100 /tmp/zr-new-run.log; exit $rc
    ```
@@ -166,9 +166,16 @@ Individual jobs resume via `--resume` on re-runs.
    Omit this override when validating against the local image produced by
    `container-build.sh`.
 
-   **Gotcha**: `rust/cargo.sh` rejects changes to std's staged lockfile,
-   even when Cargo's incomplete std-workspace `--locked` handling permits
-   them. Review the reported file under
+   **Gotcha**: `rust/cargo.sh` validates std's staged workspace with
+   `cargo metadata --locked` before compiling and rejects subsequent lock
+   changes. Cargo 1.86 build-std can silently re-resolve without writing the
+   lockfile, so the post-build comparison alone is insufficient. If the
+   metadata check reports a stale resolution, use ordinary `cargo update`
+   with `RUSTC_BOOTSTRAP=1` on the staged library manifest inside the
+   container (without `-Zbuild-std`), retaining compatible existing pins
+   and preferring the release's upstream lock versions for new packages.
+   The complete workspace resolution includes optional/dev dependencies;
+   this does not enable those features in image builds. Review the file under
    `modules/zephyr-rust/toolchain/lib/rustlib/src/rust/library/Cargo.lock`,
    then commit the reviewed resolution as `rust/Cargo.lock`. Do not simply
    bypass the guard or update upstream's library lock: std uses the parent
