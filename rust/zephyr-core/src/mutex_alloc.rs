@@ -79,7 +79,7 @@ mod mutex_pool {
         static rust_mutex_pool: [KMutex; NUM_MUTEX];
     }
 
-    const NUM_USED: usize = (NUM_MUTEX + 7) / 8;
+    const NUM_USED: usize = NUM_MUTEX.div_ceil(8);
     extern "C" {
         // C owns one zero-initialized byte array in rust_std_partition.
         // Every crate instance accesses it exclusively through AtomicU8.
