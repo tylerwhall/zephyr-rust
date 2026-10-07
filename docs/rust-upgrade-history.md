@@ -21,10 +21,29 @@ fresh read-only build and process-group-safe smoke run passed again.
 All twelve target JSONs pass Rust 1.86's parser; shell syntax and a
 negative lock-guard test also passed.
 
-Stopped before the full matrix for user review, as requested, because
-non-trivial port and Cargo integration changes were needed. No matrix,
-repository test-suite execution, or Clippy pass was started. Other boards,
-Zephyr 2.3.0/2.7.3, and no_std builds remain unvalidated at this checkpoint.
+Initially stopped before the full matrix for user review, as requested,
+because non-trivial port and Cargo integration changes were needed.
+After the user authorized continuation, CI-parity validation passed:
+
+- Full 113-job matrix with RUN=1 on Zephyr 2.3.0/2.7.3/3.7.0: all builds
+  passed, including no_std, and all six verified qemu_x86 sample runs
+  reached the intentional-crash marker and CPU exception with status 1.
+  Zephyr 2.3.0 drops some fault messages and omits the literal access
+  violation line, as in prior upgrades.
+- Zephyr 2.3.0 sanitycheck: all seven configurations executed and passed
+  on qemu_x86 and qemu_cortex_m3, with no failures, skips, or warnings.
+- Strict Clippy on Zephyr 3.7.0/qemu_x86: host crates, all standalone
+  library roots (including low-level crates), and all eight apps/tests
+  passed with --locked and -D warnings, with no skips. Libc's existing
+  missing_abi warning is emitted by the dependency, not a linted root.
+
+Clippy required one mutex bitmap sizing fix, detailed below. Targeted
+strict Clippy and the default smoke run passed before committing it;
+then the full matrix and sanitycheck were rerun from fresh directories
+on the final code. Independently audited all 113 unique matrix tuples,
+final links, six fault outputs, and all eight Clippy app exit files.
+Zephyr 2.7.3/3.7.0 test execution remains pending twister integration;
+this validation provides build coverage there, not test execution.
 Nothing was pushed.
 
 ### Conflicts and adaptations
@@ -59,6 +78,13 @@ Nothing was pushed.
    to i686's target JSON and its generator, retaining existing features
    and calling-convention behavior. This matches upstream's explicit
    soft-float designation rather than enabling FPU/SSE instructions.
+
+6. **Clippy manual_div_ceil**: strict library Clippy on Rust 1.86
+   rejected `(NUM_MUTEX + 7) / 8` in the mutex-pool bitmap size.
+   Replaced it with `NUM_MUTEX.div_ceil(8)` in parent commit `669e682`.
+   The const result and C-owned bitmap layout are unchanged. Targeted
+   strict Clippy, the smoke run's nine-slot exhaustion/reuse checks,
+   and the subsequent full validation passed. No lint allows were added.
 
 ### Dependencies and lock enforcement
 
@@ -102,11 +128,24 @@ Nothing was pushed.
 - The container lacks rustfmt; bindgen reports that non-fatally, as in
   the baseline. Rust 1.86 also warns about libc's existing implicit-C-ABI
   extern block (`missing_abi`); no suppression or libc change was made.
-  Broader lint coverage remains pending, not claimed as passed.
+  Strict Clippy subsequently passed as described above; it does not
+  lint libc as a standalone root or cover cfg'd-out backend code.
+- Archived earlier matrix results and used a real fresh `ci/log/build`
+  directory, preventing --resume from skipping Rust 1.85 jobs. After the
+  Clippy fix, archived the first 1.86 matrix and reran all 113 jobs.
+  Sanitycheck used the exact runner command/flags from ci/sanitycheck.sh
+  through build-cmd.sh, with fresh timestamped output volumes instead of
+  deleting the previous root-owned ci/sanity-out. Every invocation forced
+  the ghcr prefix and explicit Rust version.
 - Logs and timestamped build volumes remain local in `.upgrade-logs/`,
   excluded from commits. Final logs: `final-1.86-build.log` and
   `final-1.86-run.log`; the volume timestamp is in `1.86-stamp`.
   Lock-regression output is in `std-1.86-stale-lock-test.log`.
+  Final broader validation logs: `matrix-1.86-final.log` (per-job output
+  under ci/log/build/run-1), `matrix-1.86-final-audit.log`,
+  `sanity-1.86-final.log`, and `clippy-1.86-full.log`. The validation
+  volume timestamp is in `1.86-validation-stamp`; the Clippy fix's
+  targeted lint/smoke output is in `clippy-1.86-div-ceil-verify.log`.
   Push remains deferred in submodule-before-parent order.
 
 ## 1.84.0 → 1.85.0 (2026-10-06)
