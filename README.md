@@ -11,7 +11,7 @@ Zephyr app.
 
 **Zephyr**: v2.3, v2.7.3, v3.7. 3.0-3.6 not supported.
 
-**Rust**: exactly 1.86.0
+**Rust**: exactly 1.87.0
 
 Use one of these supported releases before reporting issues; other releases
 and Zephyr's main branch are not covered by this repository's CI.
@@ -64,12 +64,12 @@ included as a submodule of this project. In practice, using a different
 compiler version often fails to compile because of Rust internally making heavy
 use of unstable compiler features.
 
-The current base is stable-1.86.0. Rustup is the default workflow, and the
+The current base is stable-1.87.0. Rustup is the default workflow, and the
 rust-toolchain file in this repo should cause rustup to automatically install
 and use the right version. If not, manually install:
 
 ```console
-rustup toolchain install 1.86.0
+rustup toolchain install 1.87.0
 ```
 
 If supplying your own rustc and cargo, make sure they are the version above.
@@ -131,7 +131,7 @@ Execute the tests on Zephyr 2.3.0/qemu_x86 and qemu_cortex_m3 in the CI containe
 
 ```console
 cd ci
-RUST_VERSION=1.86.0 ./sanitycheck.sh
+RUST_VERSION=1.87.0 ./sanitycheck.sh
 ```
 
 Later-version tests are currently build-only; twister execution is pending.

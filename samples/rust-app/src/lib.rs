@@ -83,7 +83,7 @@ fn mutex_pool_test() {
         while let Some(mutex) = DynMutex::new::<C>() {
             assert!(count < MUTEX_POOL_SIZE);
             let ptr = &*mutex as *const _;
-            assert!(mutexes.iter().flatten().all(|other| &**other as *const _ != ptr));
+            assert!(mutexes.iter().flatten().all(|other| !std::ptr::eq(&**other, ptr)));
             mutexes[count] = Some(mutex);
             count += 1;
         }

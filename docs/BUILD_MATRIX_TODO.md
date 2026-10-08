@@ -19,7 +19,7 @@ to qemu_x86 and qemu_cortex_m3. Later-version tests remain build-only.
   for input and the other QEMU combinations did not exit in the inventory.
 - Use `ci/run-sample.sh`: it owns an emulator process group and cleans it up
   on exit/timeout. Never substitute a bare ninja run/timeout pipeline.
-- Run containers with explicit `RUST_VERSION=1.86.0 ZEPHYR_VERSION=<ver>`.
+- Run containers with explicit `RUST_VERSION=1.87.0 ZEPHYR_VERSION=<ver>`.
   The repo is read-only by default; pass container variables via
   `DOCKER_ARGS="... -e VAR=value"` and persist build directories with volumes.
 - Trim builds with APPS, BOARDS, and ZEPHYR_VERSIONS. Results are under

@@ -29,6 +29,12 @@ version = "0.0.0"
 dependencies = [
  "compiler_builtins",
  "core",
+]
+
+[[package]]
+name = "alloctests"
+version = "0.0.0"
+dependencies = [
  "rand",
  "rand_xorshift",
 ]
@@ -60,9 +66,9 @@ dependencies = [
 
 [[package]]
 name = "compiler_builtins"
-version = "0.1.146"
+version = "0.1.152"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a97117b1434b79833f39a5fabdf82f890bd98c1988334dea1cb67f7e627fa311"
+checksum = "2153cf213eb259361567720ce55f6446f17acd0ccca87fb6dc05360578228a58"
 dependencies = [
  "cc",
  "rustc-std-workspace-core",
@@ -159,9 +165,9 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbf6a919d6cf397374f7dfeeea91d974c7c0a7221d0d0f4f20d859d329e53fcc"
+checksum = "fbd780fe5cc30f81464441920d82ac8740e2e46b29a6fad543ddd075229ce37e"
 dependencies = [
  "compiler_builtins",
  "rustc-std-workspace-alloc",
@@ -170,7 +176,7 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.169"
+version = "0.2.171"
 dependencies = [
  "rustc-std-workspace-core",
 ]
