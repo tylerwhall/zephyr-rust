@@ -3,6 +3,135 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.86.0 → 1.87.0 (2026-10-07)
+
+**Result**: the std port rebased onto `1.87.0` and consolidated into
+14 atomic commits (branch `zephyr-1.87.0`, final tip
+`d35c8a3ad3f694d7d22d0ddaf285b7cfb1bea9e2`): the 1.87 sys-layout
+adaptation and the `c_char` ABI correction were squashed into the
+feature commits they belong to rather than stacked on top, and the
+public/private dependency pair that cancelled out was dropped. The
+old `zephyr-1.86.0` branch was not rewritten. Rust 1.87.0 requires libc `0.2.171`, so the
+libc port was rebased from `0.2.169` onto `0.2.171` (branch
+`zephyr-0.2.171`); adopting the shared `crate::primitives` module
+(item 8) subsumed the commits that hand-rolled the `c_*` types and
+fixed-width aliases, collapsing the port from seven commits to one,
+final tip `af5602d7a499f18930ee870f8a80cdb55403be9e`.
+
+**Validation checkpoint**: the Rust 1.86.0 baseline and upgraded Rust
+1.87.0 default sample built and ran on `qemu_x86` / Zephyr 3.7.0 using
+the ghcr.io `zephyr-rust-<ver>-1.87.0` images (all three versions were
+already published). Both reached
+`Next call will crash if userspace is working.`, the expected
+user-thread access violation and CPU exception, and status 1, with
+identical output and RAM usage. After the `c_char` ABI fix, samples
+also built on `qemu_cortex_m3`, `qemu_riscv32`, and `qemu_riscv64`
+(build-only; those emulators do not exit), and the `qemu_x86` run
+passed again.
+
+**Full CI regression** (ghcr.io 1.87.0 images): `ci/build-all.sh
+RUN=1` (all 113 matrix jobs across Zephyr 2.3.0/2.7.3/3.7.0,
+executing the verified exiting `qemu_x86` rust-app/no_std samples),
+`ci/sanitycheck.sh` (Zephyr 2.3.0 test execution on qemu_x86 and
+qemu_cortex_m3), and strict `ci/clippy.sh` with `-D warnings` on
+3.7.0 all passed.
+
+### Conflicts and adaptations
+
+1. **Submodule removals**: the removal commit conflicted because
+   upstream 1.87 modified `.gitmodules` (LLVM branch bump) and the
+   deleted documentation/tool submodules. Kept the intentional
+   deletions and the port's two-entry `.gitmodules` (stdarch,
+   backtrace); no new removals were needed.
+2. **C primitives c_char guard**: upstream converted
+   `core::ffi::primitives` to the `cfg_match!` macro (`if #[cfg(all(`
+   became `all(`). The port's Zephyr signedness override conflicted
+   there; it was first re-applied, then removed entirely once the ABI
+   was measured (item 8), leaving the file identical to upstream.
+3. **stdarch pointer**: the 1.87.0 tag moves `library/stdarch` to
+   `9426bb56586c`; the stale 1.86 checkout failed core compilation
+   with 37 `extern blocks must be unsafe` errors. `git submodule
+   update` resolved it from the existing clone. `library/backtrace`
+   is unchanged between the tags.
+4. **sys module reorganization**: Rust 1.87 moved fs, process, stdio,
+   cmath, and os_str out of `sys/pal/unsupported` into cfg-dispatched
+   top-level `sys` modules. Removed the obsolete PAL registrations
+   (fs/process pointed at deleted files; cmath/os_str were shadowed),
+   moved the port's allocator to `sys/alloc/zephyr.rs` and stdio to
+   `sys/stdio/zephyr.rs` with new `target_os = "zephyr"` branches in
+   those selectors, and repointed `k_str_out_raw` at
+   `zephyr_core::any`. fs and process now resolve to the shared
+   unsupported implementations. During the initial upgrade this was
+   a separate adaptation commit on top of the port; the history was
+   then consolidated so the stub sys impl creates the allocator,
+   stdio, and mutex backends directly at their 1.87 paths
+   (`sys/alloc/zephyr.rs`, `sys/stdio/zephyr.rs`,
+   `sys/sync/mutex/zephyr.rs`) with the selector wiring, and the
+   later implement-alloc/stdio/mutex commits edit them in place, as
+   if the port had been written on 1.87 from the start.
+5. **libc fixed-width aliases**: upstream 0.2.170 deleted
+   `src/fixed_width_ints.rs`, centralizing its contents (deprecated
+   `int8_t..uint64_t` aliases, aarch64 `__int128` aliases) in the
+   shared `crate::primitives` module that every OS branch imports.
+   The Zephyr branch now does the same, which also resolved the
+   `fixed_width_ints` rebase conflict; see item 8 for why the port's
+   private `c_*` definitions could be dropped along with it.
+6. **std lockfile**: applied the upstream 1.87.0 release versions to
+   `rust/Cargo.lock`: compiler_builtins 0.1.152, hermit-abi 0.5.0,
+   libc 0.2.171 (local patch), and the new `alloctests` workspace
+   member taking rand/rand_xorshift out of `alloc`. No other packages
+   changed between the release locks.
+7. **Lock guard retained**: verified by tampering the staged lock
+   (hermit-abi pinned to 0.4.0) and building directly with Cargo
+   1.87.0: the build succeeded and the lock was neither enforced nor
+   rewritten, so build-std still silently re-resolves stale std
+   locks. The pre-build `cargo metadata --locked` validation and
+   post-build comparison in `rust/cargo.sh` are unchanged, and the
+   guard correctly rejected the 1.86 lock before any compilation.
+8. **c_char ABI correction**: audited the port's `c_char` signedness
+   against the real Zephyr C ABI. Zephyr passes no
+   `-f[unsigned]_char` override anywhere (checked the 2.1, 2.7.3, and
+   3.7 trees and their cmake/arch glue), so `char` follows the SDK
+   compiler default per target. Probing the SDK compilers from all
+   three supported containers (0.12.2, 0.13.2, 0.16.1) with
+   `_Static_assert((char)-1 < 0, ...)` showed `char` is unsigned on
+   arm, aarch64, riscv32, riscv64, and xtensa, and signed on x86,
+   nios2, and mips. The port had modeled Zephyr `char` as signed
+   except aarch64/riscv64 (libc `zephyr/mod.rs` and a matching
+   `core::ffi::primitives` override), which was wrong for arm (7 of
+   12 target specs) and riscv32 (3 of 12); the original rationale
+   ("preserve the Zephyr ABI used by its libc port") was circular.
+   Upstream's generic arch list already matches the measured ABI for
+   every arch Rust builds for Zephyr, so the fix is removal: the
+   `core::ffi::primitives` special case is gone (file pristine) and
+   the libc Zephyr branch imports the shared `crate::primitives`
+   like every other target, deleting the port's hand-written `c_*`
+   definitions. **Behavior change: `c_char` becomes `u8` (was `i8`)
+   on arm and riscv32 targets**, matching the C side. The libc
+   autosquash dropped the now-empty commits that added or adjusted
+   those definitions (`add c_char`, `add long and ulong`, `remove
+   fixed_width_ints for Rust 1.71`, `char is unsigned on riscv64`,
+   `use the shared core c_void definition`), collapsing the port to
+   a single commit; the std-side removal was fixup'd into
+   `zephyr: stub sys impl`. `c_long` (pointer-width) and the
+   fixed-width/`__int128` aliases were re-verified correct on every
+   arch. Built `qemu_x86`, `qemu_cortex_m3`, `qemu_riscv32`, and
+   `qemu_riscv64` samples and re-ran the `qemu_x86` smoke test.
+9. **Clippy-root lockfiles**: every clippy root carries a committed
+   `Cargo.lock` enforced with `--locked`, and the libc path-dependency
+   version bump (0.2.169 -> 0.2.171) made sixteen of them stale
+   (`--locked` failed on the first clippy crate). Regenerated with
+   `cargo generate-lockfile` inside the 1.87.0 container
+   (`WRITABLE=1`); diffs are the libc version, two futures patch
+   bumps, and lock format v3 -> v4 normalization. `zephyr-bindgen`
+   and `time-convert` needed no change.
+10. **New 1.87 lints** (strict clippy `-D warnings`): the port's libc
+    `extern { ... }` block now warns `missing_abi` (extern
+    declarations need an explicit ABI); fixed with `extern "C"` in
+    the libc port commit. `clippy::ptr_eq` (new) fired on a raw
+    pointer inequality in `samples/rust-app`; rewritten with
+    `std::ptr::eq`.
+
 ## 1.85.0 → 1.86.0 (2026-10-06)
 
 **Result**: 18 std-port commits rebased onto `1.86.0`, branch
