@@ -100,6 +100,10 @@ In the parent repo, in the same commit as the submodule pointer bump:
 - `rust/cargo.sh` reads the exact compiler pin from `rust-toolchain.toml`;
   no separate version assertion needs updating
 - `rust/Cargo.lock`: reviewed std dependency resolution (separate from app locks)
+- Clippy-root lockfiles (`git ls-files '*/Cargo.lock'` except
+  `rust/Cargo.lock`): a libc rebase changes the path-dependency version and
+  stales every lock that includes it under `--locked`; regenerate the
+  affected roots (regeneration mechanics in `AGENTS.md`)
 - `README.md`: version references ("exactly ...", "stable-...",
   `rustup toolchain install ...`)
 - `.github/workflows/*.yml`: container image tags and the
@@ -188,9 +192,17 @@ Individual jobs resume via `--resume` on re-runs.
    fix belongs to an earlier port commit; use a normal commit with a proper
    message when it is independent. Continue building after each fix, but stop
    and ask when the correct adaptation or intended behavior is unclear. Do not
-   autosquash until the build succeeds. Then autosquash the fixups, resolve
-   any autosquash conflicts in favor of the final validated state, and verify
-   the resulting port history.
+   autosquash until the build succeeds. Then autosquash the fixups. When a fix
+   removes content added by several port commits, fixup into the first, resolve
+   conflicts with the final validated content, and `--skip` the subsumed
+   commits (submodule rebase state lives in the parent's `.git/modules/...`;
+   scripts should use `git rev-parse --git-dir`). Prove the rewrite changed
+   only history: `git diff <old-tip> <new-tip>` must be empty.
+
+5. Run strict clippy (`CLIPPY_ARGS="-D warnings"`, see `AGENTS.md`) before
+   the full matrix: new toolchain lints need source fixes that invalidate
+   matrix results, so finding them after a matrix run forces a re-run. Its
+   `--locked` runs also catch stale clippy-root lockfiles.
 
 ## 5. Record the upgrade
 

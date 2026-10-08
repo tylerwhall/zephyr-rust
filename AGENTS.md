@@ -111,6 +111,10 @@ remaining warnings grouped by lint. Details:
 - A stale `Cargo.lock` reported by `--locked` is regenerated with
   `cargo generate-lockfile --manifest-path <crate>/Cargo.toml` (or
   `cargo update` for dependency bumps) and committed with the change.
+  `generate-lockfile` ignores the existing lock and bumps everything
+  to latest-compatible: regenerate only roots whose graph actually
+  changed (e.g. the libc path dep) and revert churn in unaffected
+  ones.
 - Add `#[allow(...)]` (with a justifying comment) only when a clean fix is
   impossible; ALWAYS stop and ask the user first when allowing a warning/lint.
 - Default lint validation uses `qemu_x86`. Native_posix/3.7.0 is excluded
@@ -274,5 +278,10 @@ the jobs `.github/workflows/main.yml` builds.
   syscall_thunks.c, devicetree_generated.h), and the cflags bindgen receives
   in the build dir's `rust-env.sh` (`TARGET_CFLAGS`, which includes
   `-imacros autoconf.h` but not the devicetree generated header).
+- `build-all.sh` progress while it runs: `find ci/log/build -name seq
+  | wc -l` counts started jobs (of `ci/matrix.py --tsv | wc -l`),
+  `docker ps -q | wc -l` counts active containers; GNU parallel writes
+  no per-job done-marker, so completion is only visible in the caller's
+  exit status. Full matrix takes ~20 min at `-j8`.
 - Keep command output small or write results to a file under the persistent
   volume; large/truncated output obscures the lines you need.
