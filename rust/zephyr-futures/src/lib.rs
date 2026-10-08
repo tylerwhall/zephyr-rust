@@ -248,7 +248,7 @@ impl Executor {
             r.replace(Some(reactor));
 
             'main: loop {
-                trace!("Reactor {:?} run", current);
+                trace!("Reactor {current:?} run");
                 // Signal indicates need to poll run queue. Reset before poll.
                 self.state.thread_signal.reset::<C>();
                 loop {
@@ -272,7 +272,7 @@ impl Executor {
                     TimerPoll::Delay(timeout) => Some(timeout),
                     TimerPoll::Woken => continue,
                 };
-                trace!("Reactor {:?} wait. Timeout {:?}", current, timeout);
+                trace!("Reactor {current:?} wait. Timeout {timeout:?}");
                 reactor.poll::<C>(timeout);
             }
 

@@ -29,9 +29,9 @@ impl ParseCallbacks for Callbacks {
 
 fn main() {
     let flags = env::var("TARGET_CFLAGS").unwrap_or("".to_string());
-    eprintln!("cflags: {}", flags);
+    eprintln!("cflags: {flags}");
     let userspace = env::var("CONFIG_USERSPACE").expect("CONFIG_USERSPACE must be set") == "y";
-    eprintln!("userspace: {}", userspace);
+    eprintln!("userspace: {userspace}");
 
     let callbacks = Callbacks::default().clone();
     // The bindgen::Builder is the main entry point
@@ -69,8 +69,7 @@ fn main() {
     for syscall in syscalls.syscalls.iter() {
         writeln!(
             &mut out,
-            "    pub use super::super::raw::z_anyctx_{} as {};",
-            syscall, syscall
+            "    pub use super::super::raw::z_anyctx_{syscall} as {syscall};"
         )
         .unwrap();
     }
@@ -81,8 +80,7 @@ fn main() {
         for syscall in syscalls.syscalls.iter() {
             writeln!(
                 &mut out,
-                "    pub use super::super::raw::z_userctx_{} as {};",
-                syscall, syscall
+                "    pub use super::super::raw::z_userctx_{syscall} as {syscall};"
             )
             .unwrap();
         }
@@ -97,8 +95,7 @@ fn main() {
         for syscall in syscalls.syscalls.iter() {
             writeln!(
                 &mut out,
-                "    pub use super::super::raw::z_kernelctx_{} as {};",
-                syscall, syscall
+                "    pub use super::super::raw::z_kernelctx_{syscall} as {syscall};"
             )
             .unwrap();
         }

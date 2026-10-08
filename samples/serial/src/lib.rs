@@ -18,7 +18,7 @@ async fn echo<R: AsyncBufReadExt + Unpin, W: AsyncWriteExt + Unpin>(rx: R, mut t
     let mut lines = rx.lines();
     while let Some(line) = lines.next().await {
         let line = line.unwrap();
-        println!("got line: {}", line);
+        println!("got line: {line}");
         println!("sleeping");
         Delay::new(Duration::from_secs(1)).await;
         let line = line.into_bytes();

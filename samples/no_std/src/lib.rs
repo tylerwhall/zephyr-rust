@@ -67,7 +67,7 @@ pub extern "C" fn rust_main() {
 
     let boxed = Box::new(1u8);
     assert_eq!(*boxed, 1);
-    zephyr_core::any::k_str_out(format!("Boxed value {}\n", boxed).as_str());
+    zephyr_core::any::k_str_out(format!("Boxed value {boxed}\n").as_str());
     drop(boxed);
 
     let a: [u8; 4] = [1, 2, 3, 4];

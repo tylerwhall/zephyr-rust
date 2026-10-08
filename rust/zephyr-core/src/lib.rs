@@ -35,7 +35,7 @@ impl fmt::Display for KernelVersion {
         let major = (self.0 & 0xff0000) >> 16;
         let minor = (self.0 & 0x00ff00) >> 8;
         let patch = self.0 & 0x0000ff;
-        write!(f, "{}.{}.{}", major, minor, patch)
+        write!(f, "{major}.{minor}.{patch}")
     }
 }
 

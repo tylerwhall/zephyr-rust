@@ -172,7 +172,7 @@ Individual jobs resume via `--resume` on re-runs.
 
    **Gotcha**: `rust/cargo.sh` validates std's staged workspace with
    `cargo metadata --locked` before compiling and rejects subsequent lock
-   changes. Cargo 1.87 build-std can silently re-resolve without writing the
+   changes. Cargo 1.88 build-std can silently re-resolve without writing the
    lockfile, so the post-build comparison alone is insufficient. If the
    metadata check reports a stale resolution, use ordinary `cargo update`
    with `RUSTC_BOOTSTRAP=1` on the staged library manifest inside the

@@ -14,7 +14,8 @@ pub mod raw {
         clippy::missing_safety_doc,
         clippy::useless_transmute,
         clippy::transmute_int_to_bool,
-        clippy::ptr_offset_with_cast
+        clippy::ptr_offset_with_cast,
+        unnecessary_transmutes // rustc 1.88 lint on bindgen bool-bitfield transmutes
     )]
     mod bindings {
         include!(concat!(env!("ZEPHYR_RUST_BINDINGS"), "/bindings.rs"));

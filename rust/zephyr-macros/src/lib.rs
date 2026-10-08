@@ -17,9 +17,9 @@ fn get_single_arg(item: TokenStream) -> Ident {
 #[proc_macro]
 pub fn k_mutex_define(item: TokenStream) -> TokenStream {
     let ident = get_single_arg(item);
-    let section = Literal::string(&format!("._k_mutex.static.{}", ident));
-    let ctor = Ident::new(&format!("_rust_mutex_init_{}", ident), ident.span());
-    let ctor_ptr = Ident::new(&format!("_ctor_rust_mutex_init_{}", ident), ident.span());
+    let section = Literal::string(&format!("._k_mutex.static.{ident}"));
+    let ctor = Ident::new(&format!("_rust_mutex_init_{ident}"), ident.span());
+    let ctor_ptr = Ident::new(&format!("_ctor_rust_mutex_init_{ident}"), ident.span());
     let expanded = quote! {
         // The static storage for the object, itself
         #[link_section = #section]
@@ -47,10 +47,10 @@ pub fn k_poll_signal_define(item: TokenStream) -> TokenStream {
     let ident = get_single_arg(item);
     // Using mutex section because there is not one for poll_signal. Need to
     // ensure this is in kernel memory.
-    let section = Literal::string(&format!("._k_mutex.static.{}", ident));
-    let ctor = Ident::new(&format!("_rust_poll_signal_init_{}", ident), ident.span());
+    let section = Literal::string(&format!("._k_mutex.static.{ident}"));
+    let ctor = Ident::new(&format!("_rust_poll_signal_init_{ident}"), ident.span());
     let ctor_ptr = Ident::new(
-        &format!("_ctor_rust_poll_signal_init_{}", ident),
+        &format!("_ctor_rust_poll_signal_init_{ident}"),
         ident.span(),
     );
     let expanded = quote! {
@@ -103,9 +103,9 @@ fn get_sem_args(item: TokenStream) -> Option<(Ident, Literal, Literal)> {
 pub fn k_sem_define(item: TokenStream) -> TokenStream {
     let (ident, initial, limit) = get_sem_args(item).expect("Expected 3 comma-separated arguments");
 
-    let section = Literal::string(&format!("._k_sem.static.{}", ident));
-    let ctor = Ident::new(&format!("_rust_sem_init_{}", ident), ident.span());
-    let ctor_ptr = Ident::new(&format!("_ctor_rust_sem_init_{}", ident), ident.span());
+    let section = Literal::string(&format!("._k_sem.static.{ident}"));
+    let ctor = Ident::new(&format!("_rust_sem_init_{ident}"), ident.span());
+    let ctor_ptr = Ident::new(&format!("_ctor_rust_sem_init_{ident}"), ident.span());
     let expanded = quote! {
         // The static storage for the object, itself
         #[link_section = #section]

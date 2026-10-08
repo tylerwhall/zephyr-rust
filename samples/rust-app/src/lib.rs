@@ -167,7 +167,7 @@ pub extern "C" fn rust_main() {
     assert_eq!(ticks.sub_timeout(ticks).0.ticks, 0);
     let later = instant + Duration::from_secs(1);
     assert!(zephyr::time::instant_ticks(later) > ticks);
-    println!("Time {:?}", instant);
+    println!("Time {instant:?}");
 
     let current = Context::k_current_get();
     current.k_object_access_grant::<Context, _>(&MUTEX);
@@ -187,7 +187,7 @@ pub extern "C" fn rust_main() {
 
     {
         let boxed = Box::new(1u8);
-        println!("Boxed value {}", boxed);
+        println!("Boxed value {boxed}");
     }
 
     // test std::ops::{Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive}

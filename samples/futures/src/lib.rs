@@ -15,7 +15,7 @@ zephyr_macros::k_sem_define!(TEST_SEM, 0, 10);
 pub extern "C" fn rust_sem_thread(_a: *const c_void, _b: *const c_void, _c: *const c_void) {
     use zephyr::context::Kernel as C;
     for i in 0..10 {
-        println!("Giving {}", i);
+        println!("Giving {i}");
         TEST_SEM.give::<C>();
     }
 }
@@ -31,7 +31,7 @@ pub extern "C" fn rust_test_main() {
         .take(10)
         .enumerate()
         .for_each(|(i, _val)| {
-            println!("Took {}", i);
+            println!("Took {i}");
             future::ready(())
         });
     let mut executor = unsafe { Executor::new(&EXECUTOR_MUTEX, &EXECUTOR_SIGNAL) };

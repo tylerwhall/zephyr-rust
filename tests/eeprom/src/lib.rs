@@ -33,7 +33,7 @@ pub extern "C" fn test_main() {
     let mut read = [0; 4];
 
     let size = eeprom.size::<C>();
-    println!("EEPROM size {}", size);
+    println!("EEPROM size {size}");
     // Out of bounds read
     assert_eq!(
         eeprom
