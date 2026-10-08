@@ -3,6 +3,97 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.87.0 → 1.88.0 (2026-10-08)
+
+**Result**: the std port rebased from `1.87.0` onto `1.88.0` with no
+consolidation needed, still 14 commits (branch `zephyr-1.88.0`, final
+tip `75d3f8e5543`). Rust 1.88.0 requires libc `0.2.172`, so the libc
+port was rebased from `0.2.171` onto `0.2.172` (branch
+`zephyr-0.2.172`, final tip `d5d4c7caf`); the single `Zephyr OS
+support` commit replayed cleanly with no conflicts.
+
+**Validation checkpoint**: baseline (1.87.0) and upgraded (1.88.0)
+`samples/rust-app` on `qemu_x86` / Zephyr 3.7.0 in the ghcr.io
+`zephyr-rust-3.7.0-<rust>` images (all three Zephyr versions were
+already published for 1.88.0). Both runs reached
+`Next call will crash if userspace is working.`, the expected
+user-thread access violation and CPU exception, and status 1. Strict
+clippy `-D warnings` on 3.7.0 passed. The full matrix and sanitycheck
+were still pending at the time of writing.
+
+### Conflicts
+
+1. **`rust: remove submodules not required to build zephyr-rust`**:
+   same modify/delete set as prior upgrades (`src/doc/*`, `src/gcc`,
+   `src/llvm-project`, `src/tools/cargo`, `src/tools/rustc-perf`) plus
+   a `.gitmodules` content conflict (upstream had re-pointed the
+   `enzyme` URL and added `gcc`/`rustc-perf` entries between 1.87 and
+   1.88). Resolved by keeping our deletions; the resulting
+   `.gitmodules` retains only `library/stdarch` and
+   `library/backtrace`.
+
+2. **`zephyr: panicking: remove get/set hook rwlock`**:
+   `library/std/src/panicking.rs` import conflict; upstream 1.88 added
+   the `Atomic` type to the `sync::atomic` import. Kept upstream's
+   import and our `#[cfg(not(target_os = "zephyr"))]` on the
+   `PoisonError`/`RwLock` import.
+
+3. **`zephyr: ThreadId: don't use uninitialized mutex`**:
+   `library/std/src/thread/mod.rs`: upstream switched the 64-bit
+   ThreadId counter to `Atomic<u64>` inside the block the port
+   replaces wholesale with its u32 atomic. Kept the port side.
+
+### Compile errors and fixes
+
+- **`args` moved out of `sys/pal/unsupported`** (E0583-style file-read
+  failure on `../unsupported/args.rs`): upstream 1.88 introduced the
+  dispatched `sys/args` module (and `sys/env`, `sys/env_consts`).
+  Because the custom target specs use `target_family = "zephyr"`,
+  `sys/args` and `sys/env` already dispatch zephyr to their
+  `unsupported` implementations, so the port's `pal/zephyr` `args`
+  re-export and inline `env` module became dead: both removed, and the
+  `"zephyr"` `FAMILY`/`OS` constants were added to
+  `sys/env_consts.rs` to preserve `std::env::consts` behavior. Fixup'd
+  into `zephyr: stub sys impl` and autosquashed.
+
+### Lockfile decisions
+
+- **`rust/Cargo.lock`** (std): regenerated from the staged workspace
+  with `cargo update -w` (`RUSTC_BOOTSTRAP=1`), then aligned with the
+  upstream 1.88.0 release lock: `compiler_builtins 0.1.158`,
+  `r-efi 5.2.0` and `r-efi-alloc 2.0.0` (downgraded from the 5.3.0 /
+  2.1.0 that `-w` selected), new `rustc-literal-escaper 0.0.2`,
+  `libc 0.2.172` (path dep). `hashbrown` had to be bumped to 0.15.3:
+  the 1.87 lock pinned 0.15.2, which is semver-compatible but predates
+  the `ExtractIf` signature 1.88 std compiles against (E0277).
+  `allocator-api2` dropped with that bump. All other 1.87 pins kept.
+- **Clippy-root lockfiles**: regenerated with `cargo update -w` per
+  root; every diff is the libc path-dependency version only.
+
+### Lints new in 1.88 (strict clippy)
+
+- `uninlined_format_args` (promoted to style): fixed in
+  `zephyr-bindgen`, `zephyr-macros`, `zephyr-futures`, `zephyr-core`
+  and the samples/tests apps.
+- `clippy::manual_dangling_ptr` (new): `zephyr-core` poll now uses
+  `core::ptr::dangling_mut`.
+- `unnecessary_transmutes` (rustc, new): fires on bindgen's
+  bool-bitfield helpers; added to the scoped generated-code exception
+  list in `zephyr-sys` (now five lints, see `docs/BUILD_STD.md`).
+
+### Gotchas hit
+
+- After the rebase, the `library/stdarch` submodule working copy was
+  still checked out at the 1.87 pointer (the HEAD tree was correct),
+  producing E0133 errors from stale intrinsics code; fixed with
+  `git submodule update library/stdarch library/backtrace`.
+- Running `cargo update` directly against the staged std manifest
+  once rewrote `rust/rust/Cargo.lock` (the top-level rust workspace
+  lock) with the std resolution. Restored with `git checkout`; four
+  replays of the same commands did not reproduce it. Verify
+  `git -C rust/rust status` is clean after touching staged-workspace
+  lockfiles.
+
 ## 1.86.0 → 1.87.0 (2026-10-07)
 
 **Result**: the std port rebased onto `1.87.0` and consolidated into
