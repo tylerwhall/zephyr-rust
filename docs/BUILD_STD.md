@@ -1,6 +1,6 @@
 # Cargo build-std in zephyr-rust
 
-The production build uses Cargo 1.93 build-std, not a manually published
+The production build uses Cargo 1.94 build-std, not a manually published
 sysroot. CMake generates the syscall thunks, one pair of Rust binding files,
 and an application staticlib project, then invokes `rust/cargo.sh` once to
 build the standard-library roots and application together.
@@ -32,7 +32,7 @@ these inputs change, and builds the host tool with `--locked`.
 
 ## Toolchain and source discovery
 
-Cargo 1.93 discovers std sources through the host compiler's sysroot at
+Cargo 1.94 discovers std sources through the host compiler's sysroot at
 `lib/rustlib/src/rust/library`; it does not consult RUST_LIB_SRC. The build
 uses the pinned port sources, not upstream rust-src.
 
@@ -58,7 +58,7 @@ compilation flags; there is no manual rlib publication or sysroot-copy step.
 - `-Zbuild-std-features=` preserves the absence of optional std
   backtrace/unwind features. Generated dev and release profiles use panic=abort.
 
-Std has its own resolution, pinned in `rust/Cargo.lock`. Cargo 1.93's
+Std has its own resolution, pinned in `rust/Cargo.lock`. Cargo 1.94's
 build-std resolver neither enforces --locked nor writes the std lockfile.
 The helper first validates the complete staged workspace with
 `cargo metadata --locked`, then compares its staged lock after every build
@@ -109,7 +109,7 @@ pass remains required; see [AGENTS.md](../AGENTS.md#clippy) for the workflow.
 
 Bindgen's incomplete-array and bitfield helpers trigger `missing_safety_doc`,
 `useless_transmute`, `transmute_int_to_bool`, `ptr_offset_with_cast`, and
-rustc 1.93's `unnecessary_transmutes`.
+rustc 1.94's `unnecessary_transmutes`.
 Exceptions for only these five Clippy/rustc lints are scoped to the private generated
 `bindings` module in `rust/zephyr-sys/src/lib.rs`. Reexports preserve the public
 `raw` API. Handwritten kernel object wrappers and all of `zephyr-core` retain
