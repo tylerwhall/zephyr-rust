@@ -3,6 +3,142 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.90.0 → 1.91.0 (2026-10-12)
+
+**Result**: the std port rebased from `1.90.0` onto `1.91.0` with no
+consolidation needed, still 14 commits (branch `zephyr-1.91.0`, final
+tip `a7cf6eb9c4`). The libc port stayed at `0.2.172`
+(`zephyr-0.2.172`, tip `d5d4c7caf`): 1.91.0 std still requires libc
+`0.2.172`, so no libc rebase was needed. All three 1.91.0 CI images
+(2.3.0, 2.7.3, 3.7.0) were already published on ghcr.io and were
+pulled, not built locally.
+
+**Validation checkpoint**: baseline (1.90.0) and upgraded (1.91.0)
+`samples/rust-app` on `qemu_x86` / Zephyr 3.7.0 in the ghcr.io
+`zephyr-rust-3.7.0-<rust>` images. Both runs reached
+`Next call will crash if userspace is working.`, the expected
+user-thread access violation and CPU exception, and status 1. Strict
+clippy `-D warnings` on 3.7.0 (full pass, libs and apps) needed no
+new-lint fixes. The full matrix and sanitycheck were intentionally not
+run (left for user review).
+
+### Conflicts
+
+1. **`rust: remove submodules not required to build zephyr-rust`**:
+   same modify/delete set as prior upgrades; resolved identically
+   (`.gitmodules` keeps only `library/backtrace`).
+
+2. **`cfg_select!` conversion** (`zephyr: stub sys impl` and three
+   later commits): 1.91 converted the `cfg_if::cfg_if!` dispatch
+   blocks in `sys/pal/mod.rs`, `sys/stdio/mod.rs`,
+   `sys/sync/mutex/mod.rs`, `sys/sync/thread_parking/mod.rs`,
+   `sys/random/mod.rs` and `sys/thread_local/mod.rs` to the new
+   `cfg_select!` macro. The port's zephyr branches were rewritten in
+   `cfg_select!` syntax (`target_os = "zephyr" => { ... }`, or an
+   extra `target_os = "zephyr",` entry in shared `any(...)` lists).
+   `sys/net/mod.rs` was restructured: the dispatch moved to
+   `sys/net/connection/mod.rs`, where the port's
+   `not(target_os = "zephyr")` exclusion now lives.
+
+3. **`zephyr: ThreadId: don't use uninitialized mutex`**: upstream
+   converted the `ThreadId::new` internals to `cfg_select!`; the port
+   replaces the whole function body, so the port side was taken
+   verbatim.
+
+### Compile errors and fixes
+
+- **`sys/alloc/mod.rs` merged cleanly but wrong**: the port's
+  `} else if #[cfg(target_os = "zephyr")]` branch landed inside an
+  upstream-converted `cfg_select!` block without a rebase conflict
+  (syntax error at compile time). Fixed as a fixup into
+  `zephyr: stub sys impl`. Lesson: after a rebase that touches
+  dispatch files, audit *every* port cfg branch for the new syntax,
+  not just the conflicted ones
+  (`git diff <tag> | grep 'else if #\[cfg'`).
+
+- **`thread::sleep` panicked "can't sleep" at runtime** (build
+  clean): 1.91 moved thread primitives out of
+  `sys/pal/<os>/thread.rs` into a new `sys/thread/<os>.rs` module
+  tree. The port's `sys/pal/zephyr/thread.rs` became dead code and
+  zephyr silently fell through to `sys/thread/unsupported.rs`.
+  Adapted to the new layout: `sys/thread/zephyr.rs` provides
+  `Thread`/`sleep`/`yield_now`/`available_parallelism`/`DEFAULT_MIN_
+  STACK_SIZE` (set_name/current_os_id come from the no-op
+  `unsupported`, matching the port), with a `target_os = "zephyr"`
+  branch in `sys/thread/mod.rs`; `pal/zephyr/thread.rs` and its `mod`
+  declaration were deleted (its `guard` submodule is superseded by
+  1.91's thread_local-internal guard, and the 1.90-era
+  `Thread::sleep_until` shim is superseded by upstream's generic
+  relative-sleep `sleep_until` fallback). Fixup'd into
+  `zephyr: implement thread::sleep` and `zephyr: stub sys impl`.
+
+- **Target JSON `target-pointer-width`** (load error): rustc 1.91
+  rejects the string `"32"` and requires an integer. `update-
+  targets.sh` now applies `|= tonumber` and all twelve target specs
+  were updated. Parent-repo change, like the 1.90 boolean fix.
+
+### Build-system gotcha: stale build-std
+
+`cargo build-std` does **not** re-fingerprint std sources after a
+successful build: edits to `rust/rust/library/std/src` in a build dir
+where std already compiled were silently ignored (the sample kept
+running the old std and the "can't sleep" panic persisted). Deleting
+the std fingerprints + `libstd-*` under
+`app/<target>/release/{.fingerprint,deps}/` (inside the container;
+the files are root-owned) forced the rebuild. A fresh build dir is
+the safer default when iterating on std changes.
+
+### Lockfile decisions
+
+- **Path dependency for compiler_builtins** (parent-repo change, done
+  at user request for upstream consistency): 1.91 removed the std
+  workspace `[patch.crates-io] compiler_builtins` entry (alloc/std use
+  path deps now). Rather than re-inject that patch in `rust/cargo.sh`,
+  `zephyr-core`, `zephyr-sys` and `time-convert` now declare
+  `compiler_builtins` as a path dependency into `rust/rust`, matching
+  how the libc fork is already consumed. The libc patch in
+  `rust/cargo.sh` stays (upstream std's own manifest depends on
+  crates.io libc; only a patch can redirect it to the fork). The
+  three root lockfiles (`zephyr-core`, `zephyr-sys`, `time-convert`)
+  were minimally regenerated (path entry + its `core` dep); app and
+  other root lockfiles are unaffected (the dep is optional and
+  inactive there).
+- **`rust/Cargo.lock`** (std): the old-lock-seeded minimal
+  re-resolution **failed** this time: cargo cannot retarget existing
+  registry consumers of `compiler_builtins` (`cfg-if`, `r-efi-alloc`)
+  onto the path package without a patch (`links = "compiler-rt"`
+  conflict). A fresh resolution (no seed lock) resolves cleanly to a
+  single path instance, so the lock was regenerated fresh and then
+  aligned to the upstream 1.91.0 release lock: `getopts 0.2.24`,
+  `hashbrown 0.15.5`, `object 0.37.3`, `miniz_oxide 0.8.9`,
+  `r-efi 5.3.0`, `r-efi-alloc 2.1.0`, `wasi 0.14.4` +
+  `wit-bindgen 0.45.0`, `cfg-if 1.0.1`, `dlmalloc 0.2.10` (with the
+  upstream `windows-sys 0.59`/`windows-targets 0.52.6` chain),
+  `hermit-abi 0.5.2`, `memchr 2.7.5`, `rand 0.9.2`/`rand_core 0.9.3`,
+  `rustc-demangle 0.1.26`, `gimli 0.32.0`. `r-efi-alloc 2.1.0` is
+  required, not cosmetic: 2.0.0 depends on registry
+  `compiler_builtins` and breaks resolution. Kept the existing
+  compatible `unwinding 0.2.10` pin (upstream has 0.2.8) with its
+  `addr2line 0.25.1` + `gimli 0.34.0` requirements, as in prior
+  upgrades. Single patched `libc 0.2.172` everywhere.
+- **Clippy-root lockfiles**: only the three listed above changed; all
+  other `--locked` clippy runs passed unchanged.
+
+### New-toolchain lints
+
+- None: strict clippy `-D warnings` passed without source fixes.
+
+### Notes
+
+- As with 1.90, the container image has no `rustfmt` component; the
+  bindgen step prints "'rustfmt' is not installed for the toolchain"
+  and continues (non-fatal).
+- Autosquash of the two thread-move fixups conflicted in
+  `pal/zephyr/mod.rs` (fixups recorded against the final tree,
+  reapplied at earlier positions); resolved so the final tree is
+  byte-identical to the validated one (`git diff <pre-squash-tip>
+  <tip>` empty).
+
 ## 1.89.0 → 1.90.0 (2026-10-12)
 
 **Result**: the std port rebased from `1.89.0` onto `1.90.0` with no
