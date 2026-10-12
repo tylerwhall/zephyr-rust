@@ -3,6 +3,105 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.89.0 → 1.90.0 (2026-10-12)
+
+**Result**: the std port rebased from `1.89.0` onto `1.90.0` with no
+consolidation needed, still 14 commits (branch `zephyr-1.90.0`, final
+tip `c79382d5aec`). The libc port stayed at `0.2.172`
+(`zephyr-0.2.172`, tip `d5d4c7caf`): 1.90.0 std still requires libc
+`0.2.172`, so no libc rebase was needed. All three 1.90.0 CI images
+(2.3.0, 2.7.3, 3.7.0) were already published on ghcr.io and were
+pulled, not built locally.
+
+**Validation checkpoint**: baseline (1.89.0) and upgraded (1.90.0)
+`samples/rust-app` on `qemu_x86` / Zephyr 3.7.0 in the ghcr.io
+`zephyr-rust-3.7.0-<rust>` images. Both runs reached
+`Next call will crash if userspace is working.`, the expected
+user-thread access violation and CPU exception, and status 1. Strict
+clippy `-D warnings` on 3.7.0 (full pass, libs and apps) passed after
+one new-lint fix (`time-convert`, below). The full matrix and
+sanitycheck were intentionally not run (left for user review).
+
+### Conflicts
+
+1. **`library/stdarch` submodule removed upstream**: 1.90 vendored
+   stdarch into the rust repo (`library/stdarch` became a regular
+   tree), so the rebase checkout refused to overwrite the initialized
+   submodule worktree. Resolved with
+   `git submodule deinit -f library/stdarch` before rebasing; no port
+   commit touched stdarch contents.
+
+2. **`rust: remove submodules not required to build zephyr-rust`**:
+   same modify/delete set as prior upgrades (`src/doc/*`, `src/gcc`,
+   `src/llvm-project`, `src/tools/cargo`, `src/tools/enzyme`,
+   `src/tools/rustc-perf`) plus a `.gitmodules` content conflict.
+   Because stdarch is no longer a submodule in 1.90, the resulting
+   `.gitmodules` retains only `library/backtrace` (prior upgrades kept
+   stdarch and backtrace).
+
+3. **`zephyr: stub sys impl`** (`library/std/Cargo.toml`): upstream
+   moved `std_detect` from `../stdarch/crates/std_detect` to the
+   vendored `../std_detect` (now `public = true`, no
+   `rustc-dep-of-std`). Kept the upstream line verbatim and added the
+   `zephyr-sys`/`zephyr-core` dependencies after it.
+
+No other port commit conflicted.
+
+### Compile errors and fixes
+
+- **Target JSON booleans** (load error, not a Rust compile error):
+  rustc 1.90's target-spec parser rejects strings where booleans are
+  expected (`invalid type: string "false", expected a boolean`), and
+  `rust/targets/update-targets.sh` emitted `"false"` for
+  `dynamic-linking`, `has-thread-local`, and
+  `position-independent-executables`. Changed the jq filter to emit
+  real `false` and updated all twelve target JSON files to match what
+  the fixed script generates. Parent-repo change, not a port change.
+
+- **`Thread::sleep_until` missing** (E0599 in `thread/mod.rs`):
+  upstream 1.90 stabilized the PAL hook for unstable
+  `thread::sleep_until`; every PAL `sys::Thread` must now provide
+  `sleep_until(Instant)`. The zephyr PAL gained a relative-sleep
+  implementation mirroring wasi (`checked_duration_since` +
+  `Self::sleep`), the "Other" behavior std documents for platforms
+  without an absolute-sleep syscall. Fixup'd into
+  `zephyr: implement thread::sleep` and autosquashed.
+
+### Lockfile decisions
+
+- **`rust/Cargo.lock`** (std): the staged workspace failed
+  `cargo metadata --locked`. Regenerated inside the 1.90.0 container
+  with `RUSTC_BOOTSTRAP=1 cargo metadata` (no `--locked`) on the
+  staged manifest seeded with the existing lock, so cargo made only
+  the changes the 1.90.0 manifests force. Bumped to the upstream
+  1.90.0 release lock versions where required: `dlmalloc 0.2.10`
+  (cargo's minimal update had picked 0.2.14; pinned to upstream's
+  release version with `cargo update --precise`, which also selects
+  upstream's `windows-sys 0.59`/`windows-targets 0.52.6` chain),
+  `fortanix-sgx-abi 0.6.1`, and `rustc-literal-escaper 0.0.5`. All
+  other pins unchanged, including `addr2line 0.25.1` and
+  `unwinding 0.2.10` (upstream has 0.25.0/0.2.7; same rationale as
+  the 1.89 upgrade). Seeding from upstream's 1.90.0 lock instead was
+  tried first and rejected: it keeps crates.io `libc 0.2.174`
+  alongside the patched path `libc 0.2.172` for non-member crates
+  (`panic_unwind`, `panic_abort`, `dlmalloc`, `std_detect`), since
+  the patch can only substitute the lower version; the old-lock seed
+  keeps the single patched libc everywhere.
+- **Clippy-root lockfiles**: unchanged; libc (the only path dep) stayed
+  at 0.2.172, and every `--locked` clippy run passed.
+
+### New-toolchain lints
+
+- `clippy::manual_is_multiple_of` (new in 1.90 clippy) fired twice in
+  `zephyr-core/time-convert`; replaced `(a % b) == 0` with
+  `a.is_multiple_of(b)`.
+
+### Notes
+
+- As with 1.89, the container image has no `rustfmt` component; the
+  bindgen step prints "'rustfmt' is not installed for the toolchain"
+  and continues (non-fatal).
+
 ## 1.88.0 → 1.89.0 (2026-10-12)
 
 **Result**: the std port rebased from `1.88.0` onto `1.89.0` with no
