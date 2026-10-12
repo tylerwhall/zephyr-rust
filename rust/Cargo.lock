@@ -161,7 +161,7 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.172"
+version = "0.2.177"
 dependencies = [
  "rustc-std-workspace-core",
 ]
@@ -182,6 +182,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fa76a2c86f704bdb222d66965fb3d63269ce38518b83cb0575fca855ebb6316"
 dependencies = [
  "adler2",
+ "rustc-std-workspace-alloc",
+ "rustc-std-workspace-core",
+]
+
+[[package]]
+name = "moto-rt"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "058a2807a30527bee4c30df7ababe971cdde94372d4dbd1ff145bb403381436c"
+dependencies = [
  "rustc-std-workspace-alloc",
  "rustc-std-workspace-core",
 ]
@@ -378,6 +388,7 @@ dependencies = [
  "hermit-abi",
  "libc",
  "miniz_oxide",
+ "moto-rt",
  "object",
  "panic_abort",
  "panic_unwind",
@@ -388,6 +399,7 @@ dependencies = [
  "rustc-demangle",
  "std_detect",
  "unwind",
+ "vex-sdk",
  "wasi 0.11.1+wasi-snapshot-preview1",
  "wasi 0.14.4+wasi-0.2.4",
  "windows-targets 0.0.0",
@@ -465,6 +477,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b134ada16dda9e435abe2a6d76a01d497bc60707357845a15f9b0ed42dc88ce"
 dependencies = [
  "gimli 0.34.0",
+ "rustc-std-workspace-core",
+]
+
+[[package]]
+name = "vex-sdk"
+version = "0.27.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89f74fce61d7a7ba1589da9634c6305a72befb7cc9150c1f872d87d8060f32b9"
+dependencies = [
  "rustc-std-workspace-core",
 ]
 
