@@ -3,6 +3,76 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.91.0 → 1.92.0 (2026-10-12)
+
+**Result**: the std port rebased from `1.91.0` onto `1.92.0` with no
+consolidation needed, still 14 commits (branch `zephyr-1.92.0`, final
+tip `308ccb07f0`). The libc port rebased from `0.2.172` onto
+`0.2.177` (`zephyr-0.2.177`, tip `c144622d8`): 1.92.0 std requires
+libc `0.2.177`, and the single port commit (`Zephyr OS support`) moved
+to the new tag without conflict. All three 1.92.0 CI images (2.3.0,
+2.7.3, 3.7.0) were already published on ghcr.io and were pulled, not
+built locally. No port compile errors: the upgraded std built clean on
+the first try, and no target spec changed (1.92 does not add any
+required target-JSON field).
+
+**Validation checkpoint**: baseline (1.91.0) and upgraded (1.92.0)
+`samples/rust-app` on `qemu_x86` / Zephyr 3.7.0 in the ghcr.io
+`zephyr-rust-3.7.0-<rust>` images. Both runs reached
+`Next call will crash if userspace is working.`, the expected
+user-thread access violation and CPU exception, and status 1. Strict
+clippy `-D warnings` on 3.7.0 (full pass, libs and apps) needed no
+new-lint fixes. The full matrix and sanitycheck were intentionally not
+run (left for user review).
+
+### Conflicts
+
+1. **`rust: remove submodules not required to build zephyr-rust`**:
+   same modify/delete set as prior upgrades (11 gitlinks, `.gitmodules`
+   keeps only `library/backtrace`); 1.92.0 added no new submodule, so
+   the resolution is identical.
+
+2. **`zephyr: stub sys impl`** in `sys/random/mod.rs`: upstream added
+   `target_os = "vexos"` to the `any(...)` list that already carried
+   the port's `target_os = "zephyr",` (and to the matching
+   `cfg(not(any(...)))` above `hashmap_random_keys`). Both entries
+   were kept. The other `cfg_select!` dispatch files touched by this
+   commit (`sys/pal`, `sys/stdio`, `sys/sync/mutex`,
+   `sys/sync/thread_parking`, `sys/net/connection`, `env_consts`,
+   `std/Cargo.toml`) merged cleanly; upstream's additions there are
+   new `motor`/`vexos` branches and a wasi `p3` predicate.
+
+Verification that nothing was lost in the rebase: `git diff 1.92.0
+--stat` matches the 1.91.0 port's stat exactly (same file list, 514
+insertions / 102 deletions), and every file the port adds is
+byte-identical between `zephyr-1.91.0` and `zephyr-1.92.0`.
+
+### Lockfile decisions
+
+- **`rust/Cargo.lock`** (std): unlike 1.91, the old-lock-seeded minimal
+  re-resolution worked (`cargo metadata --locked` still failed, as
+  intended, and a plain `cargo metadata` then produced the whole
+  needed change from the existing lock rather than a fresh
+  resolution).
+  The diff is only libc `0.2.172` → `0.2.177` (the path package's own
+  version) plus the two new std target dependencies, `motor`'s
+  `moto-rt` and `vexos`'s `vex-sdk`. Neither is reachable from a
+  Zephyr build, but both were pinned down to the 1.92.0 release lock
+  versions (`moto-rt 0.15.0`, `vex-sdk 0.27.0`) with
+  `cargo update -p <pkg> --precise` instead of shipping cargo's
+  latest-compatible picks (`0.15.3` / `0.27.1`). No other pin moved.
+- **Clippy-root lockfiles**: the libc rebase stales every root that
+  carries the `rust/libc` path dependency (12 lockfiles; the
+  `zephyr-bindgen` lock's libc `0.2.159` is an unrelated registry
+  dependency). Each was refreshed with
+  `cargo update -p libc --manifest-path <root>/Cargo.toml`, which
+  changed exactly the libc `version` line in each; a full
+  `generate-lockfile` would have bumped unrelated packages.
+
+### Deviations
+
+None. No process or `rust/cargo.sh` change was required.
+
 ## 1.90.0 → 1.91.0 (2026-10-12)
 
 **Result**: the std port rebased from `1.90.0` onto `1.91.0` with no
