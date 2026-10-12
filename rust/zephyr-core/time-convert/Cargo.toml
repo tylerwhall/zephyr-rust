@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 core = { version = '1.0.0', optional = true, package = 'rustc-std-workspace-core' }
-compiler_builtins = { version = '0.1.2', optional = true }
+compiler_builtins = { path = "../../rust/library/compiler-builtins/compiler-builtins", optional = true }
 
 [features]
 rustc-dep-of-std = ['core', 'compiler_builtins/rustc-dep-of-std']
