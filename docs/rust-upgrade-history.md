@@ -3,6 +3,98 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.92.0 → 1.93.0 (2026-10-12)
+
+**Result**: the std port rebased from `1.92.0` onto `1.93.0` with no
+consolidation needed, still 14 commits (branch `zephyr-1.93.0`, final
+tip `40168ea61b`). The libc port was untouched: 1.93.0 std still
+requires libc `0.2.177`, so `rust/libc` stays on `zephyr-0.2.177`
+(tip `c144622d8`) and no clippy-root lockfile went stale. All three
+1.93.0 CI images (2.3.0, 2.7.3, 3.7.0) were already published on
+ghcr.io and were pulled, not built locally.
+
+**Validation checkpoint**: baseline (1.92.0) and upgraded (1.93.0)
+`samples/rust-app` on `qemu_x86` / Zephyr 3.7.0 in the ghcr.io
+`zephyr-rust-3.7.0-<rust>` images. Both runs reached
+`Next call will crash if userspace is working.`, the expected
+user-thread access violation and CPU exception, and status 1. Strict
+clippy `-D warnings` on 3.7.0 (full pass, libs and apps) needed no
+new-lint fixes. The full matrix and sanitycheck were intentionally not
+run (left for user review).
+
+### Conflicts
+
+1. **`rust: remove submodules not required to build zephyr-rust`**:
+   same modify/delete set as prior upgrades (the doc/toolchain
+   gitlinks bumped by upstream vs. the port's deletions); deletions
+   kept, `.gitmodules` still carries only `library/backtrace`.
+
+2. **`zephyr: panicking: remove get/set hook rwlock`** in
+   `std/src/panicking.rs`: upstream switched the hook to the
+   non-poisoning `sync::nonpoison::RwLock` and dropped the
+   `PoisonError` unwrap. The port's `cfg(not(target_os = "zephyr"))`
+   was kept on the new import and on the `match *HOOK.read()`
+   statement; the zephyr `default_hook` branch merged cleanly.
+
+3. **`zephyr: ThreadId: don't use uninitialized mutex`**: upstream
+   split `thread/mod.rs` into submodules (`builder.rs`, `id.rs`,
+   `current.rs`, ...), so the huge conflict was resolved by taking
+   upstream's new `mod.rs` structure and moving the port's ThreadId
+   changes (the `NonZeroU32` atomic counter, `from_u64` narrowing,
+   `as_u64` returning `NonZeroU64`) into `thread/id.rs`, where
+   `ThreadId` now lives. The port's import edits moved with them.
+
+### Compile/link errors and fixes
+
+1. **E0061 `imp::Thread::new` takes 2 arguments**:
+   upstream moved thread spawning into `thread/lifecycle.rs` and
+   changed the sys call to `Thread::new(stack, Box<ThreadInit>)`.
+   Adapted `sys/thread/zephyr.rs` (still `UNSUPPORTED_PLATFORM`) to
+   the new signature. Fixup'd into
+   `zephyr: implement thread::sleep`.
+
+2. **Link error: undefined reference to `k_aligned_alloc`** from
+   `<KMalloc as GlobalAlloc>::alloc` in the app archive. Upstream 1.93
+   changed the TLS machinery (`sys/thread_local/os.rs`) to allocate
+   TLS value boxes through `System` instead of the global allocator,
+   to avoid re-entering a global allocator that itself uses TLS. On
+   Zephyr `System` maps to zephyr-core's `KMalloc`
+   (`k_malloc`/`k_aligned_alloc`), and those kernel/libc symbols only
+   exist when a system heap is configured (`K_HEAP_MEM_POOL_SIZE > 0`
+   on 3.x; the malloc arena on 2.x). Supported images instead grant a
+   `k_heap` via `#[global_allocator]` (`CONFIG_RUST_ALLOC_POOL`), so
+   `System` had never been instantiated before and never linked.
+   Fix: `os.rs` keeps the pre-1.93 behavior for zephyr
+   (`alloc::alloc`/`alloc::dealloc`, i.e. the global allocator shim)
+   behind a `target_os = "zephyr"` cfg. Fixup'd into
+   `zephyr: implement thread local storage`. Deliberately *not* done:
+   mapping zephyr `System` onto the allocator shim, which would
+   recurse when no `#[global_allocator]` is present
+   (`__rdl_alloc → System.alloc → shim → __rdl_alloc`).
+
+### Lockfile decisions
+
+- **`rust/Cargo.lock`** (std): seeded the staged workspace with the
+  1.93.0 upstream `library/Cargo.lock` and ran a plain
+  `cargo metadata` (`RUSTC_BOOTSTRAP=1`) in the container. The
+  reviewed diff against the upstream lock is exactly the port's
+  addition: the `zephyr-sys`/`zephyr-core`/`time-convert` path
+  packages and their dependency subtree (`derive_more 0.14.1` and its
+  proc-macro tree), plus the libc path-package conversion (source and
+  checksum removed). No upstream pin moved.
+- **Clippy-root lockfiles**: unchanged (libc stayed at 0.2.177);
+  confirmed by the strict clippy pass, which runs every root with
+  `--locked`.
+
+### Deviations
+
+- Cargo's build-std freshness did not notice edits to the port
+  sources through the `rust/cargo.sh` source overlay: re-runs reported
+  `Finished` with no `Compiling std`. Forcing a rebuild required
+  deleting the cargo target dir
+  (`<build>/modules/zephyr-rust/app/<triple>`) after each port source
+  edit. No repo change; noted for future upgrades.
+
 ## 1.91.0 → 1.92.0 (2026-10-12)
 
 **Result**: the std port rebased from `1.91.0` onto `1.92.0` with no
