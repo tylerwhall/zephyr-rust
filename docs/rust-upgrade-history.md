@@ -3,6 +3,71 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.93.0 → 1.94.0 (2026-10-12)
+
+**Result**: the std port rebased from `1.93.0` onto `1.94.0` with no
+consolidation needed, still 14 commits (branch `zephyr-1.94.0`, final
+tip `77df9564ef0`). Rust 1.94.0 std requires libc `0.2.178`, so the
+one-commit libc port was rebased from `0.2.177` onto `0.2.178`
+without conflicts (branch `zephyr-0.2.178`, tip `fbdf70f1c`); that
+path-dependency bump staled every clippy-root lockfile containing
+libc, and the twelve affected locks were updated in place (version
+line only, no other graph churn). `rust/Cargo.lock` picked up the
+three upstream library-lock changes (libc `0.2.178`, moto-rt `0.16.0`,
+rustc-literal-escaper `0.0.7` dropping its `rustc-std-workspace-std`
+dependency); the reviewed diff against the upstream `1.94.0` library
+lock again contains only the zephyr path crates and their dependency
+subtree. All three 1.94.0 CI images (2.3.0, 2.7.3, 3.7.0) were already
+published on ghcr.io and were pulled, not built locally.
+
+**Validation checkpoint**: baseline (1.93.0) and upgraded (1.94.0)
+`samples/rust-app` on `qemu_x86` / Zephyr 3.7.0 in the ghcr.io
+`zephyr-rust-3.7.0-<rust>` images. Both runs produced identical output
+through `Next call will crash if userspace is working.`, the expected
+user-thread access violation and CPU exception, and status 1. Strict
+clippy `-D warnings` on 3.7.0 (full pass, libs and apps) needed no
+new-lint fixes and all `--locked` roots passed. The full matrix and
+sanitycheck were intentionally not run (left for user review).
+
+### Conflicts
+
+1. **`rust: remove submodules not required to build zephyr-rust`**:
+same modify/delete set as prior upgrades (the doc/toolchain gitlinks
+bumped by upstream vs. the port's deletions); deletions kept.
+
+2. **Autosquash context conflicts**: the fixups for the pipe/error
+   adaptations rewrote `sys/pal/zephyr/mod.rs` early in the port
+   history, so the later `thread::sleep`, `thread local storage`, and
+   `thread parking` commits each conflicted on the removed
+   `unsupported/pipe.rs` path line; resolved by keeping each commit's
+   own module-list change without the pipe line.
+
+### Compile/link errors and fixes
+
+1. **Missing `sys/pal/unsupported/pipe.rs`**: upstream reorganized the
+   pipe implementations; the per-PAL `pipe` modules and
+   `unsupported/pipe.rs` were removed in favor of a new `sys/pipe/`
+   module whose `_` fallback already covers zephyr. Dropped the port's
+   `#[path = "../unsupported/pipe.rs"] pub mod pipe;` from
+   `sys/pal/zephyr/mod.rs`; fixup'd into `zephyr: stub sys impl`.
+
+2. **`sys/io/error` cfg_select with no matching arm**: upstream moved
+   the per-target io-error implementations (`errno`,
+   `decode_error_kind`, `error_string`, `is_interrupted`) into
+   `sys/io/error/` with a per-target `cfg_select!` that has no zephyr
+   branch. Added a `target_os = "zephyr"` arm and a new
+   `sys/io/error/zephyr.rs` carrying the port's `decode_error_kind`
+   (from `zephyr: stub sys impl`) and `is_interrupted` (its own commit
+   now adds it there), plus generic-style `errno()` (returns 0) and
+   `error_string()` stubs matching the old `unsupported/os.rs`
+   behavior zephyr inherited via its path include.
+
+3. **E0599 `SystemTime::MAX`/`MIN` not found**: upstream implemented
+   `SystemTime::{MIN, MAX}` in `std::time`, requiring the PAL
+   `SystemTime` to define the constants. Added the same ones upstream
+   uses in `unsupported/time.rs` (`Duration::MAX` / `Duration::ZERO`)
+   to `sys/pal/zephyr/time.rs`; fixup'd into `zephyr: stub sys impl`.
+
 ## 1.92.0 → 1.93.0 (2026-10-12)
 
 **Result**: the std port rebased from `1.92.0` onto `1.93.0` with no
