@@ -3,6 +3,72 @@
 Running log of zephyr-rust Rust version upgrades: every important decision
 and conflict, per `docs/rust-upgrade.md`. Newest first.
 
+## 1.88.0 → 1.89.0 (2026-10-12)
+
+**Result**: the std port rebased from `1.88.0` onto `1.89.0` with no
+consolidation needed, still 14 commits (branch `zephyr-1.89.0`, final
+tip `b9eb25ada68`). The libc port stayed at `0.2.172`
+(`zephyr-0.2.172`, tip `d5d4c7caf`): 1.89.0 std still requires libc
+`0.2.172`, so no libc rebase was needed. All three 1.89.0 CI images
+(2.3.0, 2.7.3, 3.7.0) were already published on ghcr.io and were
+pulled, not built locally.
+
+**Validation checkpoint**: baseline (1.88.0) and upgraded (1.89.0)
+`samples/rust-app` on `qemu_x86` / Zephyr 3.7.0 in the ghcr.io
+`zephyr-rust-3.7.0-<rust>` images. Both runs reached
+`Next call will crash if userspace is working.`, the expected
+user-thread access violation and CPU exception, and status 1. Strict
+clippy `-D warnings` on 3.7.0 passed with no new-lint fixes. The full
+matrix and sanitycheck were intentionally not run (left for user
+review).
+
+### Conflicts
+
+1. **`rust: remove submodules not required to build zephyr-rust`**:
+   same modify/delete set as prior upgrades (`src/doc/*`, `src/gcc`,
+   `src/llvm-project`, `src/tools/cargo`, `src/tools/rustc-perf`)
+   plus a `.gitmodules` content conflict (upstream added
+   `rustc-perf`/`enzyme`/`gcc` entries between 1.88 and 1.89).
+   Resolved by keeping our deletions; the resulting `.gitmodules`
+   retains only `library/stdarch` and `library/backtrace`. Nested
+   submodule pointers were then synced to the 1.89.0 gitlinks
+   (`git submodule update`).
+
+No other port commit conflicted.
+
+### Compile errors and fixes
+
+- **`Thread::new` signature** (E0061 in `thread/mod.rs`): upstream
+  1.89 commit `7ab3ec175f4` ("thread name in stack overflow message")
+  added an `Option<&str>` name argument to every PAL's
+  `sys::Thread::new`. The port's `sys/pal/zephyr/thread.rs` mirrors
+  `unsupported/thread.rs`, which gained `_name: Option<&str>` as
+  argument two; applied the same change. Fixup'd into
+  `zephyr: stub sys impl` and autosquashed.
+
+### Lockfile decisions
+
+- **`rust/Cargo.lock`** (std): the staged workspace failed
+  `cargo metadata --locked` (stale `compiler_builtins`, which became
+  a workspace path dependency in 1.89). Regenerated with
+  `cargo update -w` (`RUSTC_BOOTSTRAP=1`) in the 1.89.0 container,
+  then aligned with the upstream 1.89.0 release lock:
+  `compiler_builtins 0.1.160`, `gimli 0.32.0`, `object 0.37.1`.
+  `addr2line` could not be aligned to upstream's 0.25.0: the existing
+  compatible `unwinding 0.2.10` pin (upstream lock has 0.2.7, xous-
+  only) requires `addr2line >= 0.25.1` and additionally pulls
+  `gimli 0.34.0`; both kept rather than downgrading `unwinding` away
+  from a pin this repo has carried since before the upgrade series. All other pins
+  unchanged.
+- **Clippy-root lockfiles**: unchanged; libc (the only path dep) stayed
+  at 0.2.172, and every `--locked` clippy run passed.
+
+### Notes
+
+- The 1.89.0 container image has no `rustfmt` component; the std build
+  script prints "'rustfmt' is not installed for the toolchain" to
+  stderr but the build succeeds (same non-fatal behavior as before).
+
 ## 1.87.0 → 1.88.0 (2026-10-08)
 
 **Result**: the std port rebased from `1.87.0` onto `1.88.0` with no
