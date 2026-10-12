@@ -43,6 +43,7 @@ for target in "${targets[@]}"; do
         .["relocation-model"] = "static" |
         .["dynamic-linking"] = false |
         .["has-thread-local"] = false |
+        .["target-pointer-width"] |= tonumber |
         del(.["is-builtin"])'
     filter="$filter $extra_filter"
     RUSTC_BOOTSTRAP=1 rustc --print target-spec-json -Z unstable-options --target $rust_target |
