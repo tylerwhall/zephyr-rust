@@ -10,8 +10,8 @@ pub fn z_tmcvt(
     round_up: bool,
     round_off: bool,
 ) -> u64 {
-    let mul_ratio = const_hz && (to_hz > from_hz) && ((to_hz % from_hz) == 0);
-    let div_ratio = const_hz && (from_hz > to_hz) && ((from_hz % to_hz) == 0);
+    let mul_ratio = const_hz && (to_hz > from_hz) && to_hz.is_multiple_of(from_hz);
+    let div_ratio = const_hz && (from_hz > to_hz) && from_hz.is_multiple_of(to_hz);
 
     if from_hz == to_hz {
         return t;
