@@ -15,7 +15,7 @@
   "target-pointer-width": "32",
   "target-family": "zephyr",
   "os": "zephyr",
-  "position-independent-executables": "false",
-  "dynamic-linking": "false",
-  "has-thread-local": "false"
+  "position-independent-executables": false,
+  "dynamic-linking": false,
+  "has-thread-local": false
 }

@@ -39,10 +39,10 @@ for target in "${targets[@]}"; do
     # Remove is-builtin, linker, linker-flavor
     filter='.["target-family"] = "zephyr" |
         .["os"] = "zephyr" |
-        .["position-independent-executables"] = "false" |
+        .["position-independent-executables"] = false |
         .["relocation-model"] = "static" |
-        .["dynamic-linking"] = "false" |
-        .["has-thread-local"] = "false" |
+        .["dynamic-linking"] = false |
+        .["has-thread-local"] = false |
         del(.["is-builtin"])'
     filter="$filter $extra_filter"
     RUSTC_BOOTSTRAP=1 rustc --print target-spec-json -Z unstable-options --target $rust_target |
