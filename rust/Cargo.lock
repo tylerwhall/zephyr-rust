@@ -4,12 +4,11 @@ version = 4
 
 [[package]]
 name = "addr2line"
-version = "0.24.2"
+version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dfbe277e56a376000877090da837660b4427aad530e3028d44e0bffe4f89a1c1"
+checksum = "1b5d307320b3181d6d7954e663bd7c774a838b8220fe0593c86d9fb09f498b4b"
 dependencies = [
- "compiler_builtins",
- "gimli 0.31.1",
+ "gimli 0.32.0",
  "rustc-std-workspace-alloc",
  "rustc-std-workspace-core",
 ]
@@ -60,12 +59,10 @@ dependencies = [
 
 [[package]]
 name = "compiler_builtins"
-version = "0.1.158"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "164cdc689e4c6d69417f77a5f48be240c291e84fbef0b1281755dc754b19c809"
+version = "0.1.160"
 dependencies = [
  "cc",
- "rustc-std-workspace-core",
+ "core",
 ]
 
 [[package]]
@@ -126,11 +123,10 @@ dependencies = [
 
 [[package]]
 name = "gimli"
-version = "0.31.1"
+version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
+checksum = "93563d740bc9ef04104f9ed6f86f1e3275c2cdafb95664e26584b9ca807a8ffe"
 dependencies = [
- "compiler_builtins",
  "rustc-std-workspace-alloc",
  "rustc-std-workspace-core",
 ]
@@ -198,11 +194,10 @@ dependencies = [
 
 [[package]]
 name = "object"
-version = "0.36.7"
+version = "0.37.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62948e14d923ea95ea2c7c86c71013138b66525b86bdc08d2dcc262bdb497b87"
+checksum = "03fd943161069e1768b4b3d050890ba48730e590f57e56d4aa04e7e090e61b4a"
 dependencies = [
- "compiler_builtins",
  "memchr",
  "rustc-std-workspace-alloc",
  "rustc-std-workspace-core",
@@ -213,7 +208,6 @@ name = "panic_abort"
 version = "0.0.0"
 dependencies = [
  "alloc",
- "cfg-if",
  "compiler_builtins",
  "core",
  "libc",
@@ -362,6 +356,7 @@ dependencies = [
 name = "rustc-std-workspace-core"
 version = "1.99.0"
 dependencies = [
+ "compiler_builtins",
  "core",
 ]
 
@@ -438,7 +433,6 @@ name = "std_detect"
 version = "0.1.5"
 dependencies = [
  "cfg-if",
- "compiler_builtins",
  "libc",
  "rustc-std-workspace-alloc",
  "rustc-std-workspace-core",
